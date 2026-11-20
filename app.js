@@ -71,7 +71,7 @@
   function viewHome() {
     setTitle("");
     app.innerHTML =
-      '<header class="hero"><h1>Cuaderno de fondos</h1></header>' +
+      '<header class="hero"><h1>Cuaderno de fondos</h1><p>Rentabilidad, riesgo y ratios de los fondos en seguimiento, con datos de Morningstar.</p></header>' +
       '<div class="cards">' +
       ["rf", "rv"].map(function (t) {
         return '<a class="cat-card" href="#/' + t + '"><div class="row"><div><small>Fondos de</small><h2>' +
@@ -207,7 +207,7 @@
     var names = Object.keys(groups).sort(function (a, b) { return a.localeCompare(b, "es"); });
 
     app.innerHTML =
-      '<div class="topbar"><a href="#/">← Inicio</a><a class="brand" href="#/">Cuaderno de fondos</a></div>' +
+      '<div class="topbar"><a href="#/">← Inicio</a></div>' +
       '<div class="page-head"><h1>' + esc(CATS[t].title) + '</h1><div class="tools">' +
       '<div class="seg" role="group" aria-label="Vista">' +
       '<button type="button" data-view="list" aria-pressed="' + (s.view === "list") + '">Lista</button>' +
@@ -350,22 +350,22 @@
     function lab(m, v, d) { return nf(v, d) + (m.u === "%" ? "%" : ""); }
     var g = "", ty = ticks(y0, y1, 5), tx = ticks(x0, x1, 6), dy = dd(ty), dx = dd(tx);
     ty.forEach(function (v) {
-      g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="' + (v === 0 ? "#3a3a40" : "#242427") + '"/>' +
-        '<text x="' + (L - 8) + '" y="' + (Y(v) + 4) + '" text-anchor="end" fill="#8d8d94" font-size="11">' + lab(my, v, dy) + "</text>";
+      g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="' + (v === 0 ? "#bdbdbd" : "#e0e0e0") + '"/>' +
+        '<text x="' + (L - 8) + '" y="' + (Y(v) + 4) + '" text-anchor="end" fill="#717171" font-size="11">' + lab(my, v, dy) + "</text>";
     });
     tx.forEach(function (v) {
-      g += '<text x="' + X(v) + '" y="' + (H - B + 18) + '" text-anchor="middle" fill="#8d8d94" font-size="11">' + lab(mx, v, dx) + "</text>";
+      g += '<text x="' + X(v) + '" y="' + (H - B + 18) + '" text-anchor="middle" fill="#717171" font-size="11">' + lab(mx, v, dx) + "</text>";
     });
-    if (x0 < 0) g += '<line y1="' + T + '" y2="' + (H - B) + '" x1="' + X(0) + '" x2="' + X(0) + '" stroke="#3a3a40"/>';
-    g += '<text x="' + (L + (W - L - R) / 2) + '" y="' + (H - 6) + '" text-anchor="middle" fill="#8d8d94" font-size="11">' + esc(mx.l) + "</text>";
-    g += '<text transform="translate(14 ' + (T + (H - T - B) / 2) + ') rotate(-90)" text-anchor="middle" fill="#8d8d94" font-size="11">' + esc(my.l) + "</text>";
+    if (x0 < 0) g += '<line y1="' + T + '" y2="' + (H - B) + '" x1="' + X(0) + '" x2="' + X(0) + '" stroke="#bdbdbd"/>';
+    g += '<text x="' + (L + (W - L - R) / 2) + '" y="' + (H - 6) + '" text-anchor="middle" fill="#717171" font-size="11">' + esc(mx.l) + "</text>";
+    g += '<text transform="translate(14 ' + (T + (H - T - B) / 2) + ') rotate(-90)" text-anchor="middle" fill="#717171" font-size="11">' + esc(my.l) + "</text>";
     pts.forEach(function (f) {
       g += '<circle class="dot' + (f.g === "Renta 4" ? " r4" : "") + '" tabindex="0" role="link" aria-label="' + esc(f.n) + '" data-id="' + esc(f.id) +
         '" cx="' + X(mx.v(f)).toFixed(1) + '" cy="' + Y(my.v(f)).toFixed(1) + '" r="5.5"/>';
     });
     return '<div class="chart-card"><svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + esc(my.l) + " frente a " + esc(mx.l) + '">' + g + "</svg>" +
       '<div class="tip" id="tip"></div>' +
-      '<div class="legend"><span><i></i>Fondos</span><span><i style="background:var(--pos)"></i>Renta 4</span><span>' + pts.length + " de " + list.length + " fondos con datos</span></div></div>";
+      '<div class="legend"><span><i></i>Fondos</span><span><i style="background:var(--brand)"></i>Renta 4</span><span>' + pts.length + " de " + list.length + " fondos con datos</span></div></div>";
   }
   function bindChart() {
     var card = document.querySelector(".chart-card"), tip = document.getElementById("tip");
@@ -401,7 +401,7 @@
       return { c: c, n: l.length, avg: avg, best: best };
     }).sort(function (a, b) { return b.n - a.n || a.c.localeCompare(b.c, "es"); });
     app.innerHTML =
-      '<div class="topbar"><a href="#/' + t + '">← ' + esc(CATS[t].title) + '</a><a class="brand" href="#/">Cuaderno de fondos</a></div>' +
+      '<div class="topbar"><a href="#/' + t + '">← ' + esc(CATS[t].title) + '</a></div>' +
       '<div class="page-head"><h1>Visión general</h1></div>' +
       '<p class="muted" style="margin:-8px 0 20px">' + esc(CATS[t].title) + " por categoría Morningstar. Rentabilidad del año: media simple de los fondos de la categoría.</p>" +
       '<div class="ov">' + rows.map(function (r) {
@@ -435,7 +435,7 @@
     if (!f) { viewNotFound(); return; }
     setTitle(f.n);
     var r = f.ret, html = "";
-    html += '<div class="topbar"><a href="#/' + f.t + '">← ' + esc(CATS[f.t].title) + '</a><a class="brand" href="#/">Cuaderno de fondos</a></div>';
+    html += '<div class="topbar"><a href="#/' + f.t + '">← ' + esc(CATS[f.t].title) + '</a></div>';
     html += "<h1>" + esc(f.n) + "</h1>";
     html += '<p class="sub">' + esc(f.g) + " · " + esc(f.id) + " · " + esc(f.c) + (f.idx ? ' <span class="tag">Indexado</span>' : "") + "</p>";
     html += '<div class="kpis">' +
@@ -462,7 +462,7 @@
     }
 
     // Composición
-    var mix = f.mix, labels = ["Acciones", "Bonos", "Efectivo", "Otros"], colors = ["#c9c9cf", "#7fb996", "#6f8fb5", "#8d8d94"];
+    var mix = f.mix, labels = ["Acciones", "Bonos", "Efectivo", "Otros"], colors = ["#851a2e", "#3b3b3b", "#b9b9b9", "#f0c9b0"];
     if (mix.some(isNum)) {
       var tot = mix.reduce(function (a, v) { return a + (isNum(v) && v > 0 ? v : 0); }, 0) || 1;
       var odd = mix.some(function (v) { return isNum(v) && v < 0; }) || Math.abs(mix.reduce(function (a, v) { return a + (isNum(v) ? v : 0); }, 0) - 100) > 2;
