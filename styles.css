@@ -185,3 +185,18 @@ dl.facts dt:first-of-type, dl.facts dd:first-of-type { border-top: 0; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 :focus-visible { outline: 2px solid #cfcfd4; outline-offset: 2px; }
+
+/* Selector de columnas y ejes */
+.picker { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; display: grid; gap: 12px; }
+.picker[hidden] { display: none; }
+.pgroup .label { margin-bottom: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.picker .chip { background: var(--bg); }
+.picker .chip[aria-pressed="true"] { background: #ececee; color: #111; border-color: #ececee; }
+.picker #resetCols { justify-self: start; }
+.axes { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+.axis { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.axis select { background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font: inherit; }
+.table-wrap td:first-child, .table-wrap th:first-child { position: sticky; left: 0; background: var(--card); z-index: 1; min-width: 210px; }
+.table-wrap tbody tr:hover td:first-child { background: var(--card-hi); }
+@media (max-width: 760px) { .table-wrap td:first-child, .table-wrap th:first-child { min-width: 160px; } }

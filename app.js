@@ -97,24 +97,87 @@
   }
 
   // ---------- listado ----------
-  var state = { rf: { view: "list", g: null, q: "", sort: "n", dir: 1 }, rv: { view: "list", g: null, q: "", sort: "n", dir: 1 } };
+  var STORE = "cf_cols_";
+  function P(k, l, g, v, o) { o = o || {}; return { k: k, l: l, g: g, v: v, u: o.u, d: o.d, sg: o.sg, txt: o.txt, only: o.only }; }
+  var RET = { u: "%", sg: 1 };
+  var METRICS = [
+    P("dur", "Duración", "Cartera", function (f) { return f.dur; }, { d: 1, only: "rf" }),
+    P("cal", "Calidad", "Cartera", function (f) { return f.cal; }, { txt: 1, only: "rf" }),
+    P("w1", "1 semana", "Rentabilidad", function (f) { return f.ret.w1; }, RET),
+    P("m1", "1 mes", "Rentabilidad", function (f) { return f.ret.m1; }, RET),
+    P("m3", "3 meses", "Rentabilidad", function (f) { return f.ret.m3; }, RET),
+    P("m6", "6 meses", "Rentabilidad", function (f) { return f.ret.m6; }, RET),
+    P("ytd", "Año", "Rentabilidad", function (f) { return f.ret.ytd; }, RET),
+    P("y1", "1 año", "Rentabilidad", function (f) { return f.ret.y1; }, RET),
+    P("y3", "3 años", "Rentabilidad", function (f) { return f.ret.y3; }, RET),
+    P("y5", "5 años", "Rentabilidad", function (f) { return f.ret.y5; }, RET),
+    P("y10", "10 años", "Rentabilidad", function (f) { return f.ret.y10; }, RET),
+    P("rmed", "Rent. media 3 años", "Rentabilidad", function (f) { return f.rmed; }, { u: "%", d: 2 }),
+    P("sh1", "Sharpe 1 año", "Ratios", function (f) { return f.sharpe[0]; }),
+    P("sh3", "Sharpe 3 años", "Ratios", function (f) { return f.sharpe[1]; }),
+    P("sh5", "Sharpe 5 años", "Ratios", function (f) { return f.sharpe[2]; }),
+    P("so1", "Sortino 1 año", "Ratios", function (f) { return f.sortino[0]; }),
+    P("so3", "Sortino 3 años", "Ratios", function (f) { return f.sortino[1]; }),
+    P("so5", "Sortino 5 años", "Ratios", function (f) { return f.sortino[2]; }),
+    P("mar1", "MAR 1 año", "Ratios", function (f) { return f.mar[0]; }),
+    P("mar3", "MAR 3 años", "Ratios", function (f) { return f.mar[1]; }),
+    P("mar5", "MAR 5 años", "Ratios", function (f) { return f.mar[2]; }),
+    P("alpha", "Alpha 3 años", "Ratios", function (f) { return f.alpha; }),
+    P("beta", "Beta 3 años", "Ratios", function (f) { return f.beta; }),
+    P("r2", "R² 3 años", "Ratios", function (f) { return f.r2; }, { d: 1 }),
+    P("score", "Score", "Ratios", function (f) { return f.score && f.score[3]; }),
+    P("vol1", "Vol. 1 año", "Riesgo", function (f) { return f.vol[0]; }, { u: "%", d: 1 }),
+    P("vol3", "Vol. 3 años", "Riesgo", function (f) { return f.vol[1]; }, { u: "%", d: 1 }),
+    P("vol5", "Vol. 5 años", "Riesgo", function (f) { return f.vol[2]; }, { u: "%", d: 1 }),
+    P("ddmax", "Caída máxima", "Riesgo", function (f) { return f.dd[4]; }, { u: "%", d: 1 }),
+    P("worst1", "Peor mes 1 año", "Riesgo", function (f) { return f.worst[0]; }, { u: "%", d: 1 }),
+    P("pos1", "Meses en positivo 1 año", "Riesgo", function (f) { return f.pos[0]; }, { u: "%", d: 0 }),
+    P("skew1", "Asimetría 1 año", "Distribución", function (f) { return f.skew[0]; }),
+    P("skew3", "Asimetría 3 años", "Distribución", function (f) { return f.skew[1]; }),
+    P("kurt1", "Curtosis 1 año", "Distribución", function (f) { return f.kurt[0]; }),
+    P("kurt3", "Curtosis 3 años", "Distribución", function (f) { return f.kurt[1]; }),
+    P("top10", "Peso top 10", "Otros", function (f) { return f.top10; }, { u: "%", d: 1 }),
+    P("cost", "Coste neto", "Otros", function (f) { var n = parseFloat(String(f.cost || "").replace(",", ".")); return isFinite(n) ? n : null; }, { u: "%", d: 2 })
+  ];
+  var GROUPS = ["Rentabilidad", "Ratios", "Riesgo", "Distribución", "Cartera", "Otros"];
+  var DEFAULTS = {
+    rf: ["dur", "cal", "ytd", "y1", "y3", "y5", "y10", "vol1"],
+    rv: ["ytd", "y1", "y3", "y5", "y10", "vol1"]
+  };
+  function metricsFor(t) { return METRICS.filter(function (m) { return !m.only || m.only === t; }); }
+  function metric(k) { for (var i = 0; i < METRICS.length; i++) if (METRICS[i].k === k) return METRICS[i]; return null; }
+  function fmtMetric(m, v, signed) {
+    if (m.txt) return esc(v || "–");
+    if (m.u === "%") return pct(v, signed, m.d == null ? 1 : m.d);
+    return dec(v, m.d == null ? 2 : m.d);
+  }
+  function cell(f, m) {
+    var v = m.v(f);
+    if (m.txt) return '<span class="muted">' + esc(v || "–") + "</span>";
+    if (m.u === "%" && m.sg) return ret(v, m.d);
+    return '<span class="num">' + fmtMetric(m, v) + "</span>";
+  }
+  function loadCols(t) {
+    var ok = metricsFor(t).map(function (m) { return m.k; }), saved = null;
+    try { saved = JSON.parse(localStorage.getItem(STORE + t) || "null"); } catch (e) { saved = null; }
+    if (Array.isArray(saved)) {
+      saved = saved.filter(function (k) { return ok.indexOf(k) !== -1; });
+      if (saved.length) return saved;
+    }
+    return DEFAULTS[t].slice();
+  }
+  function saveCols(t) { try { localStorage.setItem(STORE + t, JSON.stringify(state[t].cols)); } catch (e) { /* sin almacenamiento */ } }
+
+  var state = {
+    rf: { view: "list", g: null, q: "", sort: "n", dir: 1, pick: false, cols: loadCols("rf") },
+    rv: { view: "list", g: null, q: "", sort: "n", dir: 1, pick: false, cols: loadCols("rv") },
+    cx: "vol1", cy: "y1"
+  };
 
   function cols(t) {
-    var common = [
-      { k: "ytd", l: "Año", v: function (f) { return f.ret.ytd; }, r: function (f) { return ret(f.ret.ytd); } },
-      { k: "y1", l: "1 año", v: function (f) { return f.ret.y1; }, r: function (f) { return ret(f.ret.y1); } },
-      { k: "y3", l: "3 años", v: function (f) { return f.ret.y3; }, r: function (f) { return ret(f.ret.y3); } },
-      { k: "y5", l: "5 años", v: function (f) { return f.ret.y5; }, r: function (f) { return ret(f.ret.y5); } },
-      { k: "y10", l: "10 años", v: function (f) { return f.ret.y10; }, r: function (f) { return ret(f.ret.y10); } }
-    ];
-    var vol = { k: "vol", l: "Vol. 1 año", v: function (f) { return f.vol[0]; }, r: function (f) { return '<span class="num">' + pct(f.vol[0], false, 1) + "</span>"; } };
-    if (t === "rf") {
-      return [
-        { k: "dur", l: "Dur.", v: function (f) { return f.dur; }, r: function (f) { return '<span class="num muted">' + dec(f.dur, 1) + "</span>"; } },
-        { k: "cal", l: "Calidad", v: function (f) { return f.cal; }, r: function (f) { return '<span class="muted">' + esc(f.cal || "–") + "</span>"; } }
-      ].concat(common, [vol]);
-    }
-    return common.concat([vol]);
+    return state[t].cols.map(metric).filter(Boolean).map(function (m) {
+      return { k: m.k, l: m.l, v: m.v, r: function (f) { return cell(f, m); } };
+    });
   }
 
   function filtered(t) {
@@ -156,7 +219,9 @@
           groups[g] + (groups[g] === 1 ? " fondo" : " fondos") + "</small></span></button>";
       }).join("") + "</div>" +
       '<div class="filters"><div class="search">' + icon() +
-      '<input id="q" type="search" placeholder="Buscar por nombre o ISIN" value="' + esc(s.q) + '" aria-label="Buscar fondo" autocomplete="off"></div></div>' +
+      '<input id="q" type="search" placeholder="Buscar por nombre o ISIN" value="' + esc(s.q) + '" aria-label="Buscar fondo" autocomplete="off"></div>' +
+      (s.view === "list" ? '<button type="button" class="chip" id="pickBtn" aria-expanded="' + s.pick + '">Columnas</button>' : "") + "</div>" +
+      '<div class="picker" id="picker"' + (s.pick && s.view === "list" ? "" : " hidden") + "></div>" +
       '<div id="body"></div>' + footer(t);
 
     app.querySelectorAll("[data-view]").forEach(function (b) {
@@ -171,14 +236,55 @@
     });
     var q = document.getElementById("q");
     q.addEventListener("input", function () { s.q = q.value; renderBody(t); });
+    var pb = document.getElementById("pickBtn");
+    if (pb) {
+      pb.addEventListener("click", function () {
+        s.pick = !s.pick;
+        pb.setAttribute("aria-expanded", String(s.pick));
+        document.getElementById("picker").hidden = !s.pick;
+        if (s.pick) renderPicker(t);
+      });
+      if (s.pick) renderPicker(t);
+    }
     renderBody(t);
+  }
+
+  function renderPicker(t) {
+    var s = state[t], el = document.getElementById("picker"), ms = metricsFor(t);
+    if (!el) return;
+    el.innerHTML = GROUPS.map(function (g) {
+      var l = ms.filter(function (m) { return m.g === g; });
+      if (!l.length) return "";
+      return '<div class="pgroup"><p class="label">' + g + '</p><div class="chips">' + l.map(function (m) {
+        return '<button type="button" class="chip" data-col="' + m.k + '" aria-pressed="' + (s.cols.indexOf(m.k) !== -1) + '">' + esc(m.l) + "</button>";
+      }).join("") + "</div></div>";
+    }).join("") + '<button type="button" class="chip" id="resetCols">Restablecer columnas</button>';
+    el.querySelectorAll("[data-col]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var k = b.getAttribute("data-col"), i = s.cols.indexOf(k);
+        if (i !== -1) { if (s.cols.length > 1) s.cols.splice(i, 1); } else s.cols.push(k);
+        if (s.sort !== "n" && s.cols.indexOf(s.sort) === -1) { s.sort = "n"; s.dir = 1; }
+        saveCols(t); renderPicker(t); renderBody(t);
+      });
+    });
+    document.getElementById("resetCols").addEventListener("click", function () {
+      s.cols = DEFAULTS[t].slice(); s.sort = "n"; s.dir = 1; saveCols(t); renderPicker(t); renderBody(t);
+    });
   }
 
   function renderBody(t) {
     var s = state[t], body = document.getElementById("body");
     var list = filtered(t);
     if (!list.length) { body.innerHTML = '<div class="table-wrap"><div class="empty">Sin resultados</div></div>'; return; }
-    if (s.view === "chart") { body.innerHTML = chart(t, list); bindChart(t); return; }
+    if (s.view === "chart") {
+      body.innerHTML = axisBar(t) + chart(t, list);
+      ["cx", "cy"].forEach(function (id) {
+        var el = document.getElementById(id);
+        el.addEventListener("change", function () { state[id] = el.value; renderBody(t); document.getElementById(id).focus(); });
+      });
+      bindChart(t);
+      return;
+    }
     var c = cols(t), rows = sorted(t, list);
     function th(k, l, first) {
       var on = s.sort === k;
@@ -214,30 +320,50 @@
     for (; v <= max + 1e-9; v += step) out.push(Math.round(v * 1e6) / 1e6);
     return out;
   }
+  function dd(arr) {
+    return arr.reduce(function (a, v) { var s = String(v).split(".")[1]; return Math.max(a, s ? s.length : 0); }, 0);
+  }
+  function axisBar(t) {
+    var ms = metricsFor(t).filter(function (m) { return !m.txt; });
+    function sel(id, label, cur) {
+      return '<label class="axis"><span class="muted">' + label + '</span><select id="' + id + '" aria-label="' + label + '">' +
+        GROUPS.map(function (g) {
+          var l = ms.filter(function (m) { return m.g === g; });
+          return l.length ? '<optgroup label="' + g + '">' + l.map(function (m) {
+            return '<option value="' + m.k + '"' + (m.k === cur ? " selected" : "") + ">" + esc(m.l) + "</option>";
+          }).join("") + "</optgroup>" : "";
+        }).join("") + "</select></label>";
+    }
+    return '<div class="axes">' + sel("cx", "Eje X", state.cx) + sel("cy", "Eje Y", state.cy) + "</div>";
+  }
   function chart(t, list) {
-    var pts = list.filter(function (f) { return isNum(f.vol[0]) && isNum(f.ret.y1); });
-    if (!pts.length) return '<div class="table-wrap"><div class="empty">No hay datos suficientes para el gráfico</div></div>';
-    var W = 820, H = 440, L = 54, R = 18, T = 18, B = 46;
-    var xs = pts.map(function (f) { return f.vol[0]; }), ys = pts.map(function (f) { return f.ret.y1; });
-    var x0 = 0, x1 = Math.max.apply(null, xs) * 1.08, y0 = Math.min(0, Math.min.apply(null, ys)) * 1.1, y1 = Math.max.apply(null, ys) * 1.1;
-    if (y1 === y0) y1 = y0 + 1;
+    var mx = metric(state.cx) || metric("vol1"), my = metric(state.cy) || metric("y1");
+    var pts = list.filter(function (f) { return isNum(mx.v(f)) && isNum(my.v(f)); });
+    if (!pts.length) return '<div class="table-wrap"><div class="empty">No hay datos suficientes para este gráfico</div></div>';
+    var W = 820, H = 440, L = 58, R = 18, T = 18, B = 46;
+    var xs = pts.map(mx.v), ys = pts.map(my.v);
+    function lo(a) { var m = Math.min.apply(null, a); return m < 0 ? m * 1.1 : 0; }
+    function hi(a) { var m = Math.max.apply(null, a); return m > 0 ? m * 1.08 : 0.1; }
+    var x0 = lo(xs), x1 = hi(xs), y0 = lo(ys), y1 = hi(ys);
     function X(v) { return L + (v - x0) / (x1 - x0) * (W - L - R); }
     function Y(v) { return H - B - (v - y0) / (y1 - y0) * (H - T - B); }
-    var g = "";
-    ticks(y0, y1, 5).forEach(function (v) {
-      g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="#242427"/>' +
-        '<text x="' + (L - 8) + '" y="' + (Y(v) + 4) + '" text-anchor="end" fill="#8d8d94" font-size="11">' + nf(v, 0) + "%</text>";
+    function lab(m, v, d) { return nf(v, d) + (m.u === "%" ? "%" : ""); }
+    var g = "", ty = ticks(y0, y1, 5), tx = ticks(x0, x1, 6), dy = dd(ty), dx = dd(tx);
+    ty.forEach(function (v) {
+      g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="' + (v === 0 ? "#3a3a40" : "#242427") + '"/>' +
+        '<text x="' + (L - 8) + '" y="' + (Y(v) + 4) + '" text-anchor="end" fill="#8d8d94" font-size="11">' + lab(my, v, dy) + "</text>";
     });
-    ticks(x0, x1, 6).forEach(function (v) {
-      g += '<text x="' + X(v) + '" y="' + (H - B + 18) + '" text-anchor="middle" fill="#8d8d94" font-size="11">' + nf(v, 0) + "%</text>";
+    tx.forEach(function (v) {
+      g += '<text x="' + X(v) + '" y="' + (H - B + 18) + '" text-anchor="middle" fill="#8d8d94" font-size="11">' + lab(mx, v, dx) + "</text>";
     });
-    g += '<text x="' + (L + (W - L - R) / 2) + '" y="' + (H - 6) + '" text-anchor="middle" fill="#8d8d94" font-size="11">Volatilidad 1 año</text>';
-    g += '<text transform="translate(14 ' + (T + (H - T - B) / 2) + ') rotate(-90)" text-anchor="middle" fill="#8d8d94" font-size="11">Rentabilidad 1 año</text>';
+    if (x0 < 0) g += '<line y1="' + T + '" y2="' + (H - B) + '" x1="' + X(0) + '" x2="' + X(0) + '" stroke="#3a3a40"/>';
+    g += '<text x="' + (L + (W - L - R) / 2) + '" y="' + (H - 6) + '" text-anchor="middle" fill="#8d8d94" font-size="11">' + esc(mx.l) + "</text>";
+    g += '<text transform="translate(14 ' + (T + (H - T - B) / 2) + ') rotate(-90)" text-anchor="middle" fill="#8d8d94" font-size="11">' + esc(my.l) + "</text>";
     pts.forEach(function (f) {
       g += '<circle class="dot' + (f.g === "Renta 4" ? " r4" : "") + '" tabindex="0" role="link" aria-label="' + esc(f.n) + '" data-id="' + esc(f.id) +
-        '" cx="' + X(f.vol[0]).toFixed(1) + '" cy="' + Y(f.ret.y1).toFixed(1) + '" r="5.5"/>';
+        '" cx="' + X(mx.v(f)).toFixed(1) + '" cy="' + Y(my.v(f)).toFixed(1) + '" r="5.5"/>';
     });
-    return '<div class="chart-card"><svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Rentabilidad a 1 año frente a volatilidad">' + g + "</svg>" +
+    return '<div class="chart-card"><svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + esc(my.l) + " frente a " + esc(mx.l) + '">' + g + "</svg>" +
       '<div class="tip" id="tip"></div>' +
       '<div class="legend"><span><i></i>Fondos</span><span><i style="background:var(--pos)"></i>Renta 4</span><span>' + pts.length + " de " + list.length + " fondos con datos</span></div></div>";
   }
@@ -248,7 +374,8 @@
       var f = byId(d.getAttribute("data-id"));
       function show(e) {
         var box = card.getBoundingClientRect(), r = d.getBoundingClientRect();
-        tip.innerHTML = "<b>" + esc(f.n) + "</b><br>" + esc(f.g) + "<br>1 año " + pct(f.ret.y1, true) + " · Vol. " + pct(f.vol[0], false, 1);
+        var mx = metric(state.cx), my = metric(state.cy);
+        tip.innerHTML = "<b>" + esc(f.n) + "</b><br>" + esc(f.g) + "<br>" + esc(my.l) + " " + fmtMetric(my, my.v(f), my.sg) + "<br>" + esc(mx.l) + " " + fmtMetric(mx, mx.v(f), mx.sg);
         tip.style.display = "block";
         tip.style.left = Math.min(r.left - box.left + 14, box.width - 270) + "px";
         tip.style.top = (r.top - box.top - 64) + "px";
@@ -356,9 +483,12 @@
       ["Volatilidad", f.vol, function (v) { return pct(v, false, 1); }],
       ["Ratio de Sharpe", f.sharpe, function (v) { return dec(v); }],
       ["Ratio de Sortino", f.sortino, function (v) { return dec(v); }],
+      ["Ratio MAR", f.mar, function (v) { return dec(v); }],
       ["Peor mes", f.worst, function (v) { return pct(v, false, 1); }],
       ["Meses en positivo", f.pos, function (v) { return pct(v, false, 0); }],
-      ["Caída máxima", [f.dd[0], f.dd[1], f.dd[2]], function (v) { return pct(v, false, 1); }]
+      ["Caída máxima", [f.dd[0], f.dd[1], f.dd[2]], function (v) { return pct(v, false, 1); }],
+      ["Asimetría", f.skew, function (v) { return dec(v); }],
+      ["Curtosis", f.kurt, function (v) { return dec(v); }]
     ].filter(function (x) { return x[1].some(isNum); });
     if (rows.length) {
       html += '<section class="block"><h3>Riesgo</h3><table class="rtable"><thead><tr><th scope="col"></th><th scope="col">1 año</th><th scope="col">3 años</th><th scope="col">5 años</th></tr></thead><tbody>' +
@@ -366,7 +496,10 @@
         "</tbody></table><dl class=\"facts\" style=\"margin-top:10px\">" +
         (isNum(f.dd[4]) ? fact("Caída máxima histórica", pct(f.dd[4], false, 1)) : "") +
         (isNum(f.alpha) ? fact("Alpha 3 años", dec(f.alpha)) : "") + (isNum(f.beta) ? fact("Beta 3 años", dec(f.beta)) : "") +
-        (isNum(f.r2) ? fact("R² 3 años", dec(f.r2, 1)) : "") + "</dl></section>";
+        (isNum(f.r2) ? fact("R² 3 años", dec(f.r2, 1)) : "") +
+        (isNum(f.rmed) ? fact("Rentabilidad media 3 años", pct(f.rmed, false, 2)) : "") +
+        (f.score && isNum(f.score[3]) ? fact("Score", dec(f.score[3]) + ' <span class="muted">(1A ' + dec(f.score[0]) + " · 3A " + dec(f.score[1]) + " · 5A " + dec(f.score[2]) + ")</span>") : "") +
+        (f.mrent ? fact("Rentabilidad Morningstar", esc(f.mrent)) : "") + (f.mris ? fact("Riesgo Morningstar", esc(f.mris)) : "") + "</dl></section>";
     }
 
     // Específico por tipo
@@ -385,6 +518,12 @@
         (f.reg ? fact("Región principal", esc(f.reg[0]) + " " + pct(f.reg[1], false, 1)) : "") +
         (f.sec ? fact("Sector principal", esc(f.sec[0]) + " " + pct(f.sec[1], false, 1)) : "") + "</dl></section>";
     }
+
+    // Evolución reciente
+    html += '<section class="block"><h3>Evolución reciente</h3><dl class="facts">' +
+      [["1 día", r.d1], ["1 semana", r.w1], ["1 mes", r.m1], ["3 meses", r.m3], ["6 meses", r.m6]].map(function (x) {
+        return fact(x[0], ret(x[1]));
+      }).join("") + "</dl></section>";
 
     // Datos generales
     html += '<section class="block"><h3>Datos generales</h3><dl class="facts">' +
