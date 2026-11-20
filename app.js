@@ -85,6 +85,7 @@
           '<span class="arrow" aria-hidden="true">→</span></a>';
       }).join("") + "</div>" +
       '<div class="cards" style="margin-top:14px">' +
+      '<a class="cat-card" href="#/categorias"><div class="row"><div><small>Explorar</small><h2>Categorías</h2></div><span class="count">' + (allCats("rf").length + allCats("rv").length) + ' categorías</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
       '<a class="cat-card" href="#/comparar"><div class="row"><div><small>Herramienta</small><h2>Comparador de fondos</h2></div><span class="count">hasta ' + CMP_MAX + ' fondos</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
       '<a class="cat-card" href="#/carteras"><div class="row"><div><small>Herramienta</small><h2>Carteras</h2></div><span class="count">' + PF.length + (PF.length === 1 ? " cartera" : " carteras") + '</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
       '<a class="cat-card" href="#/recomendadas"><div class="row"><div><small>Herramienta</small><h2>Carteras recomendadas</h2></div><span class="count">3 perfiles</span></div><span class="arrow" aria-hidden="true">→</span></a></div>' +
@@ -988,6 +989,108 @@
     });
   }
 
+  // ---------- categorías ----------
+  var cs = { cat: null, sort: "ytd", dir: -1, pick: false };
+  function allCats(t) {
+    var m = {};
+    ofType(t).forEach(function (f) { m[f.c] = (m[f.c] || 0) + 1; });
+    return Object.keys(m).sort(function (x, y) { return m[y] - m[x] || x.localeCompare(y, "es"); }).map(function (c) { return [c, m[c]]; });
+  }
+  function catType(c) { var f = FUNDS.filter(function (x) { return x.c === c; })[0]; return f ? f.t : null; }
+
+  function viewCategories(raw) {
+    var want = null;
+    try { want = raw ? decodeURIComponent(raw) : null; } catch (e) { want = null; }
+    if (want && catType(want)) cs.cat = want;
+    setTitle(cs.cat ? cs.cat : "Categorías");
+    var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Categorías</h1>' +
+      '<p class="sub">Elige una categoría Morningstar para ver todos sus fondos con sus métricas. Pulsa el título de una columna para ordenar y usa Columnas para elegir qué métricas ver.</p>';
+    [["rf", "Renta fija"], ["rv", "Renta variable"]].forEach(function (g) {
+      h += '<p class="label" style="margin-top:18px">' + g[1] + '</p><div class="chips cats">' + allCats(g[0]).map(function (x) {
+        return '<button type="button" class="chip" data-cat="' + esc(x[0]) + '" aria-pressed="' + (cs.cat === x[0]) + '">' + esc(x[0]) + ' <small>' + x[1] + "</small></button>";
+      }).join("") + "</div>";
+    });
+    h += '<div id="catbody"></div>';
+    app.innerHTML = h + footer("rv");
+    app.querySelectorAll("[data-cat]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var c = b.getAttribute("data-cat");
+        cs.cat = cs.cat === c ? null : c;
+        history.replaceState(null, "", cs.cat ? "#/categorias/" + encodeURIComponent(cs.cat) : "#/categorias");
+        viewCategories(cs.cat ? encodeURIComponent(cs.cat) : null);
+      });
+    });
+    renderCat();
+  }
+
+  function renderCat() {
+    var el = document.getElementById("catbody");
+    if (!cs.cat) { el.innerHTML = '<p class="muted" style="margin-top:22px">Selecciona una categoría para ver sus fondos.</p>'; return; }
+    var t = catType(cs.cat), s = state[t], list = ofType(t).filter(function (f) { return f.c === cs.cat; }), cl = cols(t);
+    if (cs.sort !== "n" && !cl.some(function (x) { return x.k === cs.sort; })) { cs.sort = cl.length ? cl[0].k : "n"; cs.dir = -1; }
+    var cur = cl.filter(function (x) { return x.k === cs.sort; })[0], get = cs.sort === "n" || !cur ? function (f) { return f.n; } : cur.v;
+    var rows = list.slice().sort(function (a, b) {
+      var x = get(a), y = get(b), nx = x == null || x === "" || (typeof x === "number" && !isNum(x)), ny = y == null || y === "" || (typeof y === "number" && !isNum(y));
+      if (nx && ny) return 0; if (nx) return 1; if (ny) return -1;
+      return typeof x === "string" ? cs.dir * x.localeCompare(y, "es") : cs.dir * (x - y);
+    });
+    function th(k, l) {
+      var on = cs.sort === k;
+      return '<th scope="col"' + (on ? ' aria-sort="' + (cs.dir > 0 ? "ascending" : "descending") + '"' : "") + '><button type="button" data-csort="' + k + '">' + l + (on ? (cs.dir > 0 ? " ↑" : " ↓") : "") + "</button></th>";
+    }
+    var avg = cl.map(function (c) {
+      var m = metric(c.k);
+      if (m.txt) return "<td></td>";
+      var vals = list.map(c.v).filter(isNum);
+      return "<td>" + (vals.length ? cell({}, { v: function () { return vals.reduce(function (p, q) { return p + q; }, 0) / vals.length; }, u: m.u, d: m.d, sg: m.sg, txt: false }) : "–") + "</td>";
+    }).join("");
+    el.innerHTML = '<div class="page-head" style="margin-top:26px"><h2 class="cat-h">' + esc(cs.cat) + ' <small class="muted">' + list.length + (list.length === 1 ? " fondo" : " fondos") + '</small></h2>' +
+      '<div class="tools"><label class="axis"><span class="muted">Ordenar por</span><select id="csel" aria-label="Ordenar por"><option value="n"' + (cs.sort === "n" ? " selected" : "") + ">Nombre</option>" +
+      cl.map(function (c) { return '<option value="' + c.k + '"' + (cs.sort === c.k ? " selected" : "") + ">" + esc(c.l) + "</option>"; }).join("") + "</select></label>" +
+      '<button type="button" class="chip" id="cdir" aria-label="Cambiar sentido">' + (cs.dir > 0 ? "Ascendente ↑" : "Descendente ↓") + "</button>" +
+      '<button type="button" class="chip" id="cpick" aria-expanded="' + cs.pick + '">Columnas</button></div></div>' +
+      '<div class="picker" id="cpicker"' + (cs.pick ? "" : " hidden") + "></div>" +
+      '<div class="table-wrap"><table><thead><tr>' + th("n", "Fondo") + cl.map(function (c) { return th(c.k, c.l); }).join("") + "</tr></thead><tbody>" +
+      rows.map(function (f) {
+        return '<tr data-id="' + esc(f.id) + '" tabindex="0"><td class="fund"><b>' + esc(f.n) + (f.idx ? '<span class="tag">Indexado</span>' : "") + "</b><small>" + esc(f.g) + "</small></td>" +
+          cl.map(function (c) { return "<td>" + c.r(f) + "</td>"; }).join("") + "</tr>";
+      }).join("") + '</tbody><tfoot><tr><td><b>Media de la categoría</b></td>' + avg + "</tr></tfoot></table></div>";
+    el.querySelectorAll("[data-csort]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var k = b.getAttribute("data-csort");
+        if (cs.sort === k) cs.dir = -cs.dir; else { cs.sort = k; cs.dir = k === "n" || k === "cal" ? 1 : -1; }
+        renderCat();
+      });
+    });
+    document.getElementById("csel").addEventListener("change", function (e) { cs.sort = e.target.value; cs.dir = cs.sort === "n" || cs.sort === "cal" ? 1 : -1; renderCat(); });
+    document.getElementById("cdir").addEventListener("click", function () { cs.dir = -cs.dir; renderCat(); });
+    var pb = document.getElementById("cpick"), pk = document.getElementById("cpicker");
+    function drawPicker() {
+      var ms = metricsFor(t);
+      pk.innerHTML = GROUPS.map(function (g) {
+        var l = ms.filter(function (m) { return m.g === g; });
+        return l.length ? '<div class="pgroup"><p class="label">' + g + '</p><div class="chips">' + l.map(function (m) {
+          return '<button type="button" class="chip" data-col="' + m.k + '" aria-pressed="' + (s.cols.indexOf(m.k) !== -1) + '">' + esc(m.l) + "</button>";
+        }).join("") + "</div></div>" : "";
+      }).join("") + '<button type="button" class="chip" id="creset">Restablecer columnas</button>';
+      pk.querySelectorAll("[data-col]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          var k = b.getAttribute("data-col"), i = s.cols.indexOf(k);
+          if (i !== -1) { if (s.cols.length > 1) s.cols.splice(i, 1); } else s.cols.push(k);
+          saveCols(t); renderCat();
+        });
+      });
+      document.getElementById("creset").addEventListener("click", function () { s.cols = DEFAULTS[t].slice(); saveCols(t); renderCat(); });
+    }
+    if (cs.pick) drawPicker();
+    pb.addEventListener("click", function () { cs.pick = !cs.pick; renderCat(); });
+    el.querySelectorAll("tbody tr").forEach(function (tr) {
+      function go() { location.hash = "#/fondo/" + encodeURIComponent(tr.getAttribute("data-id")); }
+      tr.addEventListener("click", go);
+      tr.addEventListener("keydown", function (e) { if (e.key === "Enter") go(); });
+    });
+  }
+
   // ---------- router ----------
   function route() {
     var h = (location.hash || "#/").replace(/^#/, ""), p = h.split("/").filter(Boolean);
@@ -998,6 +1101,7 @@
     if (p[0] === "fondo" && p[1]) return viewFund(decodeURIComponent(p[1]));
     if (p[0] === "comparar") return viewCompare(p[1]);
     if (p[0] === "carteras") return viewPortfolios();
+    if (p[0] === "categorias") return viewCategories(p[1]);
     if (p[0] === "recomendadas") return viewRecommended();
     if (p[0] === "cartera" && p[1]) return viewPortfolio(decodeURIComponent(p[1]));
     return viewNotFound();

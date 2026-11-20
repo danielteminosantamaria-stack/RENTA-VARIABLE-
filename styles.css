@@ -304,3 +304,9 @@ tfoot td:first-child { background: var(--soft); }
 .cm-h { margin: 0 0 6px; font-size: 12.5px; color: var(--muted); }
 .cm-h b { color: var(--brand); }
 .cm-t { margin: 0; white-space: pre-line; line-height: 1.55; }
+
+/* Categorías */
+.chips.cats { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips.cats .chip small { opacity: .7; margin-left: 4px; }
+.cat-h { font-family: var(--heading); font-size: 22px; margin: 0; }
+.cat-h small { font-family: var(--sans); font-size: 13px; font-weight: 400; }
