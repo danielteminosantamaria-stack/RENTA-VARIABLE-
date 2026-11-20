@@ -68,6 +68,12 @@
         return '<a href="#/fondo/' + encodeURIComponent(f.id) + '"><span>' + esc(f.n) + '</span>' + ret(f.ret.ytd) + "</a>";
       }).join("") + "</div></div>";
   }
+  function weekList(t, best) {
+    var l = ofType(t).filter(function (f) { return isNum(f.ret.w1); })
+      .sort(function (a, b) { return best ? b.ret.w1 - a.ret.w1 : a.ret.w1 - b.ret.w1; }).slice(0, 5);
+    return "<div><p class=\"label\">" + (best ? "5 mejores" : "5 peores") + " de la semana · " + esc(CATS[t].top) + '</p><div class="list">' +
+      l.map(function (f) { return '<a href="#/fondo/' + encodeURIComponent(f.id) + '"><span>' + esc(f.n) + "</span>" + ret(f.ret.w1) + "</a>"; }).join("") + "</div></div>";
+  }
   function viewHome() {
     setTitle("");
     app.innerHTML =
@@ -80,7 +86,10 @@
       }).join("") + "</div>" +
       '<div class="cards" style="margin-top:14px">' +
       '<a class="cat-card" href="#/comparar"><div class="row"><div><small>Herramienta</small><h2>Comparador de fondos</h2></div><span class="count">hasta ' + CMP_MAX + ' fondos</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
-      '<a class="cat-card" href="#/carteras"><div class="row"><div><small>Herramienta</small><h2>Carteras</h2></div><span class="count">' + PF.length + (PF.length === 1 ? " cartera" : " carteras") + '</span></div><span class="arrow" aria-hidden="true">→</span></a></div>' +
+      '<a class="cat-card" href="#/carteras"><div class="row"><div><small>Herramienta</small><h2>Carteras</h2></div><span class="count">' + PF.length + (PF.length === 1 ? " cartera" : " carteras") + '</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
+      '<a class="cat-card" href="#/recomendadas"><div class="row"><div><small>Herramienta</small><h2>Carteras recomendadas</h2></div><span class="count">3 perfiles</span></div><span class="arrow" aria-hidden="true">→</span></a></div>' +
+      '<div class="tops">' + weekList("rf", true) + weekList("rv", true) + "</div>" +
+      '<div class="tops">' + weekList("rf", false) + weekList("rv", false) + "</div>" +
       '<div class="tops">' + topList("rf") + topList("rv") + "</div>" +
       '<div class="search">' + icon() +
       '<input id="q" type="search" placeholder="Buscar por nombre o ISIN" autocomplete="off" aria-label="Buscar fondo"></div>' +
@@ -541,6 +550,10 @@
       (f.aumc ? fact("Patrimonio de la clase", money(f.aumc)) : "") +
       (f.nav ? fact("Valor liquidativo", money2(f.nav) + ' <span class="muted">(' + esc(f.nd) + ")</span>") : "") + "</dl></section>";
 
+    var cm = (window.COMMENTS && window.COMMENTS[f.id]) || [];
+    html += '<section class="block" style="margin-top:28px"><h3>Comentarios de la gestora</h3>' + (cm.length
+      ? cm.map(function (c) { return '<div class="comment"><p class="cm-h"><b>' + esc(c.d || "") + "</b>" + (c.s ? " · " + esc(c.s) : "") + '</p><p class="cm-t">' + esc(c.t || "") + "</p></div>"; }).join("")
+      : '<p class="muted">Todavía no hay comentarios de la gestora para este fondo.</p>') + "</section>";
     html += "</div>" + footer(f.t);
     app.innerHTML = html;
     var apb = document.getElementById("addpfBtn");
@@ -926,6 +939,55 @@
     return h + "</div>";
   }
 
+  // ---------- carteras recomendadas ----------
+  var PROFILES = [
+    { k: "conservador", n: "Conservadora", d: "Predomina la renta fija.", rf: 4, rv: 2, wrf: 70, rfVol: 4, rfNo: /High Yield|Emergente|Alt -|Otros/, rvVol: 16, rvNo: /Sector|Oro|Emergente|Small|Med\/Peq/ },
+    { k: "moderado", n: "Moderada", d: "Mitad renta fija, mitad renta variable.", rf: 3, rv: 3, wrf: 50, rfVol: 6, rfNo: /High Yield|Otros/, rvVol: 20, rvNo: /Sector|Oro/ },
+    { k: "dinamico", n: "Dinámica", d: "Predomina la renta variable.", rf: 1, rv: 5, wrf: 20, rfVol: 6, rfNo: /High Yield|Otros/, rvNo: /Oro|Recursos|Otros|Infraestructura/ }
+  ];
+  function rankScore(f) { return (isNum(f.score && f.score[3]) ? f.score[3] : -99) + (f.stars || 0) / 100; }
+  function pickBest(t, n, maxVol, no) {
+    var seen = {}, out = [];
+    ofType(t).filter(function (f) {
+      return !f.idx && isNum(f.score && f.score[3]) && !(no && no.test(f.c)) && !(maxVol && !(isNum(f.vol[0]) && f.vol[0] <= maxVol));
+    })
+      .sort(function (a, b) { return rankScore(b) - rankScore(a); })
+      .forEach(function (f) { if (out.length < n && !seen[f.c]) { seen[f.c] = 1; out.push(f); } });
+    return out;
+  }
+  function buildProfile(pr) {
+    var rf = pickBest("rf", pr.rf, pr.rfVol, pr.rfNo), rv = pickBest("rv", pr.rv, pr.rvVol, pr.rvNo), lines = [], tot = 0;
+    [[rf, pr.wrf], [rv, 100 - pr.wrf]].forEach(function (g) {
+      g[0].forEach(function (f) { var w = Math.round(g[1] / g[0].length * 10) / 10; lines.push({ id: f.id, w: w }); tot += w; });
+    });
+    if (lines.length) lines[lines.length - 1].w = Math.round((lines[lines.length - 1].w + 100 - tot) * 10) / 10;
+    return { id: "rec-" + pr.k, name: "Cartera " + pr.n.toLowerCase(), amount: null, lines: lines };
+  }
+  function viewRecommended() {
+    setTitle("Carteras recomendadas");
+    var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Carteras recomendadas</h1>' +
+      '<p class="sub">Tres carteras de 6 fondos por perfil, construidas con los datos del cuaderno. Criterio: mejor puntuación Morningstar total (rating como desempate), un fondo por categoría, sin fondos indexados y con un tope de volatilidad a 1 año según el perfil (en la conservadora y la moderada, sin fondos sectoriales ni high yield).</p>' +
+      '<p class="note">Propuesta orientativa y automática, no es asesoramiento personalizado. Rentabilidad pasada no garantiza resultados futuros.</p>';
+    var built = PROFILES.map(buildProfile);
+    PROFILES.forEach(function (pr, i) {
+      var p = built[i];
+      h += '<section class="rec"><div class="rechead"><div><h2>' + esc(pr.n) + '</h2><p class="muted">' + esc(pr.d) + " " + pr.wrf + "% renta fija, " + (100 - pr.wrf) + '% renta variable.</p></div>' +
+        '<button type="button" class="btn" data-copy="' + i + '">Copiar a mis carteras</button></div>' +
+        '<div class="table-wrap"><table><thead><tr><th scope="col">Fondo</th><th scope="col">Peso %</th><th scope="col">Año</th><th scope="col">1 año</th><th scope="col">Vol. 1 año</th><th scope="col">Rating</th></tr></thead><tbody>' +
+        p.lines.map(function (l) {
+          var f = byId(l.id);
+          return '<tr><td class="fund"><a href="#/fondo/' + encodeURIComponent(f.id) + '"><b>' + esc(f.n) + "</b></a><small>" + esc(f.g) + " · " + esc(f.c) + "</small></td><td class=\"num\">" + nf(l.w, 1) + "</td><td>" + ret(f.ret.ytd) + "</td><td>" + ret(f.ret.y1) + '</td><td class="num">' + pct(f.vol[0], false, 1) + "</td><td>" + (f.stars ? stars(f.stars) : "–") + "</td></tr>";
+        }).join("") + "</tbody></table></div>" + summary(p) + "</section>";
+    });
+    app.innerHTML = h + footer("rv");
+    app.querySelectorAll("[data-copy]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var c = cleanPf({ name: built[+b.getAttribute("data-copy")].name, amount: null, lines: built[+b.getAttribute("data-copy")].lines });
+        PF.push(c); savePf(); location.hash = "#/cartera/" + encodeURIComponent(c.id);
+      });
+    });
+  }
+
   // ---------- router ----------
   function route() {
     var h = (location.hash || "#/").replace(/^#/, ""), p = h.split("/").filter(Boolean);
@@ -936,6 +998,7 @@
     if (p[0] === "fondo" && p[1]) return viewFund(decodeURIComponent(p[1]));
     if (p[0] === "comparar") return viewCompare(p[1]);
     if (p[0] === "carteras") return viewPortfolios();
+    if (p[0] === "recomendadas") return viewRecommended();
     if (p[0] === "cartera" && p[1]) return viewPortfolio(decodeURIComponent(p[1]));
     return viewNotFound();
   }
