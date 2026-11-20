@@ -86,6 +86,7 @@
       }).join("") + "</div>" +
       '<div class="cards" style="margin-top:14px">' +
       '<a class="cat-card" href="#/categorias"><div class="row"><div><small>Explorar</small><h2>Categorías</h2></div><span class="count">' + (allCats("rf").length + allCats("rv").length) + ' categorías</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
+      '<a class="cat-card" href="#/gestion"><div class="row"><div><small>Herramienta</small><h2>Gestión de carteras</h2></div><span class="count">analizar la del cliente</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
       '<a class="cat-card" href="#/construir"><div class="row"><div><small>Herramienta</small><h2>Construir cartera</h2></div><span class="count">con el cliente</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
       '<a class="cat-card" href="#/comparar"><div class="row"><div><small>Herramienta</small><h2>Comparador de fondos</h2></div><span class="count">hasta ' + CMP_MAX + ' fondos</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
       '<a class="cat-card" href="#/carteras"><div class="row"><div><small>Herramienta</small><h2>Carteras</h2></div><span class="count">' + PF.length + (PF.length === 1 ? " cartera" : " carteras") + '</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
@@ -1238,6 +1239,251 @@
     drawAll();
   }
 
+  // ---------- gestión de carteras (análisis de la cartera actual del cliente) ----------
+  var gc = { name: "", profile: "moderado", lines: [] };
+  function bname(k) { return BUCKETS.filter(function (b) { return b.k === k; })[0].n; }
+  function sumOf(o) { return Object.keys(o).reduce(function (a, k) { return a + o[k]; }, 0); }
+  function gcTotal() { return gc.lines.reduce(function (a, l) { return a + (l.amt > 0 ? l.amt : 0); }, 0); }
+  function gcLines() {
+    var t = gcTotal();
+    return gc.lines.map(function (l) {
+      var f = l.id ? byId(l.id) : null;
+      return { id: f ? f.id : null, name: f ? f.n : l.name, bucket: f ? bucketOf(f) : l.bucket, amt: l.amt, w: t && l.amt > 0 ? l.amt / t * 100 : 0 };
+    }).filter(function (l) { return l.w > 0; });
+  }
+  function altFor(f, taken) {
+    return FUNDS.filter(function (g) { return g.id !== f.id && !g.idx && g.c === f.c && taken.indexOf(g.id) === -1; })
+      .sort(function (a, b) { return rankScore(b) - rankScore(a); })[0] || null;
+  }
+  function topCand(k, taken) {
+    return candidates(k).filter(function (g) { return taken.indexOf(g.id) === -1; })[0] || null;
+  }
+  function posInCat(f) {
+    var cat = FUNDS.filter(function (g) { return g.c === f.c; }).sort(function (a, b) { return rankScore(b) - rankScore(a); });
+    return [cat.map(function (g) { return g.id; }).indexOf(f.id) + 1, cat.length];
+  }
+  function gcInfo(L) {
+    var taken = L.map(function (l) { return l.id; }).filter(Boolean);
+    return L.map(function (l) {
+      var f = l.id ? byId(l.id) : null, o = { l: l, f: f, k: l.bucket, v: "Mantener", why: "", alt: null };
+      if (!f) {
+        o.v = "Sustituir"; o.why = "No está en la web, sin datos para analizarlo";
+        o.alt = topCand(l.bucket, taken);
+      } else {
+        var alt = altFor(f, taken), better = alt && rankScore(alt) > rankScore(f) + 0.3;
+        if (f.idx) { o.v = "Sustituir"; o.why = "Fondo indexado"; o.alt = alt || topCand(o.k, taken); }
+        else if (better) { o.v = "Sustituir"; o.why = "En su categoría hay un fondo con mejor puntuación Morningstar"; o.alt = alt; }
+        else if ((f.stars && f.stars <= 2) || (isNum(f.sharpe[1]) && f.sharpe[1] < 0)) { o.v = "Revisar"; o.why = f.stars && f.stars <= 2 ? "Rating Morningstar bajo" : "Sharpe a 3 años negativo"; }
+        else o.why = "Buena posición dentro de su categoría";
+      }
+      if (o.alt) taken.push(o.alt.id);
+      return o;
+    });
+  }
+  function gcTargets(cur, r) {
+    var t = {};
+    BUCKETS.forEach(function (b) { t[b.k] = Math.min(r[b.k][1], Math.max(r[b.k][0], cur[b.k] || 0)); });
+    for (var i = 0; i < 30; i++) {
+      var d = 100 - sumOf(t);
+      if (Math.abs(d) < 0.01) break;
+      var room = {}, tr = 0, pass;
+      for (pass = 0; pass < 2 && tr <= 0; pass++) {
+        tr = 0;
+        BUCKETS.forEach(function (b) {
+          var el = pass === 1 || (cur[b.k] || 0) > 0 || r[b.k][0] > 0;
+          room[b.k] = el ? (d > 0 ? r[b.k][1] - t[b.k] : t[b.k] - r[b.k][0]) : 0; tr += room[b.k];
+        });
+      }
+      if (tr <= 0) break;
+      BUCKETS.forEach(function (b) { t[b.k] += (d > 0 ? 1 : -1) * Math.min(room[b.k], Math.abs(d) * room[b.k] / tr); });
+    }
+    return t;
+  }
+  function gcPropose(info, pr, amount) {
+    var lines = {}, order = [];
+    function add(id, w, note) {
+      if (!lines[id]) { lines[id] = { id: id, w: 0, notes: [] }; order.push(id); }
+      lines[id].w += w; if (note) lines[id].notes.push(note);
+    }
+    info.forEach(function (o) {
+      if (o.v === "Sustituir" && o.alt) add(o.alt.id, o.l.w, "Sustituye a " + o.l.name);
+      else if (o.f) add(o.f.id, o.l.w, "");
+    });
+    var taken = order.slice(), cur = {};
+    order.forEach(function (id) { var k = bucketOf(byId(id)); cur[k] = (cur[k] || 0) + lines[id].w; });
+    var t = gcTargets(cur, pr.r), out = [];
+    BUCKETS.forEach(function (b) {
+      var ids = order.filter(function (id) { return bucketOf(byId(id)) === b.k; }), tw = t[b.k];
+      if (!(tw > 0.05)) return;
+      if (!ids.length) {
+        var c = topCand(b.k, taken);
+        if (c) { taken.push(c.id); out.push({ id: c.id, w: tw, notes: ["Nuevo: cubre " + b.n] }); }
+        return;
+      }
+      var cw = ids.reduce(function (a, id) { return a + lines[id].w; }, 0);
+      ids.forEach(function (id) { out.push({ id: id, w: lines[id].w / cw * tw, notes: lines[id].notes }); });
+    });
+    var mf = maxFunds(amount);
+    while (mf && mf.n !== null && out.length > mf.n) {
+      out.sort(function (a, b) { return a.w - b.w; });
+      var s = out.filter(function (x) { return out.some(function (y) { return y !== x && bucketOf(byId(y.id)) === bucketOf(byId(x.id)); }); })[0];
+      if (!s) break;
+      var big = out.filter(function (y) { return y !== s && bucketOf(byId(y.id)) === bucketOf(byId(s.id)); }).sort(function (a, b) { return b.w - a.w; })[0];
+      big.w += s.w; big.notes = big.notes.concat(["Absorbe a " + byId(s.id).n + " para respetar el máximo de fondos"]);
+      out.splice(out.indexOf(s), 1);
+    }
+    var tot = out.reduce(function (a, x) { return a + x.w; }, 0);
+    out.forEach(function (x) { x.w = Math.round(x.w / tot * 1000) / 10; });
+    var diff = Math.round((100 - out.reduce(function (a, x) { return a + x.w; }, 0)) * 10) / 10;
+    if (out.length) { out.sort(function (a, b) { return b.w - a.w; }); out[0].w = Math.round((out[0].w + diff) * 10) / 10; }
+    return { lines: out, targets: t, cur: cur };
+  }
+
+  function gcAnalyze() {
+    var L = gcLines(), tot = gcTotal(), pr = BPROF[gc.profile], p = { lines: L };
+    if (!L.length) return '<p class="muted" style="margin-top:22px">Añade los fondos de la cartera actual con su importe para ver el análisis.</p>';
+    var n = L.length, info = gcInfo(L), prop = gcPropose(info, pr, tot), cost = metric("cost").v;
+    function kp(lines) {
+      var q = { lines: lines }, g = function (fn) { return wAvg(q, fn).v; };
+      return { y: g(function (f) { return f.ret.ytd; }), y1: g(function (f) { return f.ret.y1; }), y3: g(function (f) { return f.ret.y3; }), v: g(function (f) { return f.vol[0]; }), s: g(function (f) { return f.sharpe[0]; }), c: g(cost), sc: g(function (f) { return f.score && f.score[3]; }) };
+    }
+    var a = kp(L), b = kp(prop.lines), cov = wAvg(p, function (f) { return f.ret.ytd; }).cov;
+    var bw = {}; L.forEach(function (l) { bw[l.bucket] = (bw[l.bucket] || 0) + l.w; });
+    var rvw = RVB.reduce(function (s, k) { return s + (bw[k] || 0); }, 0);
+    var pw = L.map(function (l) { return l.w / 100; }), hhi = pw.reduce(function (s, x) { return s + x * x; }, 0), eff = 1 / hhi;
+    var gw = {}; L.forEach(function (l) { var f = l.id ? byId(l.id) : null; if (f) gw[f.g] = (gw[f.g] || 0) + l.w; });
+    var gtop = Object.keys(gw).sort(function (x, y) { return gw[y] - gw[x]; })[0];
+    var sorted = L.slice().sort(function (x, y) { return y.w - x.w; }), top3 = sorted.slice(0, 3).reduce(function (s, l) { return s + l.w; }, 0);
+    var noData = L.filter(function (l) { return !l.id; }), idxs = info.filter(function (o) { return o.f && o.f.idx; });
+    var mf = maxFunds(tot), implied = rvw < 30 ? "conservador" : rvw <= 60 ? "moderado" : "dinámico";
+    var volCap = { conservador: 6, moderado: 11, dinamico: 16 }[gc.profile];
+
+    var h = '<div class="kpis" style="margin-top:26px">' + kpi("Importe total", nf(tot, 0) + " €", true) + kpi("Rentabilidad del año", ret(a.y), true) + kpi("Rentabilidad 1 año", ret(a.y1)) + kpi("Volatilidad 1 año", pct(a.v, false, 1)) + kpi("Sharpe 1 año", dec(a.s)) + kpi("Coste neto medio", isNum(a.c) ? pct(a.c, false, 2) : "–") + "</div>" +
+      '<p class="note">Medias ponderadas con datos de Morningstar' + (cov < 0.999 ? " (" + nf(cov * 100, 0) + "% del importe tiene datos)" : "") + ". La volatilidad no tiene en cuenta las correlaciones. Rentabilidad pasada, no garantiza resultados futuros.</p>";
+
+    // por categoría de inversión
+    h += '<h2 class="gh">1. Análisis cuantitativo</h2><div class="grid2"><section class="block"><h3>Reparto frente a la horquilla del perfil ' + pr.n.toLowerCase() + "</h3><div class=\"table-wrap\"><table><thead><tr><th scope=\"col\">Categoría</th><th scope=\"col\">Actual</th><th scope=\"col\">Horquilla</th><th scope=\"col\">Estado</th></tr></thead><tbody>" +
+      BUCKETS.map(function (bk) {
+        var w = bw[bk.k] || 0, r = pr.r[bk.k], st = w < r[0] - 0.05 ? ["Por debajo", "out"] : w > r[1] + 0.05 ? ["Por encima", "out"] : ["Dentro", "in"];
+        return "<tr><td>" + esc(bk.n) + '</td><td class="num">' + nf(w, 1) + '%</td><td class="num">' + r[0] + " a " + r[1] + '%</td><td><span class="bst ' + st[1] + '">' + st[0] + "</span></td></tr>";
+      }).join("") + "</tbody></table></div></section>";
+    var mix = [0, 1, 2, 3].map(function (i) { return wAvg(p, function (f) { return f.mix[i]; }).v; }), labels = ["Acciones", "Bonos", "Efectivo", "Otros"], colors = ["#851a2e", "#3b3b3b", "#b9b9b9", "#f0c9b0"];
+    var posm = mix.reduce(function (s, x) { return s + (isNum(x) && x > 0 ? x : 0); }, 0) || 1;
+    h += '<section class="block"><h3>Composición real de la cartera</h3><div class="stack">' + mix.map(function (x, i) { return isNum(x) && x > 0 ? '<i style="width:' + (x / posm * 100).toFixed(2) + "%;background:" + colors[i] + '"></i>' : ""; }).join("") +
+      '</div><div class="keys">' + mix.map(function (x, i) { return isNum(x) && Math.abs(x) >= 0.05 ? '<span style="--c:' + colors[i] + '">' + labels[i] + " <b>" + pct(x, false, 1) + "</b></span>" : ""; }).join("") + "</div>" +
+      '<dl class="facts" style="margin-top:16px">' + fact("Renta variable (categorías)", nf(rvw, 1) + "%") + fact("Número de fondos", String(n)) + fact("Fondos efectivos (concentración)", nf(eff, 1)) + fact("Mayor posición", esc(sorted[0].name) + " (" + nf(sorted[0].w, 1) + "%)") + fact("Tres mayores posiciones", nf(top3, 1) + "%") + (gtop ? fact("Gestora principal", esc(gtop) + " (" + nf(gw[gtop], 1) + "%)") : "") + "</dl></section></div>";
+
+    // por fondo
+    h += '<section class="block" style="margin-top:22px"><h3>Análisis por fondo</h3><div class="table-wrap"><table><thead><tr><th scope="col">Fondo</th><th scope="col">Peso</th><th scope="col">Año</th><th scope="col">1 año</th><th scope="col">3 años</th><th scope="col">Vol. 1 a.</th><th scope="col">Sharpe 1 a.</th><th scope="col">Rating</th><th scope="col">Puesto en su categoría</th><th scope="col">Valoración</th></tr></thead><tbody>' +
+      info.map(function (o) {
+        var f = o.f, cls2 = o.v === "Mantener" ? "keep" : o.v === "Revisar" ? "rev" : "sub", ps = f ? posInCat(f) : null;
+        return '<tr><td class="fund"><b>' + esc(o.l.name) + (f && f.idx ? '<span class="tag">Indexado</span>' : "") + "</b><small>" + (f ? esc(f.g) + " · " + esc(f.c) : "Fuera de la web · " + esc(bname(o.k))) + '</small></td><td class="num">' + nf(o.l.w, 1) + "%</td>" +
+          (f ? "<td>" + ret(f.ret.ytd) + "</td><td>" + ret(f.ret.y1) + "</td><td>" + ret(f.ret.y3) + '</td><td class="num">' + pct(f.vol[0], false, 1) + '</td><td class="num">' + dec(f.sharpe[0]) + "</td><td>" + (f.stars ? stars(f.stars) : "–") + '</td><td class="num">' + ps[0] + " de " + ps[1] + "</td>" : '<td colspan="7" class="muted">Sin datos</td>') +
+          '<td><span class="vd ' + cls2 + '">' + o.v + "</span><small>" + esc(o.why) + "</small></td></tr>";
+      }).join("") + "</tbody></table></div></section>";
+
+    // cualitativo
+    var good = [], bad = [];
+    var ok = BUCKETS.filter(function (bk) { var w = bw[bk.k] || 0, r = pr.r[bk.k]; return w >= r[0] - 0.05 && w <= r[1] + 0.05; }).length;
+    (implied === gc.profile ? good : bad).push(implied === gc.profile ? "La proporción de renta variable (" + nf(rvw, 0) + "%) es coherente con un perfil " + pr.n.toLowerCase() + "." : "La cartera tiene un " + nf(rvw, 0) + "% en renta variable, más propia de un perfil " + implied + " que del " + pr.n.toLowerCase() + " elegido.");
+    (ok === BUCKETS.length ? good : bad).push(ok === BUCKETS.length ? "Todas las categorías de inversión están dentro de la horquilla del perfil." : ok + " de " + BUCKETS.length + " categorías están dentro de la horquilla del perfil; el resto está desajustado.");
+    (eff >= n * 0.7 ? good : bad).push(eff >= n * 0.7 ? "El peso está bien repartido entre los fondos (equivalen a " + nf(eff, 1) + " fondos de igual peso)." : "El peso está concentrado: " + n + " fondos que equivalen a " + nf(eff, 1) + " de igual peso, y las tres mayores posiciones suman " + nf(top3, 0) + "%.");
+    if (gtop && gw[gtop] > 40) bad.push("Dependencia alta de una gestora: " + gtop + " representa el " + nf(gw[gtop], 0) + "% de la cartera.");
+    if (isNum(a.v)) (a.v <= volCap ? good : bad).push(a.v <= volCap ? "La volatilidad aproximada (" + pct(a.v, false, 1) + ") es razonable para el perfil." : "La volatilidad aproximada (" + pct(a.v, false, 1) + ") es alta para un perfil " + pr.n.toLowerCase() + ".");
+    if (isNum(a.c)) (a.c <= 1.5 ? good : bad).push(a.c <= 1.5 ? "El coste neto medio (" + pct(a.c, false, 2) + ") es contenido." : "El coste neto medio (" + pct(a.c, false, 2) + ") es elevado; conviene comprobar si compensa con la rentabilidad.");
+    var good4 = info.filter(function (o) { return o.f && o.f.stars >= 4; }).reduce(function (s, o) { return s + o.l.w; }, 0);
+    (good4 >= 60 ? good : bad).push("El " + nf(good4, 0) + "% del importe está en fondos con 4 o 5 estrellas Morningstar" + (good4 >= 60 ? "." : ", por debajo de lo deseable."));
+    if (idxs.length) bad.push("Incluye fondos indexados (" + idxs.map(function (o) { return o.l.name; }).join(", ") + "), que no entran en la selección de fondos que haces con tus clientes.");
+    if (noData.length) bad.push(noData.length + (noData.length === 1 ? " fondo no está" : " fondos no están") + " en la web, así que no se pueden medir.");
+    if (mf && mf.n !== null && n > mf.n) bad.push("Tiene " + n + " fondos para " + nf(tot, 0) + " €, por encima del máximo de " + mf.n + ".");
+    h += '<h2 class="gh">2. Análisis cualitativo</h2><div class="grid2"><section class="block"><h3>Puntos fuertes</h3><ul class="checks">' + (good.length ? good.map(function (s) { return '<li class="ok"><i></i><span>' + esc(s) + "</span></li>"; }).join("") : '<li class="info"><i></i><span>No se han detectado puntos fuertes claros.</span></li>') +
+      '</ul></section><section class="block"><h3>Puntos débiles</h3><ul class="checks">' + (bad.length ? bad.map(function (s) { return '<li class="warn"><i></i><span>' + esc(s) + "</span></li>"; }).join("") : '<li class="ok"><i></i><span>No se han detectado puntos débiles.</span></li>') + "</ul></section></div>";
+
+    // mejoras
+    var acts = [];
+    info.forEach(function (o) {
+      if (o.v === "Sustituir" && o.alt) {
+        var al = o.alt, f = o.f;
+        acts.push("Sustituir " + o.l.name + " por " + al.n + " (" + al.g + "). " + (f ? "Puntuación Morningstar " + dec(f.score && f.score[3]) + " frente a " + dec(al.score && al.score[3]) + ", Sharpe 1 año " + dec(f.sharpe[0]) + " frente a " + dec(al.sharpe[0]) + ", 1 año " + pct(f.ret.y1, true, 1) + " frente a " + pct(al.ret.y1, true, 1) + "." : "Es el fondo mejor puntuado de " + bname(o.k) + "."));
+      } else if (o.v === "Sustituir") acts.push(o.l.name + ": " + o.why.toLowerCase() + " y no hay alternativa disponible en su categoría.");
+      else if (o.v === "Revisar") acts.push("Revisar " + o.l.name + ": " + o.why.toLowerCase() + ".");
+    });
+    BUCKETS.forEach(function (bk) {
+      var c = bw[bk.k] || 0, t2 = prop.targets[bk.k] || 0;
+      if (Math.abs(t2 - c) >= 1) acts.push((t2 > c ? "Aumentar " : "Reducir ") + bk.n + " del " + nf(c, 0) + "% al " + nf(t2, 0) + "% (horquilla " + pr.r[bk.k][0] + " a " + pr.r[bk.k][1] + "%).");
+    });
+    if (mf && mf.n !== null && n > mf.n) acts.push("Reducir el número de fondos de " + n + " a " + mf.n + " como máximo.");
+    h += '<h2 class="gh">3. Mejoras propuestas</h2><section class="block"><ol class="acts">' + (acts.length ? acts.map(function (s) { return "<li>" + esc(s) + "</li>"; }).join("") : "<li>La cartera está bien construida para el perfil; no se proponen cambios.</li>") + "</ol></section>";
+
+    // cartera propuesta
+    var pn = prop.lines.length, cmpRows = [["Rentabilidad del año", ret(a.y), ret(b.y)], ["Rentabilidad 1 año", ret(a.y1), ret(b.y1)], ["Rentabilidad 3 años", ret(a.y3), ret(b.y3)], ["Volatilidad 1 año", pct(a.v, false, 1), pct(b.v, false, 1)], ["Sharpe 1 año", dec(a.s), dec(b.s)], ["Coste neto medio", isNum(a.c) ? pct(a.c, false, 2) : "–", isNum(b.c) ? pct(b.c, false, 2) : "–"], ["Puntuación Morningstar media", dec(a.sc), dec(b.sc)], ["Número de fondos", String(n), String(pn)]];
+    var gone = info.filter(function (o) { return o.v === "Sustituir" && o.alt; }).map(function (o) { return o.l.name; });
+    h += '<h2 class="gh">4. Cartera propuesta</h2><div class="grid2"><section class="block"><h3>Composición propuesta</h3><div class="table-wrap"><table><thead><tr><th scope="col">Fondo</th><th scope="col">Peso</th><th scope="col">Importe</th></tr></thead><tbody>' +
+      prop.lines.map(function (x) { var f = byId(x.id); return '<tr><td class="fund"><a href="#/fondo/' + encodeURIComponent(f.id) + '"><b>' + esc(f.n) + "</b></a><small>" + esc(f.g) + " · " + esc(bname(bucketOf(f))) + (x.notes.length ? " · " + esc(x.notes.join("; ")) : "") + '</small></td><td class="num">' + nf(x.w, 1) + '%</td><td class="num">' + (tot ? nf(tot * x.w / 100, 0) + " €" : "–") + "</td></tr>"; }).join("") +
+      '</tbody></table></div></section><section class="block"><h3>Antes y después</h3><div class="table-wrap"><table><thead><tr><th scope="col"></th><th scope="col">Actual</th><th scope="col">Propuesta</th></tr></thead><tbody>' +
+      cmpRows.map(function (r) { return "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td><td><b>" + r[2] + "</b></td></tr>"; }).join("") + '</tbody></table></div><p class="note">Los cambios se hacen manteniendo el peso de cada categoría dentro de la horquilla del perfil y sustituyendo solo los fondos marcados. Para el traspaso, calcula las participaciones por fondo.</p></section></div>' +
+      '<div class="row tools2"><button type="button" class="btn" id="gcsave">Guardar propuesta en mis carteras</button></div>' +
+      '<p class="note">Análisis automático y orientativo con datos de Morningstar y reglas propias. Antes de proponer nada al cliente hay que revisar su idoneidad, su horizonte y su fiscalidad, y las plusvalías latentes que genere cada traspaso.</p>';
+    gcLast = { prop: prop, tot: tot };
+    return h;
+  }
+  var gcLast = null;
+
+  function viewGestion() {
+    setTitle("Gestión de carteras");
+    var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Gestión de carteras</h1>' +
+      '<p class="sub">Introduce la cartera actual del cliente con el importe de cada fondo. La web hace un análisis cuantitativo y cualitativo y propone mejoras sobre los fondos del universo. Los datos de la cartera solo viven en este navegador mientras la página esté abierta y no se guardan en ningún sitio.</p>' +
+      '<div class="bhead"><label class="fld"><span class="muted">Nombre de la cartera</span><input class="inp" id="gname" maxlength="80" placeholder="Por ejemplo, Cartera actual" value="' + esc(gc.name) + '"></label>' +
+      '<div class="fld"><span class="muted">Perfil del cliente</span><div class="seg" role="group" aria-label="Perfil">' + Object.keys(BPROF).map(function (k) { return '<button type="button" data-gp="' + k + '" aria-pressed="' + (gc.profile === k) + '">' + BPROF[k].n + "</button>"; }).join("") + "</div></div></div>" +
+      '<div class="search tight">' + icon() + '<input id="gq" type="search" autocomplete="off" placeholder="Añadir fondo de la cartera por nombre o ISIN" aria-label="Añadir fondo"></div><div class="results" id="gres"></div>' +
+      '<details class="manual"><summary>El fondo no está en la web</summary><div class="row" style="margin-top:10px"><input class="inp grow" id="mname" placeholder="Nombre del fondo" maxlength="80"><select class="inp" id="mb">' + BUCKETS.map(function (b) { return '<option value="' + b.k + '">' + esc(b.n) + "</option>"; }).join("") + '</select><button type="button" class="btn ghost" id="madd">Añadir</button></div></details>' +
+      '<div id="gtable"></div><div id="gout" class="gest"></div>';
+    app.innerHTML = h + footer("rv");
+
+    function drawTable() {
+      var el = document.getElementById("gtable");
+      if (!gc.lines.length) { el.innerHTML = ""; return; }
+      el.innerHTML = '<div class="table-wrap" style="margin-top:14px"><table><thead><tr><th scope="col">Fondo</th><th scope="col">Importe (€)</th><th scope="col">Peso</th><th scope="col"><span class="sr">Quitar</span></th></tr></thead><tbody>' +
+        gc.lines.map(function (l, i) {
+          var f = l.id ? byId(l.id) : null;
+          return '<tr><td class="fund"><b>' + esc(f ? f.n : l.name) + "</b><small>" + (f ? esc(f.g) + " · " + esc(f.c) : "Fuera de la web · " + esc(bname(l.bucket))) + '</small></td><td><input class="inp amt" type="number" min="0" step="100" value="' + (l.amt || "") + '" data-amt="' + i + '" aria-label="Importe de ' + esc(f ? f.n : l.name) + '"></td><td class="num" data-pw="' + i + '"></td><td><button type="button" class="x" data-rm="' + i + '" aria-label="Quitar">×</button></td></tr>';
+        }).join("") + '</tbody><tfoot><tr><td><b>Total</b></td><td class="num" id="gtot"></td><td></td><td></td></tr></tfoot></table></div>';
+      el.querySelectorAll("[data-amt]").forEach(function (inp) {
+        inp.addEventListener("input", function () { var v = parseNum(inp.value); gc.lines[+inp.getAttribute("data-amt")].amt = v !== null && v > 0 ? v : 0; drawOut(); });
+      });
+      el.querySelectorAll("[data-rm]").forEach(function (b) { b.addEventListener("click", function () { gc.lines.splice(+b.getAttribute("data-rm"), 1); drawTable(); drawOut(); }); });
+    }
+    function drawOut() {
+      var t = gcTotal();
+      document.querySelectorAll("[data-pw]").forEach(function (c) { var l = gc.lines[+c.getAttribute("data-pw")]; c.textContent = t && l.amt > 0 ? nf(l.amt / t * 100, 1) + "%" : "–"; });
+      var tt = document.getElementById("gtot"); if (tt) tt.textContent = nf(t, 0) + " €";
+      document.getElementById("gout").innerHTML = gc.lines.length ? gcAnalyze() : "";
+      var sv = document.getElementById("gcsave");
+      if (sv) sv.addEventListener("click", function () {
+        var c = cleanPf({ name: (gc.name || "Cartera") + " (propuesta)", amount: gcLast.tot || null, lines: gcLast.prop.lines.map(function (x) { return { id: x.id, w: x.w }; }) });
+        PF.push(c); savePf(); location.hash = "#/cartera/" + encodeURIComponent(c.id);
+      });
+    }
+    document.getElementById("gname").addEventListener("input", function (e) { gc.name = e.target.value.slice(0, 80); });
+    app.querySelectorAll("[data-gp]").forEach(function (b) { b.addEventListener("click", function () { gc.profile = b.getAttribute("data-gp"); app.querySelectorAll("[data-gp]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); }); drawOut(); }); });
+    var gq = document.getElementById("gq");
+    gq.addEventListener("input", function () {
+      var v = gq.value.trim(), res = document.getElementById("gres");
+      if (!v) { res.innerHTML = ""; return; }
+      res.innerHTML = pickList(v, gc.lines.map(function (l) { return l.id; }).filter(Boolean), function (f) { return '<a href="#" data-add="' + esc(f.id) + '">' + esc(f.n) + "<small>" + esc(f.g) + " · " + esc(f.c) + "</small></a>"; });
+      res.querySelectorAll("[data-add]").forEach(function (a) {
+        a.addEventListener("click", function (e) { e.preventDefault(); gc.lines.push({ id: a.getAttribute("data-add"), amt: 0 }); gq.value = ""; res.innerHTML = ""; drawTable(); drawOut(); });
+      });
+    });
+    document.getElementById("madd").addEventListener("click", function () {
+      var nm = document.getElementById("mname").value.trim();
+      if (!nm) return;
+      gc.lines.push({ id: null, name: nm.slice(0, 80), bucket: document.getElementById("mb").value, amt: 0 });
+      document.getElementById("mname").value = ""; drawTable(); drawOut();
+    });
+    drawTable(); drawOut();
+  }
+
   // ---------- router ----------
   function route() {
     var h = (location.hash || "#/").replace(/^#/, ""), p = h.split("/").filter(Boolean);
@@ -1248,6 +1494,7 @@
     if (p[0] === "fondo" && p[1]) return viewFund(decodeURIComponent(p[1]));
     if (p[0] === "comparar") return viewCompare(p[1]);
     if (p[0] === "carteras") return viewPortfolios();
+    if (p[0] === "gestion") return viewGestion();
     if (p[0] === "construir") return viewBuild();
     if (p[0] === "categorias") return viewCategories(p[1]);
     if (p[0] === "recomendadas") return viewRecommended();
