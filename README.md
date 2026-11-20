@@ -1,4 +1,4 @@
-# Cuaderno de fondos
+# GESTION DE CARTERAS - DANIEL TEMIÑO
 
 Web estática (sin servidor, sin dependencias) con el seguimiento de fondos de renta fija y renta variable y mixtos a partir de las hojas de Morningstar del Drive.
 

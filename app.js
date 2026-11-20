@@ -55,7 +55,7 @@
     if (!n) return true;
     return norm(f.n + " " + f.id + " " + f.g + " " + f.c).indexOf(n) !== -1;
   }
-  function setTitle(t) { document.title = t ? t + " · Cuaderno de fondos" : "Cuaderno de fondos"; }
+  function setTitle(t) { document.title = t ? t + " · GESTION DE CARTERAS - DANIEL TEMIÑO" : "GESTION DE CARTERAS - DANIEL TEMIÑO"; }
 
   // ---------- inicio ----------
   function topFive(t) {
@@ -77,7 +77,7 @@
   function viewHome() {
     setTitle("");
     app.innerHTML =
-      '<header class="hero"><h1>Cuaderno de fondos</h1><p>Rentabilidad, riesgo y ratios de los fondos en seguimiento, con datos de Morningstar.</p></header>' +
+      '<header class="hero"><h1>GESTION DE CARTERAS - DANIEL TEMIÑO</h1><p>Rentabilidad, riesgo y ratios de los fondos en seguimiento, con datos de Morningstar.</p></header>' +
       '<div class="cards">' +
       ["rf", "rv"].map(function (t) {
         return '<a class="cat-card" href="#/' + t + '"><div class="row"><div><small>Fondos de</small><h2>' +
@@ -570,7 +570,7 @@
 
   function viewNotFound() {
     setTitle("No encontrado");
-    app.innerHTML = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>No encontrado</h1><p class="muted">Este fondo no está en el cuaderno.</p>';
+    app.innerHTML = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>No encontrado</h1><p class="muted">Este fondo no está en la web.</p>';
   }
 
   // ---------- utilidades comunes de comparador y carteras ----------
@@ -727,7 +727,7 @@
   function viewPortfolios() {
     setTitle("Carteras");
     var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Carteras</h1>' +
-      '<p class="sub">Crea carteras con fondos del cuaderno y sigue su rentabilidad y riesgo. Las carteras se guardan solo en este navegador, no se envían a ningún sitio. Usa Exportar para guardar una copia.</p>';
+      '<p class="sub">Crea carteras con fondos de la web y sigue su rentabilidad y riesgo. Las carteras se guardan solo en este navegador, no se envían a ningún sitio. Usa Exportar para guardar una copia.</p>';
     h += '<div class="pf-grid">' + (PF.length ? PF.map(function (p) {
       var a = wAvg(p, function (f) { return f.ret.ytd; });
       return '<a class="pfcard" href="#/cartera/' + encodeURIComponent(p.id) + '"><b>' + esc(p.name) + "</b><small>" + p.lines.length +
@@ -968,7 +968,7 @@
   function viewRecommended() {
     setTitle("Carteras recomendadas");
     var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Carteras recomendadas</h1>' +
-      '<p class="sub">Tres carteras de 6 fondos por perfil, construidas con los datos del cuaderno. Criterio: mejor puntuación Morningstar total (rating como desempate), un fondo por categoría, sin fondos indexados y con un tope de volatilidad a 1 año según el perfil (en la conservadora y la moderada, sin fondos sectoriales ni high yield).</p>' +
+      '<p class="sub">Tres carteras de 6 fondos por perfil, construidas con los datos de la web. Criterio: mejor puntuación Morningstar total (rating como desempate), un fondo por categoría, sin fondos indexados y con un tope de volatilidad a 1 año según el perfil (en la conservadora y la moderada, sin fondos sectoriales ni high yield).</p>' +
       '<p class="note">Propuesta orientativa y automática, no es asesoramiento personalizado. Rentabilidad pasada no garantiza resultados futuros.</p>';
     var built = PROFILES.map(buildProfile);
     PROFILES.forEach(function (pr, i) {
