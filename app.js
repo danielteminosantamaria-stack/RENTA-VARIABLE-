@@ -78,6 +78,9 @@
           esc(CATS[t].card) + '</h2></div><span class="count">' + ofType(t).length + ' fondos</span></div>' +
           '<span class="arrow" aria-hidden="true">→</span></a>';
       }).join("") + "</div>" +
+      '<div class="cards" style="margin-top:14px">' +
+      '<a class="cat-card" href="#/comparar"><div class="row"><div><small>Herramienta</small><h2>Comparador de fondos</h2></div><span class="count">hasta ' + CMP_MAX + ' fondos</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
+      '<a class="cat-card" href="#/carteras"><div class="row"><div><small>Herramienta</small><h2>Carteras</h2></div><span class="count">' + PF.length + (PF.length === 1 ? " cartera" : " carteras") + '</span></div><span class="arrow" aria-hidden="true">→</span></a></div>' +
       '<div class="tops">' + topList("rf") + topList("rv") + "</div>" +
       '<div class="search">' + icon() +
       '<input id="q" type="search" placeholder="Buscar por nombre o ISIN" autocomplete="off" aria-label="Buscar fondo"></div>' +
@@ -447,7 +450,11 @@
     var docs = [["ficha", "Ficha (KID)", "Documento oficial"], ["informe", "Informe periódico", "Documento oficial"], ["xray", "X-Ray", "Morningstar"], ["ms", "Morningstar", "Ficha online"]]
       .filter(function (d) { return safeUrl(f[d[0]]); })
       .map(function (d) { return '<a class="doc" href="' + esc(f[d[0]]) + '" target="_blank" rel="noopener noreferrer">' + d[1] + "<small>" + d[2] + "</small></a>"; });
-    if (docs.length) html += '<div class="docs">' + docs.join("") + "</div>";
+    docs.push('<a class="doc" href="#/comparar/' + encodeURIComponent(f.id) + '">Comparar<small>Con otros fondos</small></a>');
+    docs.push(PF.length
+      ? '<span class="doc addpf">Añadir a cartera<small><select id="addpf" aria-label="Cartera">' + PF.map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.name) + "</option>"; }).join("") + '</select> <button type="button" id="addpfBtn" class="btn sm">Añadir</button></small></span>'
+      : '<a class="doc" href="#/carteras">Carteras<small>Crear una cartera</small></a>');
+    html += '<div class="docs">' + docs.join("") + "</div>";
 
     html += '<div class="grid2">';
 
@@ -536,11 +543,387 @@
 
     html += "</div>" + footer(f.t);
     app.innerHTML = html;
+    var apb = document.getElementById("addpfBtn");
+    if (apb) apb.addEventListener("click", function () {
+      var p = pfById(document.getElementById("addpf").value);
+      if (!p) return;
+      if (p.lines.some(function (l) { return l.id === f.id; })) { apb.textContent = "Ya está"; return; }
+      p.lines.push({ id: f.id, w: Math.max(0, Math.round((100 - sumW(p)) * 100) / 100) });
+      savePf(); apb.textContent = "Añadido";
+    });
   }
 
   function viewNotFound() {
     setTitle("No encontrado");
     app.innerHTML = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>No encontrado</h1><p class="muted">Este fondo no está en el cuaderno.</p>';
+  }
+
+  // ---------- utilidades comunes de comparador y carteras ----------
+  var BETTER = {
+    hi: "w1 m1 m3 m6 ytd y1 y3 y5 y10 rmed sh1 sh3 sh5 so1 so3 so5 mar1 mar3 mar5 alpha score ddmax worst1 pos1".split(" "),
+    lo: "vol1 vol3 vol5 cost".split(" ")
+  };
+  var CMP_MAX = 4;
+  var CMP_COLORS = ["#851a2e", "#3b3b3b", "#1e7a4a", "#c27c0e"];
+  var YEARS = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
+
+  function annOf(f, y) { return f.ann && isNum(f.ann[2026 - y]) ? f.ann[2026 - y] : null; }
+  function yearLabel(y) { return y === 2026 ? "2026 (" + String(META.annDate || "").slice(0, 5) + ")" : String(y); }
+  function download(name, text, type) {
+    var b = new Blob([text], { type: type }), u = URL.createObjectURL(b), a = document.createElement("a");
+    a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(u); }, 1000);
+  }
+  function parseNum(s) {
+    var n = parseFloat(String(s == null ? "" : s).replace(",", "."));
+    return isFinite(n) ? n : null;
+  }
+  function pickList(q, exclude, make) {
+    var hits = FUNDS.filter(function (f) { return exclude.indexOf(f.id) === -1 && matches(f, q); }).slice(0, 8);
+    return hits.length ? '<div class="list">' + hits.map(make).join("") + "</div>" : '<div class="list"><div class="empty">Sin resultados</div></div>';
+  }
+  function bars(items, max, signed) {
+    return '<div class="bars">' + items.map(function (x) {
+      return bar(x[0], x[1], max, signed ? (x[1] < 0 ? "neg" : "pos") : "", signed ? '<span class="' + cls(x[1]) + '">' + pct(x[1], true, 1) + "</span>" : pct(x[1], false, 1));
+    }).join("") + "</div>";
+  }
+
+  // ---------- comparador ----------
+  function hashFor(ids) { return "#/comparar" + (ids.length ? "/" + ids.map(encodeURIComponent).join(",") : ""); }
+
+  function viewCompare(raw) {
+    setTitle("Comparador de fondos");
+    var ids = (raw ? raw.split(",") : []).map(function (x) { try { return decodeURIComponent(x); } catch (e) { return x; } })
+      .filter(function (id, i, a) { return byId(id) && a.indexOf(id) === i; }).slice(0, CMP_MAX);
+    var fs = ids.map(byId);
+    var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Comparador de fondos</h1>' +
+      '<p class="sub">Elige entre 2 y ' + CMP_MAX + ' fondos para ver sus métricas una al lado de otra. En cada fila se marca el mejor valor.</p>';
+    h += '<div class="sel">' + fs.map(function (f, i) {
+      var rest = ids.filter(function (x) { return x !== f.id; });
+      return '<a class="selchip" href="' + hashFor(rest) + '" style="--c:' + CMP_COLORS[i] + '" title="Quitar de la comparación">' + esc(f.n) + " <b>×</b></a>";
+    }).join("") + "</div>";
+    if (ids.length < CMP_MAX) {
+      h += '<div class="search tight">' + icon() + '<input id="cq" type="search" autocomplete="off" placeholder="Añadir fondo por nombre o ISIN" aria-label="Añadir fondo"></div><div class="results" id="cres"></div>';
+    }
+    h += fs.length >= 2 ? cmpTable(fs) + cmpChart(fs) : '<p class="muted" style="margin-top:20px">Añade al menos 2 fondos para compararlos.</p>';
+    app.innerHTML = h + footer("rv");
+    var cq = document.getElementById("cq");
+    if (cq) cq.addEventListener("input", function () {
+      var v = cq.value.trim(), res = document.getElementById("cres");
+      res.innerHTML = v ? pickList(v, ids, function (f) {
+        return '<a href="' + hashFor(ids.concat(f.id)) + '">' + esc(f.n) + "<small>" + esc(f.g) + " · " + esc(f.c) + "</small></a>";
+      }) : "";
+    });
+  }
+
+  function cmpTable(fs) {
+    var n = fs.length, rows = "";
+    var head = "<tr><th scope=\"col\"></th>" + fs.map(function (f, i) {
+      return '<th scope="col" class="ch"><a href="#/fondo/' + encodeURIComponent(f.id) + '" style="--c:' + CMP_COLORS[i] + '"><i></i>' + esc(f.n) + "</a><small>" + esc(f.g) + "</small></th>";
+    }).join("") + "</tr>";
+    function textRow(label, fn) { return "<tr><td>" + label + "</td>" + fs.map(function (f) { return "<td>" + fn(f) + "</td>"; }).join("") + "</tr>"; }
+    rows += '<tr class="grp"><td colspan="' + (n + 1) + '">General</td></tr>' +
+      textRow("Categoría Morningstar", function (f) { return '<span class="cat">' + esc(f.c) + "</span>"; }) +
+      textRow("Rating Morningstar", function (f) { return f.stars ? stars(f.stars) : '<span class="muted">–</span>'; }) +
+      textRow("Patrimonio de la clase", function (f) { return f.aumc ? money(f.aumc) : "–"; });
+    GROUPS.forEach(function (g) {
+      var ms = METRICS.filter(function (m) {
+        return m.g === g && fs.some(function (f) { var v = m.v(f); return m.txt ? !!v : isNum(v); });
+      });
+      if (!ms.length) return;
+      rows += '<tr class="grp"><td colspan="' + (n + 1) + '">' + g + "</td></tr>";
+      ms.forEach(function (m) {
+        var vals = fs.map(function (f) { return m.v(f); });
+        var dir = BETTER.hi.indexOf(m.k) !== -1 ? 1 : BETTER.lo.indexOf(m.k) !== -1 ? -1 : 0;
+        var nums = m.txt ? [] : vals.filter(isNum), best = null;
+        if (dir && nums.length > 1) best = dir > 0 ? Math.max.apply(null, nums) : Math.min.apply(null, nums);
+        rows += "<tr><td>" + esc(m.l) + "</td>" + fs.map(function (f, i) {
+          return '<td' + (best !== null && vals[i] === best ? ' class="best"' : "") + ">" + cell(f, m) + "</td>";
+        }).join("") + "</tr>";
+      });
+    });
+    return '<div class="table-wrap cmp"><table><thead>' + head + "</thead><tbody>" + rows + "</tbody></table></div>";
+  }
+
+  function cmpChart(fs) {
+    var vals = [];
+    YEARS.forEach(function (y) { fs.forEach(function (f) { var v = annOf(f, y); if (v !== null) vals.push(v); }); });
+    if (!vals.length) return "";
+    var W = 820, H = 320, L = 48, R = 12, T = 14, B = 34;
+    var lo = Math.min(0, Math.min.apply(null, vals)) * 1.1, hi = Math.max(0.1, Math.max.apply(null, vals) * 1.1);
+    function Y(v) { return H - B - (v - lo) / (hi - lo) * (H - T - B); }
+    var gw = (W - L - R) / YEARS.length, bw = Math.min(24, gw * 0.8 / fs.length), g = "", t = ticks(lo, hi, 5), d = dd(t);
+    t.forEach(function (v) {
+      g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="' + (v === 0 ? "#bdbdbd" : "#e0e0e0") + '"/>' +
+        '<text x="' + (L - 8) + '" y="' + (Y(v) + 4) + '" text-anchor="end" fill="#717171" font-size="11">' + nf(v, d) + "%</text>";
+    });
+    YEARS.forEach(function (y, gi) {
+      var x0 = L + gi * gw + (gw - bw * fs.length) / 2;
+      fs.forEach(function (f, i) {
+        var v = annOf(f, y);
+        if (v === null) return;
+        var top = Y(Math.max(v, 0)), hgt = Math.max(1, Math.abs(Y(v) - Y(0)));
+        g += '<rect x="' + (x0 + i * bw).toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + (bw - 2).toFixed(1) + '" height="' + hgt.toFixed(1) + '" rx="2" fill="' + CMP_COLORS[i] + '"><title>' + esc(f.n) + " " + yearLabel(y) + ": " + pct(v, true, 1) + "</title></rect>";
+      });
+      g += '<text x="' + (L + gi * gw + gw / 2) + '" y="' + (H - 12) + '" text-anchor="middle" fill="#717171" font-size="11">' + esc(yearLabel(y)) + "</text>";
+    });
+    return '<div class="chart-card" style="margin-top:22px"><p class="label">Rentabilidad por año</p><svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Rentabilidad por año de los fondos comparados">' + g + "</svg>" +
+      '<div class="legend">' + fs.map(function (f, i) { return '<span><i style="background:' + CMP_COLORS[i] + '"></i>' + esc(f.n) + "</span>"; }).join("") + "</div></div>";
+  }
+
+  // ---------- carteras (se guardan solo en este navegador) ----------
+  var PF_KEY = "cf_carteras";
+  function loadPf() {
+    try { var v = JSON.parse(localStorage.getItem(PF_KEY) || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+  }
+  var PF = loadPf();
+  function savePf() { try { localStorage.setItem(PF_KEY, JSON.stringify(PF)); } catch (e) { /* sin almacenamiento */ } }
+  function uid() { return "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function pfById(id) { return PF.filter(function (p) { return p.id === id; })[0] || null; }
+  function sumW(p) { return p.lines.reduce(function (a, l) { return a + (isNum(l.w) ? l.w : 0); }, 0); }
+  function wAvg(p, get) {
+    var s = 0, c = 0, tot = sumW(p);
+    p.lines.forEach(function (l) {
+      var f = byId(l.id);
+      if (!f || !(l.w > 0)) return;
+      var v = get(f);
+      if (isNum(v)) { s += l.w * v; c += l.w; }
+    });
+    return { v: c ? s / c : null, cov: tot ? c / tot : 0 };
+  }
+  function maxFunds(amount) {
+    if (!isNum(amount) || amount <= 0) return null;
+    if (amount < 60000) return { n: 6, note: amount >= 50000 ? " (el tramo de 50.000 a 60.000 no está definido, se aplica el de menos de 50.000)" : "" };
+    if (amount <= 100000) return { n: 8, note: "" };
+    if (amount <= 300000) return { n: 10, note: "" };
+    if (amount <= 1000000) return { n: 15, note: "" };
+    return { n: null, note: " (por encima de 1.000.000 no hay tramo definido)" };
+  }
+  function cleanPf(o) {
+    if (!o || typeof o.name !== "string" || !Array.isArray(o.lines)) return null;
+    var lines = o.lines.filter(function (l) { return l && typeof l.id === "string" && byId(l.id); }).slice(0, 40).map(function (l) {
+      var w = parseNum(l.w);
+      return { id: l.id, w: w === null ? 0 : Math.max(0, Math.min(100, w)) };
+    });
+    var a = parseNum(o.amount);
+    return { id: uid(), name: o.name.slice(0, 80) || "Cartera", amount: a !== null && a > 0 ? a : null, lines: lines };
+  }
+
+  function viewPortfolios() {
+    setTitle("Carteras");
+    var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Carteras</h1>' +
+      '<p class="sub">Crea carteras con fondos del cuaderno y sigue su rentabilidad y riesgo. Las carteras se guardan solo en este navegador, no se envían a ningún sitio. Usa Exportar para guardar una copia.</p>';
+    h += '<div class="pf-grid">' + (PF.length ? PF.map(function (p) {
+      var a = wAvg(p, function (f) { return f.ret.ytd; });
+      return '<a class="pfcard" href="#/cartera/' + encodeURIComponent(p.id) + '"><b>' + esc(p.name) + "</b><small>" + p.lines.length +
+        (p.lines.length === 1 ? " fondo" : " fondos") + (p.amount ? " · " + nf(p.amount, 0) + " €" : "") + "</small><span>" +
+        (a.v === null ? '<span class="muted">Sin datos</span>' : ret(a.v) + ' <small>en el año</small>') + "</span></a>";
+    }).join("") : '<div class="empty box">Todavía no hay carteras. Crea la primera aquí abajo.</div>') + "</div>";
+    h += '<form class="newpf" id="newpf"><p class="label">Nueva cartera</p><div class="row">' +
+      '<input class="inp grow" id="npn" placeholder="Nombre (por ejemplo, Cartera moderada)" maxlength="80" required aria-label="Nombre de la cartera">' +
+      '<input class="inp amt" id="npa" type="number" min="0" step="1000" placeholder="Importe (€), opcional" aria-label="Importe en euros">' +
+      '<button class="btn" type="submit">Crear cartera</button></div></form>';
+    h += '<div class="row tools2"><button class="btn ghost" type="button" id="pfexp"' + (PF.length ? "" : " disabled") + '>Exportar todas</button>' +
+      '<label class="btn ghost" for="pfimp">Importar</label><input id="pfimp" type="file" accept="application/json,.json" hidden></div><p class="note" id="pfmsg"></p>';
+    app.innerHTML = h + footer("rv");
+
+    document.getElementById("newpf").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var name = document.getElementById("npn").value.trim();
+      if (!name) return;
+      var a = parseNum(document.getElementById("npa").value), p = { id: uid(), name: name, amount: a !== null && a > 0 ? a : null, lines: [] };
+      PF.push(p); savePf();
+      location.hash = "#/cartera/" + encodeURIComponent(p.id);
+    });
+    document.getElementById("pfexp").addEventListener("click", function () {
+      download("carteras-cuaderno-de-fondos.json", JSON.stringify({ version: 1, carteras: PF }, null, 1), "application/json");
+    });
+    document.getElementById("pfimp").addEventListener("change", function (e) {
+      var file = e.target.files && e.target.files[0], msg = document.getElementById("pfmsg");
+      if (!file) return;
+      var rd = new FileReader();
+      rd.onload = function () {
+        try {
+          var data = JSON.parse(String(rd.result)), list = (data && data.carteras) || data;
+          if (!Array.isArray(list)) throw new Error("formato");
+          var ok = list.map(cleanPf).filter(Boolean);
+          PF = PF.concat(ok); savePf();
+          msg.textContent = ok.length + (ok.length === 1 ? " cartera importada." : " carteras importadas.");
+          viewPortfolios();
+          document.getElementById("pfmsg").textContent = ok.length + (ok.length === 1 ? " cartera importada." : " carteras importadas.");
+        } catch (err) { msg.textContent = "No se ha podido leer el archivo. Usa un JSON exportado desde esta página."; }
+      };
+      rd.readAsText(file);
+    });
+  }
+
+  function viewPortfolio(id) {
+    var p = pfById(id);
+    if (!p) { viewNotFound(); return; }
+    setTitle(p.name);
+    var h = '<div class="topbar"><a href="#/carteras">← Carteras</a></div>' +
+      '<div class="pfhead"><input class="inp big" id="pfname" value="' + esc(p.name) + '" maxlength="80" aria-label="Nombre de la cartera">' +
+      '<label class="amtl"><span class="muted">Importe (€)</span><input class="inp amt" id="pfamt" type="number" min="0" step="1000" value="' + (p.amount || "") + '" placeholder="Opcional"></label></div>' +
+      '<div class="search tight">' + icon() + '<input id="pq" type="search" autocomplete="off" placeholder="Añadir fondo por nombre o ISIN" aria-label="Añadir fondo a la cartera"></div><div class="results" id="pres"></div>' +
+      '<div id="pftable"></div><div id="pfsum"></div>' +
+      '<div class="row tools2"><a class="btn ghost" id="pfcmp" href="#/comparar">Comparar fondos</a>' +
+      '<button class="btn ghost" type="button" id="pfcsv">Exportar CSV</button>' +
+      '<button class="btn ghost" type="button" id="pfdup">Duplicar</button>' +
+      '<button class="btn ghost danger" type="button" id="pfdel">Eliminar cartera</button></div>';
+    app.innerHTML = h + footer("rv");
+
+    function save() { savePf(); }
+    function renderTable() {
+      var t = document.getElementById("pftable");
+      if (!p.lines.length) { t.innerHTML = '<div class="table-wrap" style="margin-top:14px"><div class="empty">Busca un fondo arriba y añádelo para empezar.</div></div>'; document.getElementById("pfsum").innerHTML = ""; setCmp(); return; }
+      t.innerHTML = '<div class="table-wrap" style="margin-top:14px"><table><thead><tr><th scope="col">Fondo</th><th scope="col">Peso %</th><th scope="col">Importe</th><th scope="col">Año</th><th scope="col">1 año</th><th scope="col">Vol. 1 año</th><th scope="col">Sharpe 1 año</th><th scope="col">Aporta al año</th><th scope="col"><span class="sr">Quitar</span></th></tr></thead><tbody>' +
+        p.lines.map(function (l, i) {
+          var f = byId(l.id);
+          return '<tr data-i="' + i + '" class="pfrow"><td class="fund"><a href="#/fondo/' + encodeURIComponent(f.id) + '"><b>' + esc(f.n) + (f.idx ? '<span class="tag">Indexado</span>' : "") + "</b></a><small>" + esc(f.g) + " · " + esc(f.c) + "</small></td>" +
+            '<td><input class="inp w" type="number" min="0" max="100" step="0.5" value="' + (l.w || 0) + '" data-w="' + i + '" aria-label="Peso de ' + esc(f.n) + '"></td>' +
+            '<td class="num" data-imp="' + i + '"></td><td>' + ret(f.ret.ytd) + "</td><td>" + ret(f.ret.y1) + '</td><td class="num">' + pct(f.vol[0], false, 1) + '</td><td class="num">' + dec(f.sharpe[0]) + '</td><td class="num" data-ap="' + i + '"></td>' +
+            '<td><button type="button" class="x" data-del="' + i + '" aria-label="Quitar ' + esc(f.n) + '">×</button></td></tr>';
+        }).join("") + '</tbody><tfoot><tr><td><b>Cartera</b></td><td class="num" id="tw"></td><td class="num" id="ti"></td><td id="ty"></td><td id="t1"></td><td class="num" id="tv"></td><td class="num" id="ts"></td><td class="num" id="ta"></td><td></td></tr></tfoot></table></div>';
+      t.querySelectorAll("[data-w]").forEach(function (inp) {
+        inp.addEventListener("input", function () {
+          var w = parseNum(inp.value);
+          p.lines[+inp.getAttribute("data-w")].w = w === null ? 0 : Math.max(0, Math.min(100, w));
+          save(); refresh();
+        });
+      });
+      t.querySelectorAll("[data-del]").forEach(function (b) {
+        b.addEventListener("click", function () { p.lines.splice(+b.getAttribute("data-del"), 1); save(); renderTable(); });
+      });
+      refresh(); setCmp();
+    }
+    function setCmp() {
+      var ids = p.lines.slice(0, CMP_MAX).map(function (l) { return l.id; });
+      document.getElementById("pfcmp").setAttribute("href", hashFor(ids));
+    }
+    function refresh() {
+      var tot = sumW(p);
+      p.lines.forEach(function (l, i) {
+        var f = byId(l.id), im = document.querySelector('[data-imp="' + i + '"]'), ap = document.querySelector('[data-ap="' + i + '"]');
+        if (im) im.textContent = p.amount ? nf(p.amount * l.w / 100, 0) + " €" : "–";
+        if (ap) ap.innerHTML = isNum(f.ret.ytd) ? ret(f.ret.ytd * l.w / 100) : '<span class="muted">–</span>';
+      });
+      var y = wAvg(p, function (f) { return f.ret.ytd; }), y1 = wAvg(p, function (f) { return f.ret.y1; }),
+        v = wAvg(p, function (f) { return f.vol[0]; }), s = wAvg(p, function (f) { return f.sharpe[0]; });
+      var q = function (id) { return document.getElementById(id); };
+      if (!q("tw")) return;
+      q("tw").textContent = nf(tot, 1) + "%";
+      q("ti").textContent = p.amount ? nf(p.amount * tot / 100, 0) + " €" : "–";
+      q("ty").innerHTML = ret(y.v); q("t1").innerHTML = ret(y1.v);
+      q("tv").textContent = pct(v.v, false, 1); q("ts").textContent = dec(s.v);
+      q("ta").innerHTML = y.v === null ? "–" : ret(y.v * tot / 100);
+      document.getElementById("pfsum").innerHTML = summary(p);
+    }
+
+    document.getElementById("pfname").addEventListener("input", function (e) { p.name = e.target.value.slice(0, 80) || "Cartera"; save(); });
+    document.getElementById("pfamt").addEventListener("input", function (e) {
+      var a = parseNum(e.target.value); p.amount = a !== null && a > 0 ? a : null; save(); refresh();
+    });
+    var pq = document.getElementById("pq");
+    pq.addEventListener("input", function () {
+      var v = pq.value.trim(), res = document.getElementById("pres");
+      if (!v) { res.innerHTML = ""; return; }
+      res.innerHTML = pickList(v, p.lines.map(function (l) { return l.id; }), function (f) {
+        return '<a href="#" data-add="' + esc(f.id) + '">' + esc(f.n) + "<small>" + esc(f.g) + " · " + esc(f.c) + "</small></a>";
+      });
+      res.querySelectorAll("[data-add]").forEach(function (a) {
+        a.addEventListener("click", function (e) {
+          e.preventDefault();
+          if (p.lines.length >= 40) return;
+          var rest = Math.max(0, Math.round((100 - sumW(p)) * 100) / 100);
+          p.lines.push({ id: a.getAttribute("data-add"), w: rest });
+          save(); pq.value = ""; res.innerHTML = ""; renderTable();
+        });
+      });
+    });
+    document.getElementById("pfcsv").addEventListener("click", function () {
+      var rows = [["ISIN", "Fondo", "Gestora", "Peso (%)", "Importe (EUR)"]].concat(p.lines.map(function (l) {
+        var f = byId(l.id);
+        return [f.id, f.n, f.g, String(l.w).replace(".", ","), p.amount ? String(Math.round(p.amount * l.w) / 100).replace(".", ",") : ""];
+      }));
+      var csv = "﻿" + rows.map(function (r) { return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(";"); }).join("\r\n");
+      download((p.name || "cartera").replace(/[^\w\-]+/g, "_") + ".csv", csv, "text/csv;charset=utf-8");
+    });
+    document.getElementById("pfdup").addEventListener("click", function () {
+      var c = cleanPf({ name: p.name + " (copia)", amount: p.amount, lines: p.lines });
+      PF.push(c); save(); location.hash = "#/cartera/" + encodeURIComponent(c.id);
+    });
+    var del = document.getElementById("pfdel");
+    del.addEventListener("click", function () {
+      if (del.getAttribute("data-sure") !== "1") { del.setAttribute("data-sure", "1"); del.textContent = "Pulsa otra vez para eliminar"; return; }
+      PF = PF.filter(function (x) { return x.id !== p.id; }); savePf(); location.hash = "#/carteras";
+    });
+    renderTable();
+  }
+
+  function summary(p) {
+    var tot = sumW(p), n = p.lines.length;
+    var y = wAvg(p, function (f) { return f.ret.ytd; }), y1 = wAvg(p, function (f) { return f.ret.y1; }),
+      v = wAvg(p, function (f) { return f.vol[0]; }), s = wAvg(p, function (f) { return f.sharpe[0]; });
+    var h = '<div class="kpis" style="margin-top:26px">' + kpi("Rentabilidad del año", ret(y.v), true) + kpi("Rentabilidad 1 año", ret(y1.v), true) +
+      kpi("Volatilidad 1 año", pct(v.v, false, 1)) + kpi("Sharpe 1 año", dec(s.v)) + "</div>";
+    h += '<p class="note">Medias ponderadas por el peso de cada fondo con los datos de Morningstar. Rentabilidad pasada, no garantiza resultados futuros. La volatilidad no tiene en cuenta las correlaciones entre fondos, así que la de la cartera real suele ser menor.</p>';
+
+    // Comprobaciones
+    var ck = [];
+    if (Math.abs(tot - 100) < 0.05) ck.push(["ok", "Los pesos suman 100%."]);
+    else ck.push(["warn", "Los pesos suman " + nf(tot, 1) + "%, no 100%."]);
+    var mf = maxFunds(p.amount);
+    if (mf && mf.n !== null) ck.push([n <= mf.n ? "ok" : "warn", n + (n === 1 ? " fondo" : " fondos") + ": el máximo para " + nf(p.amount, 0) + " € es " + mf.n + "." + mf.note]);
+    else if (mf) ck.push(["info", "Importe de " + nf(p.amount, 0) + " €" + mf.note + "."]);
+    else ck.push(["info", "Indica el importe para comprobar el número máximo de fondos."]);
+    var idx = p.lines.filter(function (l) { return byId(l.id).idx; }).map(function (l) { return byId(l.id).n; });
+    ck.push(idx.length ? ["warn", "Incluye fondos indexados: " + idx.join(", ") + "."] : ["ok", "No incluye fondos indexados."]);
+    var byCat = {};
+    p.lines.forEach(function (l) { var f = byId(l.id); (byCat[f.c] = byCat[f.c] || []).push(f.n); });
+    Object.keys(byCat).filter(function (c) { return byCat[c].length > 1; }).forEach(function (c) {
+      ck.push(["info", byCat[c].length + " fondos en la categoría " + c + ": posible solapamiento."]);
+    });
+    var sorted = p.lines.slice().sort(function (a, b) { return b.w - a.w; });
+    if (sorted.length) {
+      var top3 = sorted.slice(0, 3).reduce(function (a, l) { return a + l.w; }, 0);
+      ck.push(["info", "Mayor posición: " + byId(sorted[0].id).n + " (" + nf(sorted[0].w, 1) + "%). Las tres mayores suman " + nf(top3, 1) + "%."]);
+    }
+    var missing = p.lines.filter(function (l) { var f = byId(l.id); return !isNum(f.ret.y1) || !isNum(f.vol[0]); }).map(function (l) { return byId(l.id).n; });
+    if (missing.length) ck.push(["warn", "Faltan datos de 1 año en: " + missing.join(", ") + ". Las medias usan solo los fondos con dato."]);
+    h += '<section class="block" style="margin-top:26px"><h3>Comprobaciones</h3><ul class="checks">' + ck.map(function (c) { return '<li class="' + c[0] + '"><i></i><span>' + esc(c[1]) + "</span></li>"; }).join("") + "</ul></section>";
+
+    h += '<div class="grid2">';
+    // Composición
+    var labels = ["Acciones", "Bonos", "Efectivo", "Otros"], colors = ["#851a2e", "#3b3b3b", "#b9b9b9", "#f0c9b0"];
+    var mix = [0, 1, 2, 3].map(function (i) { return wAvg(p, function (f) { return f.mix[i]; }).v; });
+    if (mix.some(isNum)) {
+      var pos = mix.reduce(function (a, x) { return a + (isNum(x) && x > 0 ? x : 0); }, 0) || 1;
+      h += '<section class="block"><h3>Composición</h3><div class="stack">' + mix.map(function (x, i) {
+        return isNum(x) && x > 0 ? '<i style="width:' + (x / pos * 100).toFixed(2) + "%;background:" + colors[i] + '"></i>' : "";
+      }).join("") + '</div><div class="keys">' + mix.map(function (x, i) {
+        return isNum(x) && Math.abs(x) >= 0.05 ? '<span style="--c:' + colors[i] + '">' + labels[i] + " <b>" + pct(x, false, 1) + "</b></span>" : "";
+      }).join("") + "</div></section>";
+    }
+    // Por categoría
+    var cw = {};
+    p.lines.forEach(function (l) { var f = byId(l.id); cw[f.c] = (cw[f.c] || 0) + l.w; });
+    var items = Object.keys(cw).map(function (c) { return [c, cw[c]]; }).sort(function (a, b) { return b[1] - a[1]; });
+    h += '<section class="block"><h3>Peso por categoría</h3>' + bars(items, Math.max.apply(null, items.map(function (x) { return x[1]; })) || 1, false) + "</section>";
+    // Por año
+    var yrs = YEARS.map(function (yy) { var a = wAvg(p, function (f) { return annOf(f, yy); }); return a.cov > 0.999 ? [yearLabel(yy), a.v] : null; }).filter(function (x) { return x && isNum(x[1]); });
+    if (yrs.length) {
+      h += '<section class="block"><h3>Rentabilidad por año</h3>' + bars(yrs, Math.max.apply(null, yrs.map(function (x) { return Math.abs(x[1]); })) || 1, true) +
+        '<p class="note">Solo años en los que todos los fondos tienen dato.</p></section>';
+    }
+    // Métricas ponderadas
+    var mw = [["Rentabilidad 3 años", "y3", true], ["Rentabilidad 5 años", "y5", true], ["Volatilidad 3 años", "vol3"], ["Sharpe 3 años", "sh3"], ["Sortino 1 año", "so1"], ["MAR 1 año", "mar1"], ["Coste neto", "cost"]].map(function (x) {
+      var m = metric(x[1]), a = wAvg(p, m.v);
+      if (a.v === null) return "";
+      var txt = x[2] ? pct(a.v, true, 2) : fmtMetric(m, a.v);
+      return fact(x[0], txt + (a.cov < 0.999 ? ' <span class="muted">(' + nf(a.cov * 100, 0) + "% del peso)</span>" : ""));
+    }).join("");
+    if (mw) h += '<section class="block"><h3>Otras métricas ponderadas</h3><dl class="facts">' + mw + "</dl></section>";
+    return h + "</div>";
   }
 
   // ---------- router ----------
@@ -551,6 +934,9 @@
     if ((p[0] === "rf" || p[0] === "rv") && !p[1]) return viewList(p[0]);
     if ((p[0] === "rf" || p[0] === "rv") && p[1] === "resumen") return viewOverview(p[0]);
     if (p[0] === "fondo" && p[1]) return viewFund(decodeURIComponent(p[1]));
+    if (p[0] === "comparar") return viewCompare(p[1]);
+    if (p[0] === "carteras") return viewPortfolios();
+    if (p[0] === "cartera" && p[1]) return viewPortfolio(decodeURIComponent(p[1]));
     return viewNotFound();
   }
   window.addEventListener("hashchange", route);
