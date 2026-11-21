@@ -453,3 +453,5 @@ td, th { font-variant-numeric: tabular-nums; }
 
 .folder .mono img { width: 100%; height: 100%; object-fit: contain; padding: 7px; border-radius: 50%; background: #fff; }
 .folder .mono:has(img) { background: #fff; border: 1px solid var(--line, #e3d9dc); }
+
+.fichaimg { width: 100%; height: auto; display: block; border: 1px solid var(--line, #e3d9dc); border-radius: 8px; }

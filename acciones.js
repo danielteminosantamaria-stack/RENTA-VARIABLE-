@@ -2,6 +2,7 @@
 window.STOCKS = [
  {
   "t": "FROG",
+  "img": "fichas/FROG.png",
   "n": "JFrog Ltd.",
   "f": "20/11/2026",
   "g": "Software empresarial (53 de 145)",

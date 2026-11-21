@@ -1757,6 +1757,7 @@
       ((s.tec && s.tec.length) ? '<dl class="facts">' + s.tec.map(function (r) { return fact(r[0], esc(r[1])); }).join("") + "</dl>" : "") +
       (s.tecTxt ? '<p class="stxt">' + esc(s.tecTxt) + "</p>" : "") + (!(s.tec && s.tec.length) && !s.tecTxt ? '<p class="muted">Sin datos técnicos.</p>' : "") +
       '</section><section class="block"><h3>Bloque cliente</h3><p class="stxt">' + esc(s.cli || "Sin texto para el cliente.") + "</p></section></div>" +
+      (s.img ? '<section class="block" style="margin-top:22px"><h3>Captura de MarketSurge</h3><a href="' + esc(s.img) + '" target="_blank" rel="noopener"><img class="fichaimg" src="' + esc(s.img) + '" alt="Captura de MarketSurge de ' + esc(s.n) + '" loading="lazy"></a></section>' : "") +
       '<p class="note">Ficha elaborada a partir de los datos de MarketSurge (IBD) que has enviado. Información orientativa, no es una recomendación personalizada de inversión.</p>';
     app.innerHTML = h + footer("rv");
   }
