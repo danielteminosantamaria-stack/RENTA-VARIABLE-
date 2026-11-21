@@ -42,6 +42,11 @@
     if (w.length === 1) return w[0].slice(0, 2).toUpperCase();
     return (w[0][0] + w[1][0]).toUpperCase();
   }
+  function logoSlug(g) { return g.toLowerCase().replace(/&/g, "y").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
+  function logoOrInit(g) {
+    var L = window.LOGOS || {}, D = window.LOGODOM || {}, src = L[g] ? "logos/" + L[g] : D[g] ? "https://www.google.com/s2/favicons?sz=128&domain=" + encodeURIComponent(D[g]) : null;
+    return src ? '<img src="' + esc(src) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.textContent=\'' + esc(initials(g)) + '\'">' : esc(initials(g));
+  }
   function icon() {
     return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
   }
@@ -231,7 +236,7 @@
       '<a class="link" href="#/' + t + '/resumen">Visión general</a></div></div>' +
       '<div class="folders">' + names.map(function (g) {
         return '<button type="button" class="folder" data-g="' + esc(g) + '" aria-pressed="' + (s.g === g) + '">' +
-          '<span class="mono" aria-hidden="true">' + esc(initials(g)) + "</span><span><b>" + esc(g) + "</b><small>" +
+          '<span class="mono" aria-hidden="true">' + logoOrInit(g) + "</span><span><b>" + esc(g) + "</b><small>" +
           groups[g] + (groups[g] === 1 ? " fondo" : " fondos") + "</small></span></button>";
       }).join("") + "</div>" +
       '<div class="filters"><div class="search">' + icon() +
