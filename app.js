@@ -39,7 +39,7 @@
   function ofType(t) { return FUNDS.filter(function (f) { return f.t === t; }); }
   function initials(g) {
     var w = g.replace(/[^A-Za-zÀ-ÿ0-9& ]/g, "").split(/\s+/).filter(Boolean);
-    if (w.length === 1) return w[0].slice(0, 2);
+    if (w.length === 1) return w[0].slice(0, 2).toUpperCase();
     return (w[0][0] + w[1][0]).toUpperCase();
   }
   function icon() {
@@ -87,6 +87,7 @@
       '<div class="cards" style="margin-top:14px">' +
       '<a class="cat-card" href="#/categorias"><div class="row"><div><small>Explorar</small><h2>Categorías</h2></div><span class="count">' + (allCats("rf").length + allCats("rv").length) + ' categorías</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
       '<a class="cat-card" href="#/gestion"><div class="row"><div><small>Herramienta</small><h2>Gestión de carteras</h2></div><span class="count">analizar la del cliente</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
+      '<a class="cat-card" href="#/acciones"><div class="row"><div><small>Explorar</small><h2>Acciones MarketSurge</h2></div><span class="count">' + stocks().length + (stocks().length === 1 ? " ficha" : " fichas") + '</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
       '<a class="cat-card" href="#/construir"><div class="row"><div><small>Herramienta</small><h2>Construir cartera</h2></div><span class="count">con el cliente</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
       '<a class="cat-card" href="#/comparar"><div class="row"><div><small>Herramienta</small><h2>Comparador de fondos</h2></div><span class="count">hasta ' + CMP_MAX + ' fondos</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
       '<a class="cat-card" href="#/carteras"><div class="row"><div><small>Herramienta</small><h2>Carteras</h2></div><span class="count">' + PF.length + (PF.length === 1 ? " cartera" : " carteras") + '</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
@@ -1243,12 +1244,12 @@
   var gc = { name: "", profile: "moderado", lines: [] };
   function bname(k) { return BUCKETS.filter(function (b) { return b.k === k; })[0].n; }
   function sumOf(o) { return Object.keys(o).reduce(function (a, k) { return a + o[k]; }, 0); }
-  function gcTotal() { return gc.lines.reduce(function (a, l) { return a + (l.amt > 0 ? l.amt : 0); }, 0); }
+  function gcTotal() { return gc.lines.reduce(function (a, l) { return a + gcEff(l); }, 0); }
   function gcLines() {
     var t = gcTotal();
     return gc.lines.map(function (l) {
-      var f = l.id ? byId(l.id) : null;
-      return { id: f ? f.id : null, name: f ? f.n : l.name, bucket: f ? bucketOf(f) : l.bucket, amt: l.amt, w: t && l.amt > 0 ? l.amt / t * 100 : 0 };
+      var f = l.id ? byId(l.id) : null, amt = gcEff(l), nav = f ? navOf(f) : null;
+      return { id: f ? f.id : null, name: f ? f.n : l.name, bucket: f ? bucketOf(f) : l.bucket, amt: amt, nav: nav, units: f && nav ? (l.part > 0 ? l.part : (amt > 0 ? amt / nav : null)) : null, w: t && amt > 0 ? amt / t * 100 : 0 };
     }).filter(function (l) { return l.w > 0; });
   }
   function altFor(f, taken) {
@@ -1438,6 +1439,100 @@
     return h + '<p class="note">Valoración automática a partir de los datos de Morningstar de cada fondo. No recoge la opinión de la gestora salvo que se haya cargado en la ficha del fondo, ni sustituye el análisis del equipo gestor.</p></section>';
   }
 
+  // ---------- traspasos, pruebas de estrés y referencia ----------
+  function navOf(f) { return numOf(String(f.nav == null ? "" : f.nav).replace(/[A-Za-z\s]/g, "")); }
+  function gcEff(l) {
+    var f = l.id ? byId(l.id) : null, nav = f ? navOf(f) : null;
+    return f && nav && l.part > 0 ? l.part * nav : (l.amt > 0 ? l.amt : 0);
+  }
+  function gcTransfers(L, prop, tot) {
+    var tgt = {}, curById = {}, sells = [], buys = [], rows = [];
+    prop.lines.forEach(function (x) { tgt[x.id] = tot * x.w / 100; });
+    L.forEach(function (l) { if (l.id) curById[l.id] = l.amt; });
+    L.forEach(function (l) {
+      var target = l.id && tgt[l.id] ? tgt[l.id] : 0, diff = l.amt - target;
+      if (diff > 1) sells.push({ name: l.name, nav: l.nav, units: l.units, amt: diff, left: diff, all: target === 0 });
+    });
+    prop.lines.forEach(function (x) { var need = tgt[x.id] - (curById[x.id] || 0); if (need > 1) buys.push({ name: byId(x.id).n, need: need, left: need }); });
+    var ts = sells.reduce(function (s, x) { return s + x.amt; }, 0), tb = buys.reduce(function (s, x) { return s + x.need; }, 0);
+    if (tb > 0 && ts > 0) buys.forEach(function (b) { b.left = b.need * ts / tb; });
+    sells.sort(function (a, b) { return b.amt - a.amt; }); buys.sort(function (a, b) { return b.left - a.left; });
+    sells.forEach(function (s) {
+      var ul = s.all ? s.units : (s.nav ? s.amt / s.nav : null), j = 0, first = rows.length;
+      if (ul !== null && ul !== undefined) ul = Math.round(ul * 10000) / 10000; else ul = null;
+      while (s.left > 1 && j < buys.length) {
+        var b = buys[j];
+        if (b.left <= 1) { j++; continue; }
+        var take = Math.min(s.left, b.left), last = s.left - take <= 1, u = null;
+        if (ul !== null) { u = last ? ul : Math.round(take / s.nav * 100) / 100; ul = Math.round((ul - u) * 10000) / 10000; }
+        rows.push({ from: s.name, units: u, amt: take, to: b.name, kind: s.all ? (last ? (rows.length === first ? "Total" : "Total (resto)") : "Parcial") : "Parcial" });
+        b.left -= take; s.left -= take;
+      }
+    });
+    return rows;
+  }
+  function gcTransfersHtml(L, prop, tot) {
+    var rows = gcTransfers(L, prop, tot), moved = rows.reduce(function (s, r) { return s + r.amt; }, 0);
+    var h = '<h2 class="gh">5. Traspasos necesarios</h2><section class="block">';
+    if (!rows.length) return h + '<p>La cartera actual ya coincide con la propuesta: no hacen falta traspasos.</p></section>';
+    h += '<div class="table-wrap"><table><thead><tr><th scope="col">Nº</th><th scope="col">Traspasar desde</th><th scope="col">Participaciones</th><th scope="col">Importe aprox.</th><th scope="col">Hacia</th><th scope="col">Tipo</th></tr></thead><tbody>' +
+      rows.map(function (r, i) { return "<tr><td>" + (i + 1) + '</td><td class="fund"><b>' + esc(r.from) + '</b></td><td class="num">' + (r.units === null ? "n.d." : nf(r.units, r.units % 1 ? 2 : 0)) + '</td><td class="num">' + nf(r.amt, 0) + ' €</td><td class="fund"><b>' + esc(r.to) + "</b></td><td>" + r.kind + "</td></tr>"; }).join("") +
+      '</tbody><tfoot><tr><td></td><td><b>Total movido</b></td><td></td><td class="num">' + nf(moved, 0) + " €</td><td>" + nf(tot ? moved / tot * 100 : 0, 0) + "% de la cartera</td><td></td></tr></tfoot></table></div>" +
+      '<p class="note">Los traspasos se indican por participaciones, y por la totalidad de las participaciones cuando se sale del fondo, para que las operaciones cuadren. Los importes son aproximados al último valor liquidativo disponible; la ejecución se hace al valor liquidativo del día de la operación, así que conviene recalcular el día antes. Pendiente de revisar con el cliente: si cada traspaso mantiene el diferimiento fiscal (sobre todo en fondos extranjeros), comisiones de reembolso, importes mínimos y plusvalías latentes. "n.d." indica que falta el valor liquidativo o las participaciones del fondo.</p></section>';
+    return h;
+  }
+
+  function refAvg(pr, get) {
+    var s = 0, c = 0;
+    BUCKETS.forEach(function (b) {
+      var w = pr.w[b.k]; if (!w) return;
+      var v = FUNDS.filter(function (f) { return !f.idx && bucketOf(f) === b.k; }).map(get).filter(isNum);
+      if (v.length) { s += w * v.reduce(function (a, x) { return a + x; }, 0) / v.length; c += w; }
+    });
+    return c ? s / c : null;
+  }
+  var SCEN = [
+    { k: "bolsa", n: "Caída de las bolsas", d: "Renta variable −20%, high yield −6%, renta fija corporativa −2%, alternativos −5%", s: { rv: -20, hy: -6, corp: -2, corto: 0, alt: -5 } },
+    { k: "credito", n: "Crisis de crédito", d: "Renta variable −15%, high yield −10%, corporativa −5%, corto plazo −1%, alternativos −6%", s: { rv: -15, hy: -10, corp: -5, corto: -1, alt: -6 } },
+    { k: "tipos", n: "Subida de tipos de 1 punto", d: "Renta fija: pérdida igual a su duración por 1%; renta variable −3%; alternativos −2%", s: {} },
+    { k: "rally", n: "Rally bursátil", d: "Renta variable +15%, high yield +4%, corporativa +1%, corto plazo +0,3%, alternativos +3%", s: { rv: 15, hy: 4, corp: 1, corto: 0.3, alt: 3 } }
+  ];
+  function shockOf(l, sc) {
+    var f = l.id ? byId(l.id) : null, k = l.bucket, isRv = RVB.indexOf(k) !== -1;
+    if (sc.k === "tipos") { if (isRv) return -3; if (k === "alt") return -2; return -(f && isNum(f.dur) ? f.dur : (k === "corto" ? 1 : 3)); }
+    var t = isRv ? "rv" : k; return sc.s[t] !== undefined ? sc.s[t] : 0;
+  }
+  function scenImpact(lines, sc) { return lines.reduce(function (s, l) { return s + l.w * shockOf(l, sc) / 100; }, 0); }
+  function portYear(lines, y) {
+    var s = 0, c = 0, tw = 0;
+    lines.forEach(function (l) { tw += l.w; var f = l.id ? byId(l.id) : null, r = f ? annOf(f, y) : null; if (r !== null) { s += l.w * r; c += l.w; } });
+    return tw && c / tw >= 0.8 ? s / c : null;
+  }
+  function gcStressHtml(L, prop, tot, pr) {
+    var PL = prop.lines.map(function (x) { return { id: x.id, w: x.w, bucket: bucketOf(byId(x.id)) }; });
+    var h = '<h2 class="gh">6. Pruebas de estrés y comparación con la referencia</h2><div class="grid2"><section class="block"><h3>Rentabilidad por año</h3><div class="table-wrap"><table><thead><tr><th scope="col">Año</th><th scope="col">Actual</th><th scope="col">Propuesta</th><th scope="col">Referencia</th></tr></thead><tbody>';
+    YEARS.slice().reverse().forEach(function (y) {
+      var a = portYear(L, y), b = portYear(PL, y), r = refAvg(pr, function (f) { return annOf(f, y); });
+      if (a === null && b === null) return;
+      h += "<tr><td>" + esc(yearLabel(y)) + "</td><td>" + (a === null ? "–" : ret(a)) + "</td><td>" + (b === null ? "–" : "<b>" + ret(b) + "</b>") + "</td><td>" + (r === null ? "–" : ret(r)) + "</td></tr>";
+    });
+    h += '</tbody></table></div><p class="note">Con las rentabilidades anuales de cada fondo y los pesos actuales o propuestos de hoy (no son rentabilidades reales de la cartera, que habría cambiado de pesos). Solo se muestran los años con datos para al menos el 80% del peso.</p></section>';
+    var k = function (lines, get) { return wAvg({ lines: lines }, get).v; };
+    var cmp = [["Rentabilidad del año", function (f) { return f.ret.ytd; }, 1], ["Rentabilidad 1 año", function (f) { return f.ret.y1; }, 1], ["Rentabilidad 3 años", function (f) { return f.ret.y3; }, 1], ["Volatilidad 1 año", function (f) { return f.vol[0]; }, 0], ["Sharpe 1 año", function (f) { return f.sharpe[0]; }, 2], ["Caída máxima (aprox., prudente)", function (f) { return f.dd[4]; }, 0]];
+    h += '<section class="block"><h3>Frente a la cartera de referencia del perfil ' + pr.n.toLowerCase() + '</h3><div class="table-wrap"><table><thead><tr><th scope="col"></th><th scope="col">Actual</th><th scope="col">Propuesta</th><th scope="col">Referencia</th></tr></thead><tbody>' +
+      cmp.map(function (c) {
+        var fmt = function (v) { return v === null ? "–" : c[2] === 1 ? ret(v) : c[2] === 2 ? dec(v) : pct(v, false, 1); };
+        return "<tr><td>" + c[0] + "</td><td>" + fmt(k(L, c[1])) + "</td><td><b>" + fmt(k(PL, c[1])) + "</b></td><td>" + fmt(refAvg(pr, c[1])) + "</td></tr>";
+      }).join("") + '</tbody></table></div><p class="note">La referencia es el reparto central del perfil aplicado a la media de los fondos no indexados de cada categoría de inversión de tu universo. No es un índice de mercado. La caída máxima ponderada es una cota prudente: la de la cartera real suele ser menor.</p></section></div>';
+    h += '<section class="block" style="margin-top:22px"><h3>Escenarios de estrés ilustrativos</h3><div class="table-wrap"><table><thead><tr><th scope="col">Escenario</th><th scope="col">Actual</th><th scope="col">Propuesta</th></tr></thead><tbody>' +
+      SCEN.map(function (sc) {
+        var a = scenImpact(L, sc), b = scenImpact(PL, sc);
+        var f2 = function (v) { return ret(v) + (tot ? ' <small>' + (v >= 0 ? "+" : "−") + nf(Math.abs(tot * v / 100), 0) + " €</small>" : ""); };
+        return '<tr><td class="fund"><b>' + sc.n + "</b><small>" + esc(sc.d) + "</small></td><td>" + f2(a) + "</td><td><b>" + f2(b) + "</b></td></tr>";
+      }).join("") + '</tbody></table></div><p class="note">Los escenarios son ilustrativos y parten de supuestos propios, por categoría de inversión y, en renta fija, por la duración de cada fondo. No son previsiones ni tienen en cuenta correlaciones ni gestión activa.</p></section>';
+    return h;
+  }
+
   function gcAnalyze() {
     var L = gcLines(), tot = gcTotal(), pr = BPROF[gc.profile], p = { lines: L };
     if (!L.length) return '<p class="muted" style="margin-top:22px">Añade los fondos de la cartera actual con su importe para ver el análisis.</p>';
@@ -1524,8 +1619,9 @@
       prop.lines.map(function (x) { var f = byId(x.id); return '<tr><td class="fund"><a href="#/fondo/' + encodeURIComponent(f.id) + '"><b>' + esc(f.n) + "</b></a><small>" + esc(f.g) + " · " + esc(bname(bucketOf(f))) + (x.notes.length ? " · " + esc(x.notes.join("; ")) : "") + '</small></td><td class="num">' + nf(x.w, 1) + '%</td><td class="num">' + (tot ? nf(tot * x.w / 100, 0) + " €" : "–") + "</td></tr>"; }).join("") +
       '</tbody></table></div></section><section class="block"><h3>Antes y después</h3><div class="table-wrap"><table><thead><tr><th scope="col"></th><th scope="col">Actual</th><th scope="col">Propuesta</th></tr></thead><tbody>' +
       cmpRows.map(function (r) { return "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td><td><b>" + r[2] + "</b></td></tr>"; }).join("") + '</tbody></table></div><p class="note">Los cambios se hacen manteniendo el peso de cada categoría dentro de la horquilla del perfil y sustituyendo solo los fondos marcados. Para el traspaso, calcula las participaciones por fondo.</p></section></div>' +
-      '<div class="row tools2"><button type="button" class="btn" id="gcsave">Guardar propuesta en mis carteras</button></div>' +
+      '<div class="row tools2"><button type="button" class="btn" id="gcsave">Guardar propuesta en mis carteras</button><button type="button" class="btn ghost" id="gcprint">Descargar informe en PDF</button></div>' +
       '<p class="note">Análisis automático y orientativo con datos de Morningstar y reglas propias. Antes de proponer nada al cliente hay que revisar su idoneidad, su horizonte y su fiscalidad, y las plusvalías latentes que genere cada traspaso.</p>';
+    h += gcTransfersHtml(L, prop, tot) + gcStressHtml(L, prop, tot, pr);
     gcLast = { prop: prop, tot: tot };
     return h;
   }
@@ -1533,7 +1629,7 @@
 
   function viewGestion() {
     setTitle("Gestión de carteras");
-    var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Gestión de carteras</h1>' +
+    var h = '<div id="printhead" class="printhead"></div><div class="topbar"><a href="#/">← Inicio</a></div><h1>Gestión de carteras</h1>' +
       '<p class="sub">Introduce la cartera actual del cliente con el importe de cada fondo. La web hace un análisis cuantitativo y cualitativo y propone mejoras sobre los fondos del universo. Los datos de la cartera solo viven en este navegador mientras la página esté abierta y no se guardan en ningún sitio.</p>' +
       '<div class="bhead"><label class="fld"><span class="muted">Nombre de la cartera</span><input class="inp" id="gname" maxlength="80" placeholder="Por ejemplo, Cartera actual" value="' + esc(gc.name) + '"></label>' +
       '<div class="fld"><span class="muted">Perfil del cliente</span><div class="seg" role="group" aria-label="Perfil">' + Object.keys(BPROF).map(function (k) { return '<button type="button" data-gp="' + k + '" aria-pressed="' + (gc.profile === k) + '">' + BPROF[k].n + "</button>"; }).join("") + "</div></div></div>" +
@@ -1545,21 +1641,38 @@
     function drawTable() {
       var el = document.getElementById("gtable");
       if (!gc.lines.length) { el.innerHTML = ""; return; }
-      el.innerHTML = '<div class="table-wrap" style="margin-top:14px"><table><thead><tr><th scope="col">Fondo</th><th scope="col">Importe (€)</th><th scope="col">Peso</th><th scope="col"><span class="sr">Quitar</span></th></tr></thead><tbody>' +
+      el.innerHTML = '<div class="table-wrap" style="margin-top:14px"><table><thead><tr><th scope="col">Fondo</th><th scope="col">Participaciones</th><th scope="col">Importe (€)</th><th scope="col">Peso</th><th scope="col"><span class="sr">Quitar</span></th></tr></thead><tbody>' +
         gc.lines.map(function (l, i) {
           var f = l.id ? byId(l.id) : null;
-          return '<tr><td class="fund"><b>' + esc(f ? f.n : l.name) + "</b><small>" + (f ? esc(f.g) + " · " + esc(f.c) : "Fuera de la web · " + esc(bname(l.bucket))) + '</small></td><td><input class="inp amt" type="number" min="0" step="100" value="' + (l.amt || "") + '" data-amt="' + i + '" aria-label="Importe de ' + esc(f ? f.n : l.name) + '"></td><td class="num" data-pw="' + i + '"></td><td><button type="button" class="x" data-rm="' + i + '" aria-label="Quitar">×</button></td></tr>';
-        }).join("") + '</tbody><tfoot><tr><td><b>Total</b></td><td class="num" id="gtot"></td><td></td><td></td></tr></tfoot></table></div>';
+          return '<tr><td class="fund"><b>' + esc(f ? f.n : l.name) + "</b><small>" + (f ? esc(f.g) + " · " + esc(f.c) : "Fuera de la web · " + esc(bname(l.bucket))) + '</small></td><td><input class="inp amt" type="number" min="0" step="0.01" value="' + (l.part || "") + '" data-part="' + i + '"' + (f && navOf(f) ? "" : " disabled") + ' aria-label="Participaciones de ' + esc(f ? f.n : l.name) + '" placeholder="' + (f && navOf(f) ? "opcional" : "n.d.") + '"></td><td><input class="inp amt" type="number" min="0" step="100" value="' + (gcEff(l) ? Math.round(gcEff(l) * 100) / 100 : "") + '" data-amt="' + i + '" aria-label="Importe de ' + esc(f ? f.n : l.name) + '"></td><td class="num" data-pw="' + i + '"></td><td><button type="button" class="x" data-rm="' + i + '" aria-label="Quitar">×</button></td></tr>';
+        }).join("") + '</tbody><tfoot><tr><td><b>Total</b></td><td></td><td class="num" id="gtot"></td><td></td><td></td></tr></tfoot></table></div>';
       el.querySelectorAll("[data-amt]").forEach(function (inp) {
-        inp.addEventListener("input", function () { var v = parseNum(inp.value); gc.lines[+inp.getAttribute("data-amt")].amt = v !== null && v > 0 ? v : 0; drawOut(); });
+        inp.addEventListener("input", function () {
+          var v = parseNum(inp.value), i = inp.getAttribute("data-amt"), l = gc.lines[+i];
+          l.amt = v !== null && v > 0 ? v : 0; l.part = null;
+          var pi = el.querySelector('[data-part="' + i + '"]'); if (pi) pi.value = "";
+          drawOut();
+        });
+      });
+      el.querySelectorAll("[data-part]").forEach(function (inp) {
+        inp.addEventListener("input", function () {
+          var v = parseNum(inp.value), i = inp.getAttribute("data-part"), l = gc.lines[+i];
+          l.part = v !== null && v > 0 ? v : null;
+          if (l.part) { l.amt = Math.round(gcEff(l) * 100) / 100; var ai = el.querySelector('[data-amt="' + i + '"]'); if (ai) ai.value = l.amt; }
+          drawOut();
+        });
       });
       el.querySelectorAll("[data-rm]").forEach(function (b) { b.addEventListener("click", function () { gc.lines.splice(+b.getAttribute("data-rm"), 1); drawTable(); drawOut(); }); });
     }
     function drawOut() {
       var t = gcTotal();
-      document.querySelectorAll("[data-pw]").forEach(function (c) { var l = gc.lines[+c.getAttribute("data-pw")]; c.textContent = t && l.amt > 0 ? nf(l.amt / t * 100, 1) + "%" : "–"; });
+      document.querySelectorAll("[data-pw]").forEach(function (c) { var l = gc.lines[+c.getAttribute("data-pw")]; c.textContent = t && gcEff(l) > 0 ? nf(gcEff(l) / t * 100, 1) + "%" : "–"; });
       var tt = document.getElementById("gtot"); if (tt) tt.textContent = nf(t, 0) + " €";
       document.getElementById("gout").innerHTML = gc.lines.length ? gcAnalyze() : "";
+      var ph = document.getElementById("printhead");
+      if (ph) ph.innerHTML = "<h1>Informe de análisis de cartera</h1><p><b>" + esc(gc.name || "Cartera del cliente") + "</b> · Perfil " + esc(BPROF[gc.profile].n.toLowerCase()) + " · " + new Date().toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }) + " · Datos Morningstar a " + esc(META.rv || META.rf || "") + "</p>";
+      var pb2 = document.getElementById("gcprint");
+      if (pb2) pb2.addEventListener("click", function () { window.print(); });
       var sv = document.getElementById("gcsave");
       if (sv) sv.addEventListener("click", function () {
         var c = cleanPf({ name: (gc.name || "Cartera") + " (propuesta)", amount: gcLast.tot || null, lines: gcLast.prop.lines.map(function (x) { return { id: x.id, w: x.w }; }) });
@@ -1586,6 +1699,63 @@
     drawTable(); drawOut();
   }
 
+  // ---------- acciones (fichas de MarketSurge) ----------
+  var ST = { q: "", sort: "n", dir: 1 };
+  var STCOLS = [["comp", "Composite"], ["eps", "EPS"], ["rs", "RS"], ["smr", "SMR"], ["ad", "A/D"], ["peg", "PEG"]];
+  function stocks() { return window.STOCKS || []; }
+  function stockBy(t) { return stocks().filter(function (s) { return s.t === t; })[0] || null; }
+  function rcell(k, v) {
+    if (v == null || v === "") return '<span class="muted">–</span>';
+    if (k === "peg") return '<span class="num">' + dec(v) + "</span>";
+    if (typeof v === "number") return '<span class="rt ' + (v >= 90 ? "r-hi" : v >= 80 ? "r-mid" : "r-lo") + '">' + v + "</span>";
+    return '<span class="rt ' + (/^[AB]/.test(v) ? "r-hi" : /^C/.test(v) ? "r-mid" : "r-lo") + '">' + esc(v) + "</span>";
+  }
+  function viewStocks() {
+    setTitle("Acciones MarketSurge");
+    var all = stocks();
+    var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Acciones MarketSurge</h1>' +
+      '<p class="sub">Fichas de acciones individuales con un bloque técnico para tu análisis y un bloque en lenguaje cliente. ' + (all.length ? all.length + (all.length === 1 ? " ficha." : " fichas.") : "") + "</p>";
+    if (!all.length) {
+      app.innerHTML = h + '<div class="empty box" style="margin-top:18px;padding:34px 20px">Todavía no hay fichas. Envíale a Claude las capturas o el Excel de MarketSurge y se añadirán aquí, con su bloque técnico, su bloque cliente y el PEG calculado.</div>' + footer("rv");
+      return;
+    }
+    h += '<div class="filters"><div class="search tight" style="margin-top:0">' + icon() + '<input id="stq" type="search" autocomplete="off" placeholder="Buscar por ticker, nombre o grupo" value="' + esc(ST.q) + '" aria-label="Buscar acción"></div></div><div id="stbody"></div>';
+    app.innerHTML = h + footer("rv");
+    var q = document.getElementById("stq");
+    q.addEventListener("input", function () { ST.q = q.value; draw(); });
+    function draw() {
+      var list = all.filter(function (s) { return matches({ n: s.n + " " + s.t, id: s.t, g: s.g || "", c: "" }, ST.q); });
+      var get = ST.sort === "n" ? function (s) { return s.n; } : ST.sort === "g" ? function (s) { return s.g || ""; } : ST.sort === "f" ? function (s) { var m = /(\d+)\/(\d+)\/(\d+)/.exec(s.f || ""); return m ? +m[3] * 10000 + +m[2] * 100 + +m[1] : null; } : function (s) { return s[ST.sort]; };
+      list = list.slice().sort(function (a, b) {
+        var x = get(a), y = get(b), nx = x == null || x === "", ny = y == null || y === "";
+        if (nx && ny) return 0; if (nx) return 1; if (ny) return -1;
+        return typeof x === "string" ? ST.dir * x.localeCompare(y, "es") : ST.dir * (x - y);
+      });
+      function th(k, l) { var on = ST.sort === k; return '<th scope="col"' + (on ? ' aria-sort="' + (ST.dir > 0 ? "ascending" : "descending") + '"' : "") + '><button type="button" data-ss="' + k + '">' + l + (on ? (ST.dir > 0 ? " ↑" : " ↓") : "") + "</button></th>"; }
+      var b = document.getElementById("stbody");
+      b.innerHTML = list.length ? '<div class="table-wrap"><table><thead><tr>' + th("n", "Acción") + th("g", "Grupo industrial") + STCOLS.map(function (c) { return th(c[0], c[1]); }).join("") + th("f", "Ficha") + "</tr></thead><tbody>" +
+        list.map(function (s) {
+          return '<tr data-t="' + esc(s.t) + '" tabindex="0"><td class="fund"><b>' + esc(s.n) + "</b><small>" + esc(s.t) + '</small></td><td class="muted">' + esc(s.g || "–") + "</td>" + STCOLS.map(function (c) { return "<td>" + rcell(c[0], s[c[0]]) + "</td>"; }).join("") + '<td class="muted">' + esc(s.f || "–") + "</td></tr>";
+        }).join("") + "</tbody></table></div>" : '<div class="table-wrap"><div class="empty">Sin resultados</div></div>';
+      b.querySelectorAll("[data-ss]").forEach(function (x) { x.addEventListener("click", function () { var k = x.getAttribute("data-ss"); if (ST.sort === k) ST.dir = -ST.dir; else { ST.sort = k; ST.dir = k === "n" || k === "g" ? 1 : -1; } draw(); }); });
+      b.querySelectorAll("tbody tr").forEach(function (tr) { function go() { location.hash = "#/accion/" + encodeURIComponent(tr.getAttribute("data-t")); } tr.addEventListener("click", go); tr.addEventListener("keydown", function (e) { if (e.key === "Enter") go(); }); });
+    }
+    draw();
+  }
+  function viewStock(t) {
+    var s = stockBy(t);
+    if (!s) { viewNotFound(); return; }
+    setTitle(s.n);
+    var h = '<div class="topbar"><a href="#/acciones">← Acciones</a></div><div class="fhead"><h1>' + esc(s.n) + '</h1><p class="muted">' + esc(s.t) + (s.g ? " · " + esc(s.g) : "") + (s.px != null ? " · Precio " + dec(s.px) : "") + (s.f ? " · Ficha del " + esc(s.f) : "") + "</p></div>" +
+      '<div class="kpis kp6">' + STCOLS.map(function (c) { return kpi(c[1], rcell(c[0], s[c[0]])); }).join("") + "</div>" +
+      '<div class="grid2" style="margin-top:22px"><section class="block"><h3>Bloque técnico</h3>' +
+      ((s.tec && s.tec.length) ? '<dl class="facts">' + s.tec.map(function (r) { return fact(r[0], esc(r[1])); }).join("") + "</dl>" : "") +
+      (s.tecTxt ? '<p class="stxt">' + esc(s.tecTxt) + "</p>" : "") + (!(s.tec && s.tec.length) && !s.tecTxt ? '<p class="muted">Sin datos técnicos.</p>' : "") +
+      '</section><section class="block"><h3>Bloque cliente</h3><p class="stxt">' + esc(s.cli || "Sin texto para el cliente.") + "</p></section></div>" +
+      '<p class="note">Ficha elaborada a partir de los datos de MarketSurge (IBD) que has enviado. Información orientativa, no es una recomendación personalizada de inversión.</p>';
+    app.innerHTML = h + footer("rv");
+  }
+
   // ---------- router ----------
   function route() {
     var h = (location.hash || "#/").replace(/^#/, ""), p = h.split("/").filter(Boolean);
@@ -1596,6 +1766,8 @@
     if (p[0] === "fondo" && p[1]) return viewFund(decodeURIComponent(p[1]));
     if (p[0] === "comparar") return viewCompare(p[1]);
     if (p[0] === "carteras") return viewPortfolios();
+    if (p[0] === "acciones") return viewStocks();
+    if (p[0] === "accion" && p[1]) return viewStock(decodeURIComponent(p[1]));
     if (p[0] === "gestion") return viewGestion();
     if (p[0] === "construir") return viewBuild();
     if (p[0] === "categorias") return viewCategories(p[1]);
