@@ -352,3 +352,11 @@ td small { display: block; }
 .gest .table-wrap td:first-child, .gest .table-wrap th:first-child { min-width: 150px; }
 .gest td .vd + small { max-width: 140px; }
 .gest .table-wrap th { white-space: normal; }
+
+.corr table { min-width: 0; }
+.corr td.cc, .corr th { text-align: center; padding: 8px 6px; font-variant-numeric: tabular-nums; }
+.corr td.cc.est { font-style: italic; color: var(--body); }
+.corr td.fund { text-align: left; min-width: 180px; }
+.fcm { border-left: 3px solid var(--brand); background: var(--soft); border-radius: 0 8px 8px 0; padding: 12px 16px; margin-bottom: 12px; }
+.fcm p { margin: 0; line-height: 1.55; font-size: 14px; } .fcm-h { margin-bottom: 6px !important; } .fcm-h b { color: var(--text); }
+.fcm-g { margin-top: 8px !important; color: var(--brand); }

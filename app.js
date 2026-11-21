@@ -1339,6 +1339,105 @@
     return { lines: out, targets: t, cur: cur };
   }
 
+  // ---------- correlaciones y comentario de gestión ----------
+  function pearson(xs, ys) {
+    var n = xs.length, mx = 0, my = 0, i;
+    for (i = 0; i < n; i++) { mx += xs[i]; my += ys[i]; }
+    mx /= n; my /= n;
+    var sxy = 0, sxx = 0, syy = 0;
+    for (i = 0; i < n; i++) { sxy += (xs[i] - mx) * (ys[i] - my); sxx += (xs[i] - mx) * (xs[i] - mx); syy += (ys[i] - my) * (ys[i] - my); }
+    return sxx > 0 && syy > 0 ? sxy / Math.sqrt(sxx * syy) : null;
+  }
+  function estCorr(ka, kb) {
+    var rv = function (k) { return RVB.indexOf(k) !== -1; };
+    if (ka === kb) return ka === "corto" ? 0.8 : 0.85;
+    if (rv(ka) && rv(kb)) return (ka === "sec" || kb === "sec" || ka === "em" || kb === "em") ? 0.7 : 0.85;
+    if (ka === "alt" || kb === "alt") return 0.35;
+    if (!rv(ka) && !rv(kb)) return (ka === "corto" || kb === "corto") ? 0.35 : (ka === "hy" || kb === "hy") ? 0.55 : 0.65;
+    return (ka === "hy" || kb === "hy") ? 0.5 : 0.25;
+  }
+  function corrPair(a, b) {
+    if (a.id && b.id) {
+      var fa = byId(a.id), fb = byId(b.id), xs = [], ys = [];
+      for (var y = 2026; y >= 2019; y--) {
+        var x1 = annOf(fa, y), x2 = annOf(fb, y);
+        if (x1 !== null && x2 !== null) { xs.push(x1); ys.push(x2); }
+      }
+      if (xs.length >= 5) { var r = pearson(xs, ys); if (r !== null) return { v: r, est: false, n: xs.length }; }
+    }
+    return { v: estCorr(a.bucket, b.bucket), est: true, n: 0 };
+  }
+  function heat(v) {
+    return v >= 0 ? "rgba(133,26,46," + (Math.max(0, v) * 0.5).toFixed(2) + ")" : "rgba(30,122,74," + (Math.min(1, -v) * 0.5).toFixed(2) + ")";
+  }
+  function gcCorr(L) {
+    var n = L.length, M = [], high = [], i, j;
+    for (i = 0; i < n; i++) { M.push([]); for (j = 0; j < n; j++) M[i].push(i === j ? { v: 1, est: false, n: 0 } : (j < i ? M[j][i] : corrPair(L[i], L[j]))); }
+    var avg = L.map(function (l, i) {
+      var s = 0, c = 0;
+      for (j = 0; j < n; j++) if (j !== i) { s += M[i][j].v * L[j].w; c += L[j].w; }
+      return c ? s / c : null;
+    });
+    var wavg = 0, wsum = 0;
+    for (i = 0; i < n; i++) if (avg[i] !== null) { wavg += avg[i] * L[i].w; wsum += L[i].w; }
+    wavg = wsum ? wavg / wsum : null;
+    for (i = 0; i < n; i++) for (j = i + 1; j < n; j++) if (M[i][j].v >= 0.85) high.push([L[i].name, L[j].name, M[i][j].v, M[i][j].est]);
+    var anyEst = false;
+    var html = '<section class="block corr" style="margin-top:22px"><h3>Correlaciones entre los fondos de la cartera</h3>';
+    if (n < 2) return { html: html + '<p class="muted">Hacen falta al menos dos fondos.</p></section>', high: [], avg: null };
+    html += '<div class="table-wrap"><table><thead><tr><th scope="col">Fondo</th>' + L.map(function (l, k) { return '<th scope="col" title="' + esc(l.name) + '">' + (k + 1) + "</th>"; }).join("") + '<th scope="col">Media</th></tr></thead><tbody>' +
+      L.map(function (l, r) {
+        return '<tr><td class="fund"><b>' + (r + 1) + ". " + esc(l.name) + "</b></td>" + M[r].map(function (c, k) {
+          if (c.est) anyEst = true;
+          return '<td class="cc' + (c.est ? " est" : "") + '" style="background:' + (r === k ? "transparent" : heat(c.v)) + '" title="' + (r === k ? "" : c.est ? "Estimada por tipo de fondo" : "Calculada con " + c.n + " rentabilidades anuales") + '">' + (r === k ? "1,00" : (c.est ? "~" : "") + nf(c.v, 2)) + "</td>";
+        }).join("") + '<td class="cc"><b>' + (avg[r] === null ? "–" : nf(avg[r], 2)) + "</b></td></tr>";
+      }).join("") + "</tbody></table></div>" +
+      '<p class="note">Correlación de Pearson calculada con las rentabilidades anuales de 2019 a 2026 (como máximo 8 datos, así que es orientativa). Cuando dos fondos no tienen al menos 5 años en común, el valor lleva el signo ~ y es una estimación según el tipo de fondo, no una medición. Una correlación alta (rojo) indica que los fondos se mueven parecido y diversifican poco entre sí; las bajas o negativas (verde) diversifican más.' + (wavg !== null ? " Correlación media ponderada de la cartera: <b>" + nf(wavg, 2) + "</b>." : "") + "</p>";
+    if (high.length) html += '<p class="label" style="margin-top:14px">Pares muy correlacionados (0,85 o más)</p><ul class="checks">' + high.map(function (x) { return '<li class="warn"><i></i><span>' + esc(x[0]) + " y " + esc(x[1]) + ": " + (x[3] ? "~" : "") + nf(x[2], 2) + ". Aportan poca diversificación entre sí.</span></li>"; }).join("") + "</ul>";
+    return { html: html + "</section>", high: high, avg: wavg };
+  }
+
+  function numOf(s) { var v = parseFloat(String(s == null ? "" : s).replace(/,/g, "")); return isFinite(v) ? v : null; }
+  function yearsSince(d) {
+    var m = /(\d+)\/(\d+)\/(\d+)/.exec(String(d || ""));
+    return m ? (new Date(2026, 10, 21) - new Date(+m[3], +m[2] - 1, +m[1])) / 31557600000 : null;
+  }
+  function fundComment(f) {
+    var s = [], yrs = yearsSince(f.cre), aum = numOf(f.aumc), cost = metric("cost").v(f), ps = posInCat(f);
+    if (isNum(yrs)) s.push(yrs < 3 ? "Fondo joven (" + nf(yrs, 1) + " años de historia): sus ratios a varios años aún no son fiables." : "Cuenta con " + nf(yrs, 0) + " años de historia.");
+    if (isNum(aum)) s.push(aum < 50 ? "El patrimonio de la clase es pequeño (" + nf(aum, 0) + " M€), lo que puede afectar a la liquidez y a la continuidad." : aum > 1500 ? "Tiene un patrimonio de la clase muy grande (" + nf(aum, 0) + " M€), lo que da estabilidad pero puede limitar la agilidad." : "Patrimonio de la clase de " + nf(aum, 0) + " M€.");
+    if (f.t === "rv") {
+      if (isNum(f.top10)) s.push(f.top10 > 45 ? "Cartera concentrada: las 10 mayores posiciones pesan el " + nf(f.top10, 0) + "%" + (isNum(f.nEq) ? " en " + nf(f.nEq, 0) + " valores." : ".") : "Cartera diversificada: las 10 mayores posiciones suman el " + nf(f.top10, 0) + "%" + (isNum(f.nEq) ? " en " + nf(f.nEq, 0) + " valores." : "."));
+      if (f.reg && f.reg[1] > 55) s.push("Sesgo geográfico a " + f.reg[0] + " (" + nf(f.reg[1], 0) + "%).");
+      if (f.sec && f.sec[1] > 30) s.push("Sesgo sectorial a " + f.sec[0].toLowerCase() + " (" + nf(f.sec[1], 0) + "%).");
+      if (f.cap && isNum(f.cap[2]) && f.cap[2] + (f.cap[3] || 0) + (f.cap[4] || 0) > 40) s.push("Peso relevante en medianas y pequeñas compañías, con más riesgo y menos liquidez.");
+    } else {
+      if (isNum(f.dur)) s.push("Duración de " + nf(f.dur, 1) + " años" + (f.dur >= 5 ? ", sensible a los tipos de interés." : f.dur <= 2 ? ", poco sensible a los tipos." : "."));
+      if (f.cal) s.push(/^(AAA|AA|A|BBB)$/.test(f.cal) ? "Calidad crediticia media " + f.cal + " (grado de inversión)." : "Calidad crediticia media " + f.cal + ", por debajo de grado de inversión: asume más riesgo de crédito.");
+    }
+    if (isNum(f.alpha)) s.push(f.alpha >= 2 ? "Gestión que ha aportado valor: alpha de " + nf(f.alpha, 1) + "% sobre su índice a 3 años." : f.alpha <= -1 ? "Ha restado valor frente a su índice a 3 años (alpha de " + nf(f.alpha, 1) + "%)." : "Rinde en línea con su índice a 3 años (alpha de " + nf(f.alpha, 1) + "%).");
+    if (isNum(f.r2)) s.push(f.r2 >= 95 ? "Replica casi mecánicamente a su índice (R² de " + nf(f.r2, 0) + "), con poca gestión activa." : f.r2 < 75 ? "Se aparta bastante de su índice (R² de " + nf(f.r2, 0) + "), lo que indica gestión activa y diferenciada." : "");
+    if (isNum(f.sharpe[1])) s.push(f.sharpe[1] >= 1 ? "Buena relación rentabilidad riesgo a 3 años (Sharpe " + dec(f.sharpe[1]) + ")." : f.sharpe[1] < 0.3 ? "Relación rentabilidad riesgo débil a 3 años (Sharpe " + dec(f.sharpe[1]) + ")." : "Relación rentabilidad riesgo aceptable a 3 años (Sharpe " + dec(f.sharpe[1]) + ").");
+    if (isNum(f.dd && f.dd[4])) s.push("Caída máxima histórica de " + pct(f.dd[4], false, 1) + (isNum(f.pos && f.pos[0]) ? " y " + nf(f.pos[0], 0) + "% de meses positivos en el último año." : "."));
+    if (isNum(f.skew && f.skew[0]) && f.skew[0] < -1) s.push("Distribución con colas negativas marcadas: los meses malos pueden ser peores de lo que sugiere la volatilidad.");
+    if (isNum(cost)) s.push(cost > 1.8 ? "Coste neto elevado (" + pct(cost, false, 2) + ")." : cost < 0.8 ? "Coste neto bajo (" + pct(cost, false, 2) + ")." : "Coste neto de " + pct(cost, false, 2) + ".");
+    s.push("Ocupa el puesto " + ps[0] + " de " + ps[1] + " en su categoría por puntuación Morningstar" + (f.stars ? " y tiene " + f.stars + " estrellas." : "."));
+    return s.filter(Boolean).join(" ");
+  }
+  function gcComments(info) {
+    var h = '<section class="block" style="margin-top:22px"><h3>Comentario sobre la gestión de cada fondo</h3>';
+    info.forEach(function (o) {
+      var f = o.f;
+      h += '<div class="fcm"><p class="fcm-h"><b>' + esc(o.l.name) + "</b>" + (f ? " · " + esc(f.g) : "") + "</p>";
+      if (!f) { h += '<p class="muted">Fondo fuera de la web: no hay datos para valorar su gestión.</p></div>'; return; }
+      h += "<p>" + esc(fundComment(f)) + "</p>";
+      var cm = (window.COMMENTS && window.COMMENTS[f.id]) || [];
+      if (cm.length) h += '<p class="fcm-g"><b>Último comentario de la gestora (' + esc(cm[0].d || "") + "):</b> " + esc(cm[0].t || "") + "</p>";
+      h += "</div>";
+    });
+    return h + '<p class="note">Valoración automática a partir de los datos de Morningstar de cada fondo. No recoge la opinión de la gestora salvo que se haya cargado en la ficha del fondo, ni sustituye el análisis del equipo gestor.</p></section>';
+  }
+
   function gcAnalyze() {
     var L = gcLines(), tot = gcTotal(), pr = BPROF[gc.profile], p = { lines: L };
     if (!L.length) return '<p class="muted" style="margin-top:22px">Añade los fondos de la cartera actual con su importe para ver el análisis.</p>';
@@ -1382,6 +1481,8 @@
           '<td><span class="vd ' + cls2 + '">' + o.v + "</span><small>" + esc(o.why) + "</small></td></tr>";
       }).join("") + "</tbody></table></div></section>";
 
+    var cr = gcCorr(L);
+    h += cr.html;
     // cualitativo
     var good = [], bad = [];
     var ok = BUCKETS.filter(function (bk) { var w = bw[bk.k] || 0, r = pr.r[bk.k]; return w >= r[0] - 0.05 && w <= r[1] + 0.05; }).length;
@@ -1396,8 +1497,9 @@
     if (idxs.length) bad.push("Incluye fondos indexados (" + idxs.map(function (o) { return o.l.name; }).join(", ") + "), que no entran en la selección de fondos que haces con tus clientes.");
     if (noData.length) bad.push(noData.length + (noData.length === 1 ? " fondo no está" : " fondos no están") + " en la web, así que no se pueden medir.");
     if (mf && mf.n !== null && n > mf.n) bad.push("Tiene " + n + " fondos para " + nf(tot, 0) + " €, por encima del máximo de " + mf.n + ".");
+    if (cr.high.length) bad.push("Hay " + cr.high.length + (cr.high.length === 1 ? " par" : " pares") + " de fondos muy correlacionados (0,85 o más), que diversifican poco entre sí.");
     h += '<h2 class="gh">2. Análisis cualitativo</h2><div class="grid2"><section class="block"><h3>Puntos fuertes</h3><ul class="checks">' + (good.length ? good.map(function (s) { return '<li class="ok"><i></i><span>' + esc(s) + "</span></li>"; }).join("") : '<li class="info"><i></i><span>No se han detectado puntos fuertes claros.</span></li>') +
-      '</ul></section><section class="block"><h3>Puntos débiles</h3><ul class="checks">' + (bad.length ? bad.map(function (s) { return '<li class="warn"><i></i><span>' + esc(s) + "</span></li>"; }).join("") : '<li class="ok"><i></i><span>No se han detectado puntos débiles.</span></li>') + "</ul></section></div>";
+      '</ul></section><section class="block"><h3>Puntos débiles</h3><ul class="checks">' + (bad.length ? bad.map(function (s) { return '<li class="warn"><i></i><span>' + esc(s) + "</span></li>"; }).join("") : '<li class="ok"><i></i><span>No se han detectado puntos débiles.</span></li>') + "</ul></section></div>" + gcComments(info);
 
     // mejoras
     var acts = [];
