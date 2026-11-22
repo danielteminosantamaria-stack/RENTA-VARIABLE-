@@ -93,6 +93,7 @@
       '<a class="cat-card" href="#/categorias"><div class="row"><div><small>Explorar</small><h2>Categorías</h2></div><span class="count">' + (allCats("rf").length + allCats("rv").length) + ' categorías</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
       '<a class="cat-card" href="#/gestion"><div class="row"><div><small>Herramienta</small><h2>Gestión de carteras</h2></div><span class="count">analizar la del cliente</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
       '<a class="cat-card" href="#/acciones"><div class="row"><div><small>Explorar</small><h2>Acciones MarketSurge</h2></div><span class="count">' + stocks().length + (stocks().length === 1 ? " ficha" : " fichas") + '</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
+      '<a class="cat-card" href="#/agenda"><div class="row"><div><small>Semana</small><h2>Agenda semanal</h2></div><span class="count">mercado y deuda</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
       '<a class="cat-card" href="#/construir"><div class="row"><div><small>Herramienta</small><h2>Construir cartera</h2></div><span class="count">con el cliente</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
       '<a class="cat-card" href="#/comparar"><div class="row"><div><small>Herramienta</small><h2>Comparador de fondos</h2></div><span class="count">hasta ' + CMP_MAX + ' fondos</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
       '<a class="cat-card" href="#/carteras"><div class="row"><div><small>Herramienta</small><h2>Carteras</h2></div><span class="count">' + PF.length + (PF.length === 1 ? " cartera" : " carteras") + '</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
@@ -1762,6 +1763,25 @@
     app.innerHTML = h + footer("rv");
   }
 
+  function viewAgenda() {
+    setTitle("Agenda semanal");
+    var A = window.AGENDA || { dias: [] };
+    var lab = { sub: "Deuda", res: "Resultados", key: "Clave", mac: "Macro", bc: "Banco central" };
+    var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Agenda semanal</h1>' +
+      '<p class="sub">Semana del ' + esc(A.semana || "") + '. Actualizada el ' + esc(A.actualizado || "") + '.</p>';
+    if (!A.dias.length) { app.innerHTML = h + '<div class="empty box" style="margin-top:18px;padding:34px 20px">Todavía no hay agenda.</div>' + footer("rv"); return; }
+    A.dias.forEach(function (d) {
+      h += '<div class="box" style="margin-top:14px;padding:16px 18px"><h2 style="margin:0 0 8px;font-size:1.05rem">' + esc(d.d) + '</h2>';
+      d.e.forEach(function (x) {
+        h += '<div class="agrow"><span class="agtag ag-' + esc(x[0]) + '">' + esc(lab[x[0]] || x[0]) + '</span><span>' + esc(x[1]) + '</span></div>';
+      });
+      h += '</div>';
+    });
+    if (A.clave) h += '<div class="box" style="margin-top:14px;padding:16px 18px"><h2 style="margin:0 0 6px;font-size:1.05rem">Qué puede mover las carteras</h2><p style="margin:0">' + esc(A.clave) + '</p></div>';
+    if (A.pendiente) h += '<p class="sub" style="margin-top:12px">' + esc(A.pendiente) + '</p>';
+    app.innerHTML = h + footer("rv");
+  }
+
   // ---------- router ----------
   function route() {
     var h = (location.hash || "#/").replace(/^#/, ""), p = h.split("/").filter(Boolean);
@@ -1773,6 +1793,7 @@
     if (p[0] === "comparar") return viewCompare(p[1]);
     if (p[0] === "carteras") return viewPortfolios();
     if (p[0] === "acciones") return viewStocks();
+    if (p[0] === "agenda") return viewAgenda();
     if (p[0] === "accion" && p[1]) return viewStock(decodeURIComponent(p[1]));
     if (p[0] === "gestion") return viewGestion();
     if (p[0] === "construir") return viewBuild();

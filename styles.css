@@ -455,3 +455,8 @@ td, th { font-variant-numeric: tabular-nums; }
 .folder .mono:has(img) { background: #fff; border: 1px solid var(--line, #e3d9dc); }
 
 .fichaimg { width: 100%; height: auto; display: block; border: 1px solid var(--line, #e3d9dc); border-radius: 8px; }
+
+.agrow { display: flex; gap: 10px; align-items: flex-start; padding: 7px 0; border-top: 1px solid var(--line, #e3d9dc); font-size: .93rem; }
+.agrow:first-of-type { border-top: 0; }
+.agtag { flex: 0 0 auto; min-width: 78px; text-align: center; font-size: .72rem; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #f1e9eb; color: #7a1a2c; }
+.ag-key { background: #c8102e; color: #fff; }
