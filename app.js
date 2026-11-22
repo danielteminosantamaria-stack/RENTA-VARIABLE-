@@ -614,6 +614,17 @@
   // ---------- comparador ----------
   function hashFor(ids) { return "#/comparar" + (ids.length ? "/" + ids.map(encodeURIComponent).join(",") : ""); }
 
+  function printBar(titleFn) {
+    var d = document.createElement("div"); d.id = "printhead"; d.className = "printhead"; app.insertBefore(d, app.firstChild);
+    var b = document.createElement("button"); b.type = "button"; b.className = "btn ghost"; b.id = "pdfbtn"; b.textContent = "Descargar PDF";
+    b.addEventListener("click", function () {
+      var t = titleFn();
+      d.innerHTML = "<h1 class=\"ph\">" + esc(t[0]) + "</h1><p>" + esc(t[1]) + " · " + new Date().toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }) + "</p>";
+      window.print();
+    });
+    return b;
+  }
+
   function viewCompare(raw) {
     setTitle("Comparador de fondos");
     var ids = (raw ? raw.split(",") : []).map(function (x) { try { return decodeURIComponent(x); } catch (e) { return x; } })
@@ -630,6 +641,7 @@
     }
     h += fs.length >= 2 ? cmpTable(fs) + cmpChart(fs) : '<p class="muted" style="margin-top:20px">Añade al menos 2 fondos para compararlos.</p>';
     app.innerHTML = h + footer("rv");
+    if (fs.length >= 2) { var cb = printBar(function () { return ["Comparativa de fondos", fs.map(function (f) { return f.n; }).join(", ")]; }); var tb = document.createElement("div"); tb.className = "row tools2"; tb.appendChild(cb); app.appendChild(tb); }
     var cq = document.getElementById("cq");
     if (cq) cq.addEventListener("input", function () {
       var v = cq.value.trim(), res = document.getElementById("cres");
@@ -791,10 +803,13 @@
       '<div id="pftable"></div><div id="pfsum"></div>' +
       '<div class="row tools2"><a class="btn ghost" id="pfcmp" href="#/comparar">Comparar fondos</a>' +
       '<button class="btn ghost" type="button" id="pfcsv">Exportar CSV</button>' +
+      '<span id="pfpdfslot"></span>' +
       '<button class="btn ghost" type="button" id="pfdup">Duplicar</button>' +
       '<button class="btn ghost danger" type="button" id="pfdel">Eliminar cartera</button></div>';
     app.innerHTML = h + footer("rv");
 
+    var pdfb = printBar(function () { var nm = document.getElementById("pfname"); var am = document.getElementById("pfamt"); return ["Cartera: " + (nm && nm.value || p.name), (am && am.value ? nf(+am.value, 0) + " €" : "Sin importe indicado")]; });
+    document.getElementById("pfpdfslot").replaceWith(pdfb);
     function save() { savePf(); }
     function renderTable() {
       var t = document.getElementById("pftable");

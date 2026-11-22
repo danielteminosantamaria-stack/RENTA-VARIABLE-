@@ -429,6 +429,8 @@ td, th { font-variant-numeric: tabular-nums; }
   .printhead { display: block; border-bottom: 3px solid var(--brand); padding-bottom: 8px; margin-bottom: 12px; }
   .printhead h1 { display: block !important; font-size: 22px; margin: 0 0 4px; color: var(--brand); }
   .printhead p { margin: 0; color: var(--body); }
+  .selchip b, .pfhead .amtl span, #pfname { border: 0 !important; }
+  .sel, .btn, .pfhead { display: none !important; }
   main, #app { max-width: none; padding: 0; }
   .gh { break-after: avoid; margin-top: 18px; }
   .block, .fcm, .kpis, tr, .grid2 > section { break-inside: avoid; }
