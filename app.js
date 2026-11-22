@@ -487,6 +487,31 @@
       }).join("") + "</div></section>";
     }
 
+    // Evolución de 10.000 € (a partir de las rentabilidades anuales)
+    if (f.ann && isNum(f.ann[0]) && isNum(f.ann[1])) {
+      var run = [];
+      for (var k = 0; k < f.ann.length && isNum(f.ann[k]); k++) run.push([2026 - k, f.ann[k]]);
+      run.reverse();
+      var val = 10000, pts = [["Inicio", val]];
+      run.forEach(function (y) { val = val * (1 + y[1] / 100); pts.push([y[0] === 2026 ? "2026" : String(y[0]), val]); });
+      var W = 420, H = 190, L = 46, R = 28, T = 12, B = 28;
+      var lo = Math.min.apply(null, pts.map(function (p) { return p[1]; })), hi = Math.max.apply(null, pts.map(function (p) { return p[1]; }));
+      lo = Math.min(lo, 10000); var span = (hi - lo) || 1; lo -= span * 0.08; hi += span * 0.08; span = hi - lo;
+      var X = function (i) { return L + (W - L - R) * i / (pts.length - 1); }, Y = function (v) { return T + (H - T - B) * (1 - (v - lo) / span); };
+      var line = pts.map(function (p, i) { return (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(p[1]).toFixed(1); }).join(" ");
+      var svg = '<svg viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" aria-label="Evolución de 10.000 euros">' +
+        '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(10000).toFixed(1) + '" y2="' + Y(10000).toFixed(1) + '" stroke="#bbb" stroke-dasharray="4 3"/>' +
+        '<text x="' + (L - 6) + '" y="' + (Y(10000) + 4).toFixed(1) + '" text-anchor="end" font-size="10" fill="#777">10.000</text>' +
+        '<path d="' + line + '" fill="none" stroke="#851a2e" stroke-width="2.2"/>' +
+        pts.map(function (p, i) {
+          return '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(p[1]).toFixed(1) + '" r="3" fill="#851a2e"/>' +
+            '<text x="' + X(i).toFixed(1) + '" y="' + (H - 10) + '" text-anchor="middle" font-size="10" fill="#777">' + p[0] + "</text>" +
+            (i ? '<text x="' + X(i).toFixed(1) + '" y="' + (Y(p[1]) - 7).toFixed(1) + '" text-anchor="middle" font-size="10" font-weight="600" fill="#333">' + nf(p[1], 0) + "</text>" : "");
+        }).join("") + "</svg>";
+      html += '<section class="block"><h3>Evolución de 10.000 €</h3>' + svg +
+        '<p class="note">Calculada encadenando las rentabilidades anuales de la clase (2026 hasta ' + esc(String(META.annDate || "").slice(0, 5)) + '). No incluye la evolución dentro de cada año.</p></section>';
+    }
+
     // Composición
     var mix = f.mix, labels = ["Acciones", "Bonos", "Efectivo", "Otros"], colors = ["#851a2e", "#3b3b3b", "#b9b9b9", "#f0c9b0"];
     if (mix.some(isNum)) {
