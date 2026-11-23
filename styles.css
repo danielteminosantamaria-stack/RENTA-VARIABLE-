@@ -694,3 +694,21 @@ tbody tr:hover td { background: var(--gold-soft); }
 .foot { background: #1a1220; border-top-color: var(--gold); }
 a { transition: color .15s; }
 .hero.vis .deco { opacity: .55; }
+
+/* ===== Tamaño compacto ===== */
+.tiles { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.tile { padding: 12px 14px; gap: 11px; border-radius: 12px; }
+.tile::before { width: 4px; } .tile::after { width: 70px; height: 70px; right: -20px; top: -20px; }
+.tile .ico { width: 38px; height: 38px; border-radius: 10px; } .tile .ico svg { width: 20px; height: 20px; }
+.tile b { font-size: 15px; } .tile small { font-size: 10px; } .tile .cnt { font-size: 11px; max-width: 70px; }
+.tile .arrow { font-size: 16px; }
+h2.sec { font-size: 18px; margin: 34px 0 12px; } h2.sec::before { height: 18px; width: 5px; }
+.hstats { gap: 10px; max-width: 640px; margin-top: 28px; }
+.hstat { padding: 10px 14px; border-radius: 10px; } .hstat b { font-size: 22px; } .hstat:last-child b { font-size: 17px; line-height: 1.6; } .hstat span { font-size: 10px; }
+.hero.vis { padding-top: 56px; padding-bottom: 46px; } .hero.vis h1 { font-size: 48px; } .hero.vis .lead { font-size: 16px; }
+.search.big input { padding: 14px 20px 14px 46px; font-size: 15px; } .search.big { max-width: 620px; }
+.mv { padding: 16px 18px 8px; border-radius: 12px; } .mvrow { padding: 4px 6px; font-size: 12.5px; } .mvbar { height: 8px; }
+.phero { padding-top: 30px; padding-bottom: 26px; } .phero h1 { font-size: 32px; } .phero .sub { font-size: 14.5px; }
+.kpis > *, .block, .cat-card, .pfcard, .table-wrap { border-radius: 12px; }
+.block { padding: 14px 18px 12px; }
+.cat-card { padding: 12px 14px; }
