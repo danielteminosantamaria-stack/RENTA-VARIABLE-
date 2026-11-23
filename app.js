@@ -227,7 +227,7 @@
   var state = {
     rf: { view: "list", g: null, cat: null, q: "", sort: "n", dir: 1, pick: false, cols: loadCols("rf") },
     rv: { view: "list", g: null, cat: null, q: "", sort: "n", dir: 1, pick: false, cols: loadCols("rv") },
-    cx: "vol1", cy: "y1"
+    cx: "vol1", cy: "y1", front: true
   };
 
   function cols(t) {
@@ -338,6 +338,9 @@
         var el = document.getElementById(id);
         el.addEventListener("change", function () { state[id] = el.value; renderBody(t); document.getElementById(id).focus(); });
       });
+      var pz = document.getElementById("plazo"), fr = document.getElementById("front");
+      pz.addEventListener("change", function () { if (pz.value) { state.cx = "vol" + pz.value; state.cy = "y" + pz.value; } renderBody(t); });
+      fr.addEventListener("change", function () { state.front = fr.checked; renderBody(t); });
       bindChart(t);
       return;
     }
@@ -390,7 +393,13 @@
           }).join("") + "</optgroup>" : "";
         }).join("") + "</select></label>";
     }
-    return '<div class="axes">' + sel("cx", "Eje X", state.cx) + sel("cy", "Eje Y", state.cy) + "</div>";
+    var pl = { "1": ["vol1", "y1"], "3": ["vol3", "y3"], "5": ["vol5", "y5"] }, cur = "";
+    Object.keys(pl).forEach(function (k) { if (state.cx === pl[k][0] && state.cy === pl[k][1]) cur = k; });
+    var plazo = '<label class="axis"><span class="muted">Plazo (volatilidad y rentabilidad)</span><select id="plazo" aria-label="Plazo">' +
+      '<option value=""' + (cur ? "" : " selected") + ">Personalizado</option>" +
+      Object.keys(pl).map(function (k) { return '<option value="' + k + '"' + (cur === k ? " selected" : "") + ">" + k + (k === "1" ? " año" : " años") + "</option>"; }).join("") + "</select></label>";
+    return '<div class="axes">' + plazo + sel("cx", "Eje X", state.cx) + sel("cy", "Eje Y", state.cy) +
+      '<label class="axis frontchk"><input type="checkbox" id="front"' + (state.front ? " checked" : "") + '> <span>Frontera eficiente</span></label></div>';
   }
   function chart(t, list) {
     var mx = metric(state.cx) || metric("vol1"), my = metric(state.cy) || metric("y1");
@@ -415,13 +424,27 @@
     if (x0 < 0) g += '<line y1="' + T + '" y2="' + (H - B) + '" x1="' + X(0) + '" x2="' + X(0) + '" stroke="#bdbdbd"/>';
     g += '<text x="' + (L + (W - L - R) / 2) + '" y="' + (H - 6) + '" text-anchor="middle" fill="#717171" font-size="11">' + esc(mx.l) + "</text>";
     g += '<text transform="translate(14 ' + (T + (H - T - B) / 2) + ') rotate(-90)" text-anchor="middle" fill="#717171" font-size="11">' + esc(my.l) + "</text>";
+    var fr = [], note = "";
+    if (state.front) {
+      if (mx.g === "Riesgo" && my.g !== "Riesgo") {
+        var srt = pts.slice().sort(function (a, b) { return mx.v(a) - mx.v(b) || my.v(b) - my.v(a); }), best = -Infinity;
+        srt.forEach(function (f) { if (my.v(f) > best) { fr.push(f); best = my.v(f); } });
+        if (fr.length > 1) {
+          g += '<polygon class="efarea" points="' + fr.map(function (f) { return X(mx.v(f)).toFixed(1) + "," + Y(my.v(f)).toFixed(1); }).join(" ") + " " + X(mx.v(fr[fr.length - 1])).toFixed(1) + "," + Y(y0).toFixed(1) + " " + X(mx.v(fr[0])).toFixed(1) + "," + Y(y0).toFixed(1) + '"/>';
+        }
+        g += '<polyline class="efline" fill="none" points="' + fr.map(function (f) { return X(mx.v(f)).toFixed(1) + "," + Y(my.v(f)).toFixed(1); }).join(" ") + '"/>';
+      } else note = "La frontera eficiente necesita un eje X de riesgo (volatilidad) y un eje Y de rentabilidad.";
+    }
+    var efIds = {}; fr.forEach(function (f) { efIds[f.id] = 1; });
     pts.forEach(function (f) {
-      g += '<circle class="dot' + (f.g === "Renta 4" ? " r4" : "") + '" tabindex="0" role="link" aria-label="' + esc(f.n) + '" data-id="' + esc(f.id) +
+      g += '<circle class="dot' + (f.g === "Renta 4" ? " r4" : "") + (efIds[f.id] ? " ef" : "") + '" tabindex="0" role="link" aria-label="' + esc(f.n) + '" data-id="' + esc(f.id) +
         '" cx="' + X(mx.v(f)).toFixed(1) + '" cy="' + Y(my.v(f)).toFixed(1) + '" r="5.5"/>';
     });
     return '<div class="chart-card"><svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + esc(my.l) + " frente a " + esc(mx.l) + '">' + g + "</svg>" +
       '<div class="tip" id="tip"></div>' +
-      '<div class="legend"><span><i></i>Fondos</span><span><i style="background:var(--brand)"></i>Renta 4</span><span>' + pts.length + " de " + list.length + " fondos con datos</span></div></div>";
+      '<div class="legend"><span><i></i>Fondos</span><span><i style="background:var(--brand)"></i>Renta 4</span><span>' + pts.length + " de " + list.length + " fondos con datos</span>" + (fr.length ? '<span><i class="efi"></i>Frontera eficiente</span>' : "") + "</div>" +
+      (fr.length ? '<div class="eflist"><b>Fondos en la frontera (menos riesgo a más riesgo):</b> ' + fr.map(function (f) { return '<a href="#/fondo/' + encodeURIComponent(f.id) + '">' + esc(f.n) + "</a> (" + nf(mx.v(f), 1) + "%, " + nf(my.v(f), 1) + "%)"; }).join(" · ") +
+        '<p class="note">Un fondo está en la frontera cuando ningún otro ofrece más rentabilidad con igual o menos volatilidad, dentro de los fondos que se muestran (respeta el filtro de categoría). Es una comparación de datos pasados, no una recomendación.</p></div>' : "") + (note ? '<p class="note">' + esc(note) + "</p>" : "") + "</div>";
   }
   function bindChart() {
     var card = document.querySelector(".chart-card"), tip = document.getElementById("tip");
