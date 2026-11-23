@@ -225,8 +225,8 @@
   function saveCols(t) { try { localStorage.setItem(STORE + t, JSON.stringify(state[t].cols)); } catch (e) { /* sin almacenamiento */ } }
 
   var state = {
-    rf: { view: "list", g: null, q: "", sort: "n", dir: 1, pick: false, cols: loadCols("rf") },
-    rv: { view: "list", g: null, q: "", sort: "n", dir: 1, pick: false, cols: loadCols("rv") },
+    rf: { view: "list", g: null, cat: null, q: "", sort: "n", dir: 1, pick: false, cols: loadCols("rf") },
+    rv: { view: "list", g: null, cat: null, q: "", sort: "n", dir: 1, pick: false, cols: loadCols("rv") },
     cx: "vol1", cy: "y1"
   };
 
@@ -238,7 +238,7 @@
 
   function filtered(t) {
     var s = state[t];
-    return ofType(t).filter(function (f) { return (!s.g || f.g === s.g) && matches(f, s.q); });
+    return ofType(t).filter(function (f) { return (!s.g || f.g === s.g) && (!s.cat || f.c === s.cat) && matches(f, s.q); });
   }
   function sorted(t, list) {
     var s = state[t], c = cols(t).filter(function (x) { return x.k === s.sort; })[0];
@@ -260,7 +260,9 @@
     setTitle(CATS[t].title);
     var groups = {};
     ofType(t).forEach(function (f) { groups[f.g] = (groups[f.g] || 0) + 1; });
-    var names = Object.keys(groups).sort(function (a, b) { return a.localeCompare(b, "es"); });
+    var cc = {};
+    ofType(t).forEach(function (f) { if (f.c) cc[f.c] = (cc[f.c] || 0) + 1; });
+    var cats = Object.keys(cc).sort(function (a, b) { return a.localeCompare(b, "es"); });
 
     app.innerHTML =
       '<div class="topbar"><a href="#/">← Inicio</a></div>' +
@@ -269,10 +271,8 @@
       '<button type="button" data-view="list" aria-pressed="' + (s.view === "list") + '">Lista</button>' +
       '<button type="button" data-view="chart" aria-pressed="' + (s.view === "chart") + '">Gráfico</button></div>' +
       '<a class="link" href="#/' + t + '/resumen">Visión general</a></div></div>' +
-      '<div class="folders">' + names.map(function (g) {
-        return '<button type="button" class="folder" data-g="' + esc(g) + '" aria-pressed="' + (s.g === g) + '">' +
-          '<span class="mono" aria-hidden="true">' + logoOrInit(g) + "</span><span><b>" + esc(g) + "</b><small>" +
-          groups[g] + (groups[g] === 1 ? " fondo" : " fondos") + "</small></span></button>";
+      '<div class="catbar" role="group" aria-label="Categorías"><button type="button" class="catchip" data-cat="" aria-pressed="' + (!s.cat) + '">Todas <i>' + ofType(t).length + "</i></button>" + cats.map(function (c) {
+        return '<button type="button" class="catchip" data-cat="' + esc(c) + '" aria-pressed="' + (s.cat === c) + '">' + esc(c) + " <i>" + cc[c] + "</i></button>";
       }).join("") + "</div>" +
       '<div class="filters"><div class="search">' + icon() +
       '<input id="q" type="search" placeholder="Buscar por nombre o ISIN" value="' + esc(s.q) + '" aria-label="Buscar fondo" autocomplete="off"></div>' +
@@ -283,10 +283,10 @@
     app.querySelectorAll("[data-view]").forEach(function (b) {
       b.addEventListener("click", function () { s.view = b.getAttribute("data-view"); viewList(t); });
     });
-    app.querySelectorAll(".folder").forEach(function (b) {
+    app.querySelectorAll(".catchip").forEach(function (b) {
       b.addEventListener("click", function () {
-        var g = b.getAttribute("data-g");
-        s.g = s.g === g ? null : g;
+        var c = b.getAttribute("data-cat");
+        s.cat = c && s.cat !== c ? c : null;
         viewList(t);
       });
     });
@@ -350,9 +350,9 @@
     body.innerHTML = '<div class="table-wrap"><table><thead><tr>' + th("n", "Fondo") +
       c.map(function (x) { return th(x.k, x.l); }).join("") + "</tr></thead><tbody>" +
       rows.map(function (f) {
-        return '<tr data-id="' + esc(f.id) + '" tabindex="0"><td class="fund"><b>' + esc(f.n) +
-          (f.idx ? '<span class="tag">Indexado</span>' : "") + "</b><small>" + esc(f.g) + (t === "rv" ? " · " + esc(f.c) : "") +
-          "</small></td>" + c.map(function (x) { return "<td>" + x.r(f) + "</td>"; }).join("") + "</tr>";
+        return '<tr data-id="' + esc(f.id) + '" tabindex="0"><td class="fund"><span class="flogo" aria-hidden="true">' + logoOrInit(f.g) + '</span><span class="ftxt"><b>' + esc(f.n) +
+          (f.idx ? '<span class="tag">Indexado</span>' : "") + "</b><small>" + esc(f.g) + (f.c ? " · " + esc(f.c) : "") +
+          "</small></span></td>" + c.map(function (x) { return "<td>" + x.r(f) + "</td>"; }).join("") + "</tr>";
       }).join("") + "</tbody></table></div>";
     body.querySelectorAll("[data-sort]").forEach(function (b) {
       b.addEventListener("click", function () {

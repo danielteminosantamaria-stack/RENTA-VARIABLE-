@@ -755,3 +755,15 @@ h2.sec { font-size: 18px; margin: 34px 0 14px; } h2.sec::before { height: 18px; 
 .block { padding: 14px 18px 12px; } .cat-card { padding: 12px 14px; }
 .cat-card:hover, .pfcard:hover, .folder:hover { box-shadow: 0 8px 20px -8px rgba(26, 18, 32, .28) !important; }
 main > * { animation-duration: .3s; }
+
+/* Categorías como filtro y logo junto al fondo */
+.catbar { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.catchip { font: inherit; font-size: 13px; font-weight: 600; color: var(--body); background: #fff; border: 1px solid #ddd6df; border-radius: 99px; padding: 7px 14px; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; transition: all .15s; }
+.catchip i { font-style: normal; font-size: 11px; font-weight: 700; color: var(--muted); background: #f1eff4; border-radius: 99px; padding: 1px 7px; }
+.catchip:hover { border-color: var(--brand); color: var(--brand); }
+.catchip[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; box-shadow: 0 4px 12px -4px rgba(176, 16, 48, .5); }
+.catchip[aria-pressed="true"] i { background: rgba(255, 255, 255, .25); color: #fff; }
+td.fund { display: flex; align-items: center; gap: 12px; }
+.flogo { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; border: 1px solid #e4e0e6; background: #fff; display: grid; place-items: center; overflow: hidden; font-size: 11px; font-weight: 700; color: var(--brand); }
+.flogo img { width: 22px; height: 22px; object-fit: contain; }
+.ftxt { display: flex; flex-direction: column; min-width: 0; }
