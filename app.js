@@ -60,7 +60,7 @@
     if (!n) return true;
     return norm(f.n + " " + f.id + " " + f.g + " " + f.c).indexOf(n) !== -1;
   }
-  function setTitle(t) { document.title = t ? t + " · GESTION DE CARTERAS - DANIEL TEMIÑO" : "GESTION DE CARTERAS - DANIEL TEMIÑO"; }
+  function setTitle(t) { document.title = t ? t + " · Gestión de carteras" : "Gestión de carteras"; }
 
   // ---------- inicio ----------
   function topFive(t) {
