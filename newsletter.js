@@ -3,7 +3,7 @@
   "use strict";
   var NL = window.NEWSLETTER = window.NEWSLETTER || {};
   /* ---- Configuración (editar aquí) ---- */
-  NL.action = NL.action || "";                    // p. ej. https://assets.mailerlite.com/jsonp/ID_CUENTA/forms/ID_FORMULARIO/subscribe
+  NL.action = NL.action || "https://assets.mailerlite.com/jsonp/2818689/forms/204946817986594131/subscribe";
   NL.emailField = NL.emailField || "fields[email]";
   NL.extra = NL.extra || { "ml-submit": "1", "anticsrf": "true" };
   NL.responsable = NL.responsable || "";          // nombre del titular (opcional, se muestra en privacidad)
