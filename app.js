@@ -1922,6 +1922,27 @@
   }
 
   // ---------- router ----------
+  // Cabecera tipo banner en todas las páginas interiores
+  var decorating = false;
+  function decorate() {
+    if (decorating) return;
+    var kids = app.children, h1 = null, fh = null;
+    for (var i = 0; i < kids.length; i++) {
+      if (kids[i].classList.contains("hero") || kids[i].classList.contains("phero")) return;
+      if (kids[i].tagName === "H1") { h1 = kids[i]; break; }
+      if (kids[i].classList.contains("fhead") || kids[i].classList.contains("page-head")) { fh = kids[i]; break; }
+    }
+    decorating = true;
+    try {
+      if (fh) { fh.classList.add("phero"); return; }
+      if (!h1) return;
+      var w = document.createElement("header"); w.className = "phero";
+      app.insertBefore(w, h1); w.appendChild(h1);
+      while (w.nextElementSibling && w.nextElementSibling.matches("p.sub, .sel")) w.appendChild(w.nextElementSibling);
+    } finally { decorating = false; }
+  }
+  if (window.MutationObserver) new MutationObserver(decorate).observe(app, { childList: true });
+
   function route() {
     var h = (location.hash || "#/").replace(/^#/, ""), p = h.split("/").filter(Boolean);
     window.scrollTo(0, 0);

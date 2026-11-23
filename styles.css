@@ -557,3 +557,29 @@ h2.sec::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .mvbar { height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
 .mvbar i { display: block; height: 100%; border-radius: 4px; } .mvbar i.pos { background: #1e7a4a; } .mvbar i.neg { background: #c8102e; }
 @media (max-width: 760px) { .hstats { grid-template-columns: repeat(2, 1fr); } .hero.vis { padding: 30px 22px 22px; } .hero.vis h1 { font-size: 30px; } .movers { grid-template-columns: 1fr; } .tiles { grid-template-columns: 1fr; } }
+
+/* ===== Páginas interiores ===== */
+.phero { position: relative; overflow: hidden; border-radius: 6px; padding: 26px 30px 24px; margin: 4px 0 22px; color: #fff; background: linear-gradient(120deg, #d10f2e 0%, #a30c25 55%, #5a0a18 100%); box-shadow: 0 8px 22px rgba(200, 16, 46, .2); }
+.phero::after { content: ""; position: absolute; right: -40px; top: -60px; width: 260px; height: 260px; border-radius: 50%; background: rgba(255, 255, 255, .08); }
+.phero h1 { color: #fff; font-size: 30px; position: relative; z-index: 1; }
+.phero .sub, .phero .muted, .phero p { color: rgba(255, 255, 255, .9); position: relative; z-index: 1; margin-bottom: 0; }
+.phero .sub { margin-top: 8px; }
+.phero a { color: #fff; text-decoration: underline; text-underline-offset: 2px; }
+.phero .tag { background: rgba(255, 255, 255, .22); color: #fff; }
+.phero .fhead h1, .phero.fhead h1 { color: #fff; }
+.kpis > * { box-shadow: 0 2px 8px rgba(0, 0, 0, .07); border-top: 3px solid var(--brand); }
+.block, .box { box-shadow: 0 2px 10px rgba(0, 0, 0, .06); border: 1px solid var(--line); }
+.block { border-top: 3px solid var(--brand); padding-top: 14px; }
+.block h3 { text-transform: uppercase; letter-spacing: .08em; font-size: 12.5px; }
+.table-wrap { box-shadow: 0 2px 10px rgba(0, 0, 0, .06); border: 1px solid var(--line); }
+tbody tr:hover td { background: var(--brand-soft); }
+.selchip { border-radius: 2px; }
+.filters, .search { box-shadow: 0 2px 8px rgba(0, 0, 0, .05); }
+.topbar { margin-bottom: 14px; }
+@media (max-width: 760px) { .phero { padding: 20px 18px; } .phero h1 { font-size: 23px; } }
+@media print { .phero { display: none !important; } }
+
+.page-head.phero { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.page-head.phero .tools { position: relative; z-index: 1; }
+.page-head.phero .seg { background: rgba(255, 255, 255, .95); }
+html, body { background: #fff !important; }
