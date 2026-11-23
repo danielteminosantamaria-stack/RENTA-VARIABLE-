@@ -97,7 +97,7 @@
     var gest = {}; FUNDS.forEach(function (f) { gest[f.g] = 1; });
     var stat = function (n, l) { return '<div class="hstat"><b>' + esc(String(n)) + "</b><span>" + esc(l) + "</span></div>"; };
     return '<header class="hero vis"><svg class="deco" viewBox="0 0 600 220" preserveAspectRatio="none" aria-hidden="true"><path d="M0 190 C60 170 90 150 140 160 S230 120 290 110 380 130 430 80 530 40 600 20" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/><path d="M0 210 C70 195 110 185 170 180 S260 150 320 145 420 150 470 110 560 80 600 60" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="3"/></svg>' +
-      '<p class="eyebrow">Banca privada</p><h1>Gestión de carteras</h1><p class="lead">Rentabilidad, riesgo y ratios de los fondos en seguimiento, con datos de Morningstar.</p>' +
+      '<h1>Gestión de carteras</h1><p class="lead">Rentabilidad, riesgo y ratios de los fondos en seguimiento, con datos de Morningstar.</p>' +
       '<div class="hstats">' + stat(FUNDS.length, "fondos") + stat(Object.keys(gest).length, "gestoras") + stat(allCats("rf").length + allCats("rv").length, "categorías") + stat(META.rv || META.rf || "", "datos a") + "</div></header>";
   }
   function searchHtml() {
