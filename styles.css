@@ -522,3 +522,38 @@ th { background: var(--soft); color: var(--text); text-transform: uppercase; let
 .site nav { flex: 1 1 auto; min-width: 0; justify-content: flex-end; }
 .site { display: block; }
 .site .util, .site .sbar { width: 100%; }
+
+/* ===== Portada visual ===== */
+.hero.vis { position: relative; overflow: hidden; border-left: 0; border-radius: 6px; padding: 44px 40px 30px; color: #fff; background: linear-gradient(120deg, #e0102f 0%, #b30d27 45%, #5a0a18 100%); box-shadow: 0 12px 30px rgba(200, 16, 46, .25); }
+.hero.vis .deco { position: absolute; right: 0; bottom: 0; width: 70%; height: 100%; opacity: .9; }
+.hero.vis > *:not(.deco) { position: relative; }
+.hero.vis .eyebrow { margin: 0 0 6px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: rgba(255, 255, 255, .8); }
+.hero.vis h1 { color: #fff; font-size: 44px; text-transform: none; letter-spacing: -.01em; }
+.hero.vis .lead { color: rgba(255, 255, 255, .92); font-size: 16px; margin: 10px 0 0; max-width: 560px; }
+.hstats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 28px; }
+.hstat { background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 255, 255, .25); backdrop-filter: blur(2px); border-radius: 6px; padding: 12px 16px; }
+.hstat b { display: block; font-family: var(--heading); font-size: 26px; line-height: 1.1; }
+.hstat span { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
+.search.big { margin: 18px 0 0; } .search.big input { font-size: 16px; padding: 14px 16px 14px 44px; box-shadow: 0 4px 14px rgba(0, 0, 0, .08); }
+h2.sec { font-family: var(--heading); font-size: 14px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 34px 0 12px; display: flex; align-items: center; gap: 12px; }
+h2.sec::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+.tile { display: flex; align-items: center; gap: 14px; padding: 16px 18px; background: #fff; border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 1px 4px rgba(0, 0, 0, .05); transition: transform .15s, box-shadow .15s, border-color .15s; position: relative; }
+.tile:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(0, 0, 0, .12); border-color: var(--brand); }
+.tile .ico { flex: 0 0 auto; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; color: var(--brand); background: var(--brand-soft); transition: background .15s, color .15s; }
+.tile:hover .ico { background: var(--brand); color: #fff; }
+.tile .tt { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.tile small { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.tile b { font-family: var(--heading); font-size: 16.5px; color: var(--text); line-height: 1.2; }
+.tile .cnt { font-size: 12px; color: var(--muted); text-align: right; max-width: 90px; line-height: 1.25; }
+.tile .arrow { color: var(--brand); font-weight: 700; }
+.movers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.mv { background: #fff; border: 1px solid var(--line); border-top: 4px solid var(--brand); border-radius: 6px; padding: 16px 18px 10px; box-shadow: 0 1px 4px rgba(0, 0, 0, .05); }
+.mv h3 { margin: 0; font-family: var(--heading); font-size: 17px; color: var(--text); border: 0; text-transform: none; letter-spacing: 0; }
+.mv .label { margin: 2px 0 10px; font-size: 12px; color: var(--muted); }
+.mvrow { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 5px 0; font-size: 12.5px; }
+.mvrow:hover .mvn { color: var(--brand); }
+.mvn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mvbar { height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
+.mvbar i { display: block; height: 100%; border-radius: 4px; } .mvbar i.pos { background: #1e7a4a; } .mvbar i.neg { background: #c8102e; }
+@media (max-width: 760px) { .hstats { grid-template-columns: repeat(2, 1fr); } .hero.vis { padding: 30px 22px 22px; } .hero.vis h1 { font-size: 30px; } .movers { grid-template-columns: 1fr; } .tiles { grid-template-columns: 1fr; } }

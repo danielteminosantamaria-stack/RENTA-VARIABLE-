@@ -79,33 +79,65 @@
     return "<div><p class=\"label\">" + (best ? "5 mejores" : "5 peores") + " de la semana · " + esc(CATS[t].top) + '</p><div class="list">' +
       l.map(function (f) { return '<a href="#/fondo/' + encodeURIComponent(f.id) + '"><span>' + esc(f.n) + "</span>" + ret(f.ret.w1) + "</a>"; }).join("") + "</div></div>";
   }
+  var ICONS = {
+    chart: '<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>', trend: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+    grid: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
+    scan: '<path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M8 12h8"/>',
+    build: '<path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="8"/>', compare: '<path d="M8 3v18M16 3v18"/><path d="M3 8h5M16 16h5"/>',
+    folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>', star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
+    bolt: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', alert: '<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/>',
+    doc: '<path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/>', cal: '<rect x="3" y="5" width="18" height="16" rx="1"/><path d="M3 10h18M8 3v4M16 3v4"/>'
+  };
+  function tile(href, ic, small, title, count) {
+    return '<a class="tile" href="' + href + '"><span class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[ic] + '</svg></span>' +
+      '<span class="tt"><small>' + esc(small) + "</small><b>" + esc(title) + '</b></span><span class="cnt">' + esc(count) + '</span><span class="arrow" aria-hidden="true">→</span></a>';
+  }
+  function homeSection(title, tiles) { return '<h2 class="sec">' + esc(title) + '</h2><div class="tiles">' + tiles.join("") + "</div>"; }
+  function heroHtml() {
+    var gest = {}; FUNDS.forEach(function (f) { gest[f.g] = 1; });
+    var stat = function (n, l) { return '<div class="hstat"><b>' + esc(String(n)) + "</b><span>" + esc(l) + "</span></div>"; };
+    return '<header class="hero vis"><svg class="deco" viewBox="0 0 600 220" preserveAspectRatio="none" aria-hidden="true"><path d="M0 190 C60 170 90 150 140 160 S230 120 290 110 380 130 430 80 530 40 600 20" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/><path d="M0 210 C70 195 110 185 170 180 S260 150 320 145 420 150 470 110 560 80 600 60" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="3"/></svg>' +
+      '<p class="eyebrow">Banca privada</p><h1>Gestión de carteras</h1><p class="lead">Rentabilidad, riesgo y ratios de los fondos en seguimiento, con datos de Morningstar.</p>' +
+      '<div class="hstats">' + stat(FUNDS.length, "fondos") + stat(Object.keys(gest).length, "gestoras") + stat(allCats("rf").length + allCats("rv").length, "categorías") + stat(META.rv || META.rf || "", "datos a") + "</div></header>";
+  }
+  function searchHtml() {
+    return '<div class="search big">' + icon() + '<input id="q" type="search" placeholder="Buscar fondo por nombre o ISIN" autocomplete="off" aria-label="Buscar fondo"></div><div class="results" id="res"></div>';
+  }
+  function moversPanel(t) {
+    var l = ofType(t).filter(function (f) { return isNum(f.ret.w1); }).sort(function (a, b) { return b.ret.w1 - a.ret.w1; });
+    var pick = l.slice(0, 5).concat(l.slice(-5).reverse());
+    if (!pick.length) return "";
+    var mx = Math.max.apply(null, pick.map(function (f) { return Math.abs(f.ret.w1); })) || 1;
+    return '<section class="mv"><h3>' + esc(CATS[t].top) + '</h3><p class="label">5 mejores y 5 peores de la semana</p>' + pick.map(function (f) {
+      var w = Math.max(2, Math.abs(f.ret.w1) / mx * 100).toFixed(0);
+      return '<a class="mvrow" href="#/fondo/' + encodeURIComponent(f.id) + '"><span class="mvn">' + esc(f.n) + '</span><span class="mvbar"><i class="' + (f.ret.w1 < 0 ? "neg" : "pos") + '" style="width:' + w + '%"></i></span>' + ret(f.ret.w1) + "</a>";
+    }).join("") + "</section>";
+  }
   function viewHome() {
     setTitle("");
     app.innerHTML =
-      '<header class="hero"><h1>GESTION DE CARTERAS - DANIEL TEMIÑO</h1><p>Rentabilidad, riesgo y ratios de los fondos en seguimiento, con datos de Morningstar.</p></header>' +
-      '<div class="cards">' +
-      ["rf", "rv"].map(function (t) {
-        return '<a class="cat-card" href="#/' + t + '"><div class="row"><div><small>Fondos de</small><h2>' +
-          esc(CATS[t].card) + '</h2></div><span class="count">' + ofType(t).length + ' fondos</span></div>' +
-          '<span class="arrow" aria-hidden="true">→</span></a>';
-      }).join("") + "</div>" +
-      '<div class="cards" style="margin-top:14px">' +
-      '<a class="cat-card" href="#/categorias"><div class="row"><div><small>Explorar</small><h2>Categorías</h2></div><span class="count">' + (allCats("rf").length + allCats("rv").length) + ' categorías</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
-      '<a class="cat-card" href="#/gestion"><div class="row"><div><small>Herramienta</small><h2>Gestión de carteras</h2></div><span class="count">analizar la del cliente</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
-      '<a class="cat-card" href="#/acciones"><div class="row"><div><small>Explorar</small><h2>Acciones MarketSurge</h2></div><span class="count">' + stocks().length + (stocks().length === 1 ? " ficha" : " fichas") + '</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
-      '<a class="cat-card" href="#/agenda"><div class="row"><div><small>Semana</small><h2>Agenda semanal</h2></div><span class="count">mercado y deuda</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
-      '<a class="cat-card" href="#/estado"><div class="row"><div><small>Cada lunes</small><h2>Estado semanal de fondos</h2></div><span class="count">alertas y oportunidades</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
-      '<a class="cat-card" href="#/nota"><div class="row"><div><small>Cada día</small><h2>Nota diaria</h2></div><span class="count">mercados y macro</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
-      '<a class="cat-card" href="#/construir"><div class="row"><div><small>Herramienta</small><h2>Construir cartera</h2></div><span class="count">con el cliente</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
-      '<a class="cat-card" href="#/comparar"><div class="row"><div><small>Herramienta</small><h2>Comparador de fondos</h2></div><span class="count">hasta ' + CMP_MAX + ' fondos</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
-      '<a class="cat-card" href="#/carteras"><div class="row"><div><small>Herramienta</small><h2>Carteras</h2></div><span class="count">' + PF.length + (PF.length === 1 ? " cartera" : " carteras") + '</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
-      '<a class="cat-card" href="#/recomendadas"><div class="row"><div><small>Herramienta</small><h2>Carteras recomendadas</h2></div><span class="count">3 perfiles</span></div><span class="arrow" aria-hidden="true">→</span></a></div>' +
-      '<div class="tops">' + weekList("rf", true) + weekList("rv", true) + "</div>" +
-      '<div class="tops">' + weekList("rf", false) + weekList("rv", false) + "</div>" +
+      heroHtml() + searchHtml() +
+      homeSection("Fondos", [
+        tile("#/rf", "chart", "Fondos de", CATS.rf.card, ofType("rf").length + " fondos"),
+        tile("#/rv", "trend", "Fondos de", CATS.rv.card, ofType("rv").length + " fondos"),
+        tile("#/categorias", "grid", "Explorar", "Categorías", (allCats("rf").length + allCats("rv").length) + " categorías")
+      ]) +
+      homeSection("Herramientas de cartera", [
+        tile("#/gestion", "scan", "Herramienta", "Gestión de carteras", "analizar la del cliente"),
+        tile("#/construir", "build", "Herramienta", "Construir cartera", "con el cliente"),
+        tile("#/comparar", "compare", "Herramienta", "Comparador de fondos", "hasta " + CMP_MAX + " fondos"),
+        tile("#/carteras", "folder", "Herramienta", "Carteras", PF.length + (PF.length === 1 ? " cartera" : " carteras")),
+        tile("#/recomendadas", "star", "Herramienta", "Carteras recomendadas", "3 perfiles")
+      ]) +
+      homeSection("Mercado y seguimiento", [
+        tile("#/acciones", "bolt", "Explorar", "Acciones MarketSurge", stocks().length + (stocks().length === 1 ? " ficha" : " fichas")),
+        tile("#/estado", "alert", "Cada lunes", "Estado semanal de fondos", "alertas y oportunidades"),
+        tile("#/nota", "doc", "Cada día", "Nota diaria", "mercados y macro"),
+        tile("#/agenda", "cal", "Semana", "Agenda semanal", "mercado y deuda")
+      ]) +
+      '<h2 class="sec">Movimientos de la semana</h2><div class="movers">' + moversPanel("rf") + moversPanel("rv") + "</div>" +
       '<div class="tops">' + topList("rf") + topList("rv") + "</div>" +
-      '<div class="search">' + icon() +
-      '<input id="q" type="search" placeholder="Buscar por nombre o ISIN" autocomplete="off" aria-label="Buscar fondo"></div>' +
-      '<div class="results" id="res"></div>' + footer("rf");
+      footer("rf");
     var q = document.getElementById("q"), res = document.getElementById("res");
     q.addEventListener("input", function () {
       var v = q.value.trim();
