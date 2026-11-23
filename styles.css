@@ -473,3 +473,52 @@ td, th { font-variant-numeric: tabular-nums; }
 .esdot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 3px; background: #ddd; }
 .esdot.es-alerta { background: #c8102e; } .esdot.es-oportunidad { background: #1d7a45; } .esdot.es-vigilar { background: #e0a100; } .esdot.es-normal { background: #cfcfcf; }
 .estable .eswhy { min-width: 220px; white-space: normal; }
+
+/* ===== Tema corporativo estilo Renta 4 ===== */
+:root { --brand: #c8102e; --brand-2: #a50d26; --brand-soft: #fcebee; --dark: #1f1f1f; --soft: #f4f4f4; --line: #e3e3e3; }
+body { background: #fff; }
+main { max-width: 1040px; }
+.site { background: #fff; color: var(--text); border-bottom: 0; box-shadow: 0 2px 8px rgba(0, 0, 0, .08); position: sticky; top: 0; z-index: 20; }
+.site .util { background: var(--dark); color: #cfcfcf; font-size: 11.5px; letter-spacing: .04em; text-transform: uppercase; }
+.site .util .in { height: 28px; max-width: 1040px; }
+.site .sbar { border-bottom: 3px solid var(--brand); }
+.site .sbar .in { max-width: 1040px; height: 64px; gap: 24px; }
+.site .logo { display: flex; flex-direction: column; line-height: 1.1; letter-spacing: 0; }
+.site .logo b { font-family: var(--heading); font-size: 21px; font-weight: 800; color: var(--brand); text-transform: uppercase; letter-spacing: .02em; }
+.site .logo span { font-size: 11.5px; color: var(--muted); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; margin-top: 2px; }
+.site nav { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+.site nav::-webkit-scrollbar { display: none; }
+.site nav a { font-family: var(--sans); font-weight: 600; font-size: 13.5px; letter-spacing: 0; color: var(--body); padding: 22px 12px 19px; border-bottom: 3px solid transparent; margin-bottom: -3px; white-space: nowrap; }
+.site nav a:hover { color: var(--brand); border-bottom-color: var(--brand); }
+.hero { background: var(--soft); color: var(--text); box-shadow: none; border-radius: 0; border-left: 6px solid var(--brand); padding: 34px 36px; margin: 28px 0; }
+.hero h1 { color: var(--text); font-size: 34px; text-transform: uppercase; letter-spacing: .01em; }
+.hero p { color: var(--body); }
+h1 { color: var(--text); }
+.topbar a { color: var(--brand); font-weight: 600; }
+.cards { gap: 16px; }
+.cat-card { background: #fff; border: 1px solid var(--line); border-top: 4px solid var(--brand); border-radius: 0; box-shadow: 0 1px 4px rgba(0, 0, 0, .06); }
+.cat-card:hover { border-color: var(--line); border-top-color: var(--brand); box-shadow: 0 6px 18px rgba(0, 0, 0, .12); transform: translateY(-1px); }
+.cat-card small { text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.cat-card h2 { font-size: 20px; }
+.btn { background: var(--brand); color: #fff; border: 1px solid var(--brand); border-radius: 2px; box-shadow: none; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; font-size: 12.5px; }
+.btn:hover { background: var(--brand-2); border-color: var(--brand-2); box-shadow: none; }
+.btn.ghost { background: #fff; color: var(--brand); }
+.btn.ghost:hover { background: var(--brand-soft); }
+.box, .block, .table-wrap { border-radius: 0; }
+.block h3, .gh { color: var(--brand); border-bottom-color: var(--brand); }
+th { background: var(--soft); color: var(--text); text-transform: uppercase; letter-spacing: .03em; font-size: 11.5px; }
+.kpis > * { border-radius: 0; }
+.es-chip { border-radius: 2px; } .es-chip.on { background: var(--brand); border-color: var(--brand); }
+.foot { background: var(--dark); color: #cfcfcf; padding: 18px 20px; margin-top: 40px; border-top: 3px solid var(--brand); }
+@media (max-width: 760px) {
+  .site .sbar .in { height: auto; flex-direction: column; align-items: flex-start; gap: 0; padding-top: 8px; }
+  .site nav a { padding: 10px 10px 8px; }
+  .hero { padding: 24px 20px; } .hero h1 { font-size: 24px; }
+}
+.site .util .in, .site .sbar .in { width: 100%; margin: 0 auto; padding: 0 20px; }
+.site .logo b { white-space: nowrap; font-size: 20px; }
+.site .logo { flex: 0 0 auto; }
+.site .sbar .in { justify-content: flex-start; }
+.site nav { flex: 1 1 auto; min-width: 0; justify-content: flex-end; }
+.site { display: block; }
+.site .util, .site .sbar { width: 100%; }
