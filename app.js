@@ -119,8 +119,7 @@
       heroHtml() + searchHtml() +
       homeSection("Fondos", [
         tile("#/rf", "chart", "Fondos de", CATS.rf.card, ofType("rf").length + " fondos"),
-        tile("#/rv", "trend", "Fondos de", CATS.rv.card, ofType("rv").length + " fondos"),
-        tile("#/categorias", "grid", "Explorar", "Categorías", (allCats("rf").length + allCats("rv").length) + " categorías")
+        tile("#/rv", "trend", "Fondos de", CATS.rv.card, ofType("rv").length + " fondos")
       ]) +
       homeSection("Herramientas de cartera", [
         tile("#/gestion", "scan", "Herramienta", "Gestión de carteras", "analizar la del cliente"),
@@ -2091,7 +2090,7 @@
     if (p[0] === "accion" && p[1]) return viewStock(decodeURIComponent(p[1]));
     if (p[0] === "gestion") return viewGestion();
     if (p[0] === "construir") return gate("construir", "Construir cartera", viewBuild);
-    if (p[0] === "categorias") return viewCategories(p[1]);
+    if (p[0] === "categorias") { location.replace("#/"); return; }
     if (p[0] === "recomendadas") return viewRecommended();
     if (p[0] === "cartera" && p[1]) return viewPortfolio(decodeURIComponent(p[1]));
     return viewNotFound();
