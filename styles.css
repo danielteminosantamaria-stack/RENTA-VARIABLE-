@@ -712,3 +712,17 @@ h2.sec { font-size: 18px; margin: 34px 0 12px; } h2.sec::before { height: 18px; 
 .kpis > *, .block, .cat-card, .pfcard, .table-wrap { border-radius: 12px; }
 .block { padding: 14px 18px 12px; }
 .cat-card { padding: 12px 14px; }
+
+/* ===== Tamaño compacto 2 ===== */
+.tiles { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.tile { padding: 9px 12px; gap: 9px; border-radius: 10px; }
+.tile .ico { width: 30px; height: 30px; border-radius: 8px; } .tile .ico svg { width: 16px; height: 16px; }
+.tile b { font-size: 13.5px; } .tile small { font-size: 9px; } .tile .cnt { font-size: 10px; max-width: 60px; }
+.tile .arrow { font-size: 14px; } .tile::after { width: 50px; height: 50px; }
+h2.sec { font-size: 16px; margin: 26px 0 10px; }
+.hstats { gap: 8px; max-width: 520px; margin-top: 22px; } .hstat { padding: 8px 12px; } .hstat b { font-size: 18px; } .hstat:last-child b { font-size: 14px; line-height: 1.7; } .hstat span { font-size: 9px; }
+.hero.vis { padding-top: 40px; padding-bottom: 38px; } .hero.vis h1 { font-size: 38px; } .hero.vis .lead { font-size: 14.5px; margin-top: 10px; } .hero.vis .eyebrow { font-size: 10px; padding: 4px 11px; }
+.search.big { max-width: 520px; margin-top: -24px; } .search.big input { padding: 11px 18px 11px 42px; font-size: 14px; }
+.mv { padding: 12px 14px 6px; } .mv h3 { font-size: 15px; } .mvrow { font-size: 12px; padding: 3px 5px; }
+.phero { padding-top: 22px; padding-bottom: 20px; } .phero h1 { font-size: 26px; } .phero .sub { font-size: 13.5px; margin-top: 4px; }
+.block { padding: 11px 14px 10px; } .cat-card { padding: 10px 12px; }
