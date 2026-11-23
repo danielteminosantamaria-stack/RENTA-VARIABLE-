@@ -130,6 +130,7 @@
       ]) +
       homeSection("Mercado y seguimiento", [
         tile("#/acciones", "bolt", "Explorar", "Stocks", stocks().length + (stocks().length === 1 ? " ficha" : " fichas")),
+        tile("#/amplitud", "trend", "🔒 Privado", "Amplitud de mercado", "NYSE y gráficos"),
         tile("#/estado", "alert", "Cada lunes", "Estado semanal de fondos", "alertas y oportunidades"),
         tile("#/nota", "doc", "Cada día", "Nota diaria", "mercados y macro"),
         tile("#/agenda", "cal", "Semana", "Agenda semanal", "mercado y deuda")
@@ -2126,6 +2127,106 @@
   }
   function setNav() { /* el menú no cambia */ }
 
+  // ---------- amplitud de mercado (datos cifrados) ----------
+  var AMP = { data: null, range: 126 };
+  function b64(x) { var b = atob(x), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+  function ampDecrypt(pw) {
+    var E = window.AMPLITUD_ENC;
+    return crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]).then(function (k) {
+      return crypto.subtle.deriveKey({ name: "PBKDF2", salt: b64(E.s), iterations: E.it, hash: "SHA-256" }, k, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+    }).then(function (key) { return crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(E.i) }, key, b64(E.c)); })
+      .then(function (buf) { return JSON.parse(new TextDecoder().decode(buf)); });
+  }
+  function sma(a, n) { return a.map(function (_, i) { if (i < n - 1) return null; var s = 0; for (var j = i - n + 1; j <= i; j++) s += a[j]; return s / n; }); }
+  function lineChart(dates, series, o) {
+    o = o || {};
+    var W = 640, H = o.h || 240, L = 48, R = 12, T = 12, B = 26, all = [];
+    series.forEach(function (s) { s.v.forEach(function (v) { if (v !== null && v !== undefined) all.push(v); }); });
+    (o.lines || []).forEach(function (l) { all.push(l.y); });
+    var mn = Math.min.apply(null, all), mx = Math.max.apply(null, all), pad = (mx - mn) * 0.06 || 1;
+    if (o.min !== undefined) mn = o.min; else mn -= pad;
+    if (o.max !== undefined) mx = o.max; else mx += pad;
+    var n = dates.length;
+    function X(i) { return L + i / Math.max(1, n - 1) * (W - L - R); }
+    function Y(v) { return T + (mx - v) / (mx - mn) * (H - T - B); }
+    var g = "", tk = ticks(mn, mx, 4), d = dd(tk);
+    tk.forEach(function (v) { g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(v).toFixed(1) + '" y2="' + Y(v).toFixed(1) + '" stroke="#e6e2e8"/><text x="' + (L - 6) + '" y="' + (Y(v) + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="#717171">' + nf(v, d) + "</text>"; });
+    (o.lines || []).forEach(function (l) { g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(l.y).toFixed(1) + '" y2="' + Y(l.y).toFixed(1) + '" stroke="' + (l.c || "#b01030") + '" stroke-dasharray="5 4" opacity=".7"/><text x="' + (W - R - 2) + '" y="' + (Y(l.y) - 4).toFixed(1) + '" text-anchor="end" font-size="10.5" fill="' + (l.c || "#b01030") + '">' + esc(l.t || "") + "</text>"; });
+    var step = Math.max(1, Math.round(n / 6));
+    for (var i = 0; i < n; i += step) { var p = dates[i].split("-"); g += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="#717171">' + p[2] + "/" + p[1] + "/" + p[0].slice(2) + "</text>"; }
+    series.forEach(function (s) {
+      var pts = [], pen = "";
+      s.v.forEach(function (v, i) { if (v === null || v === undefined) { pen = ""; return; } pts.push((pen ? "L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1)); pen = "1"; });
+      g += '<path d="' + pts.join("") + '" fill="none" stroke="' + s.c + '" stroke-width="' + (s.w || 1.8) + '"' + (s.dash ? ' stroke-dasharray="5 4"' : "") + ' stroke-linejoin="round"/>';
+    });
+    return '<svg class="amp-svg" viewBox="0 0 ' + W + " " + H + '" data-n="' + n + '" role="img">' + g + '<line class="xh" y1="' + T + '" y2="' + (H - B) + '" stroke="#1a1220" stroke-opacity=".35" style="display:none"/></svg>';
+  }
+  function viewAmplitud() {
+    setTitle("Amplitud");
+    var head = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>🔒 Amplitud de mercado</h1><p class="sub">NYSE: línea avance/descenso, RASI, McClellan, Summation y porcentaje de valores sobre sus medias. Apartado privado.</p>';
+    if (AMP.data) return ampRender(head);
+    var saved = ""; try { saved = sessionStorage.getItem("cf_amp") || ""; } catch (e) { /* sin almacenamiento */ }
+    function open(pw, bad) {
+      return ampDecrypt(pw).then(function (d) { AMP.data = d; try { sessionStorage.setItem("cf_amp", pw); } catch (e) { /* sin almacenamiento */ } ampRender(head); }).catch(function () { if (bad) bad(); });
+    }
+    function form(err) {
+      app.innerHTML = head + '<form class="lockbox" id="ampf"><label class="muted" for="amppw">Contraseña</label><input id="amppw" type="password" autocomplete="current-password" autofocus>' +
+        '<button type="submit" class="btn primary">Desbloquear</button><p class="lockerr" id="amperr"' + (err ? "" : " hidden") + '>Contraseña incorrecta</p></form>' + footer("rv");
+      document.getElementById("ampf").addEventListener("submit", function (e) {
+        e.preventDefault();
+        open(document.getElementById("amppw").value, function () { document.getElementById("amperr").hidden = false; });
+      });
+    }
+    if (!window.AMPLITUD_ENC) { app.innerHTML = head + '<div class="empty box">No hay datos de amplitud publicados todavía.</div>' + footer("rv"); return; }
+    if (saved) open(saved, function () { form(false); }); else form(false);
+  }
+  function ampRender(head) {
+    var D = AMP.data, all = D.rows, n = Math.min(AMP.range, all.length), sl = all.slice(all.length - n);
+    var col = function (k) { var j = D.cols.indexOf(k); return sl.map(function (r) { return r[j]; }); };
+    var full = function (k) { var j = D.cols.indexOf(k); return all.map(function (r) { return r[j]; }); };
+    var last = all[all.length - 1], c = function (k) { return last[D.cols.indexOf(k)]; };
+    var nyseAll = full("nyse"), s200 = sma(nyseAll, 200).slice(all.length - n), mx12 = Math.max.apply(null, nyseAll.slice(-252)), caida = (1 - c("nyse") / mx12) * 100;
+    var dt = last[0].split("-"), fecha = dt[2] + "/" + dt[1] + "/" + dt[0];
+    function kp(l, v, sub) { return '<div class="kpi"><small>' + esc(l) + "</small><span>" + v + "</span>" + (sub ? '<em class="ksub">' + sub + "</em>" : "") + "</div>"; }
+    var p200 = c("p200"), p50 = c("p50"), ad = c("ad"), wma = c("wma");
+    var kp8 = kp("NYSE", nf(c("nyse"), 0), "caída " + nf(caida, 1) + "% desde el máximo de 12 meses") + kp("% sobre media 200", p200 === null ? "–" : nf(p200, 1) + "%", p200 !== null && p200 < 50 ? "por debajo de 50: debilidad" : "por encima de 50") +
+      kp("% sobre media 50", p50 === null ? "–" : nf(p50, 1) + "%", p50 !== null && p50 < 20 ? "sobrevendido" : p50 !== null && p50 > 80 ? "sobrecomprado" : "zona normal") +
+      kp("Línea AD", nf(ad, 0), ad < wma ? "bajo su media de 150 (WMA150)" : "sobre su media de 150") +
+      kp("RASI", nf(c("rasi"), 0), "") + kp("McClellan", nf(c("mcos"), 0), "") + kp("Summation", nf(c("sum"), 0), "") + kp("Máx. / mín. 52 sem.", nf(c("nmax"), 0) + " / " + nf(c("nmin"), 0), c("nmin") > c("nmax") ? "más mínimos que máximos" : "más máximos que mínimos");
+    var dates = col("f");
+    var rng = [[63, "3 meses"], [126, "6 meses"], [252, "1 año"], [all.length, "Todo"]].map(function (r) { return '<button type="button" class="catchip" data-r="' + r[0] + '" aria-pressed="' + (AMP.range === r[0]) + '">' + r[1] + "</button>"; }).join("");
+    function card(t, svg, leg) { return '<section class="block amp-card"><h3>' + t + '</h3><div class="amp-wrap">' + svg + '<div class="amp-tip"></div></div><div class="legend">' + leg + "</div></section>"; }
+    function lg(items) { return items.map(function (i) { return '<span><i style="background:' + i[0] + '"></i>' + i[1] + "</span>"; }).join(""); }
+    var col1 = "#b01030", col2 = "#1b3a5c", col3 = "#12806e", col4 = "#c8a04a";
+    var charts = [
+      card("NYSE y media de 200 sesiones", lineChart(dates, [{ v: col("nyse"), c: col1 }, { v: s200, c: col4, dash: true }]), lg([[col1, "NYSE"], [col4, "Media 200"]])),
+      card("Línea avance/descenso y su media de 150", lineChart(dates, [{ v: col("ad"), c: col2 }, { v: col("wma"), c: col4, dash: true }]), lg([[col2, "Línea AD"], [col4, "WMA150"]])),
+      card("Valores sobre su media de 50 y de 200 sesiones (%)", lineChart(dates, [{ v: col("p50"), c: col3 }, { v: col("p200"), c: col1 }], { min: 0, max: 100, lines: [{ y: 20, c: "#12806e", t: "20 sobrevendido" }, { y: 50, c: "#717171", t: "50" }, { y: 80, c: "#b01030", t: "80 sobrecomprado" }] }), lg([[col3, "% sobre media 50"], [col1, "% sobre media 200"]])),
+      card("RASI y Summation Index", lineChart(dates, [{ v: col("rasi"), c: col1 }, { v: col("sum"), c: col2 }], { lines: [{ y: 0, c: "#717171" }] }), lg([[col1, "RASI"], [col2, "Summation"]])),
+      card("Oscilador McClellan", lineChart(dates, [{ v: col("mcos"), c: col3 }], { lines: [{ y: 0, c: "#717171" }] }), lg([[col3, "McClellan"]])),
+      card("Nuevos máximos y mínimos de 52 semanas", lineChart(dates, [{ v: col("nmax"), c: col3 }, { v: col("nmin"), c: col1 }]), lg([[col3, "Nuevos máximos"], [col1, "Nuevos mínimos"]]))
+    ];
+    app.innerHTML = head + '<p class="note">Datos de amplitud del NYSE a ' + fecha + '. Los porcentajes sobre medias pueden revisarse al alza o a la baja el día siguiente.</p><div class="kpis kp8">' + kp8 + '</div>' +
+      '<div class="catbar" role="group" aria-label="Periodo">' + rng + '</div><div class="amp-grid">' + charts.join("") + "</div>" +
+      '<p class="note">Lectura orientativa de datos pasados, no una recomendación. Fuente: amplitudmercado.com.</p>' + footer("rv");
+    app.querySelectorAll("[data-r]").forEach(function (b) { b.addEventListener("click", function () { AMP.range = +b.getAttribute("data-r"); ampRender(head); }); });
+    app.querySelectorAll(".amp-wrap").forEach(function (w, ci) {
+      var svg = w.querySelector("svg"), tip = w.querySelector(".amp-tip"), xh = svg.querySelector(".xh");
+      var defs = [["nyse", "NYSE", "s200"], ["ad", "Línea AD", "wma"], ["p50", "% media 50", "p200"], ["rasi", "RASI", "sum"], ["mcos", "McClellan"], ["nmax", "Máximos", "nmin"]][ci];
+      w.addEventListener("mousemove", function (e) {
+        var r = svg.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * 640, i = Math.round((x - 48) / (640 - 60) * (dates.length - 1));
+        if (i < 0 || i >= dates.length) { tip.style.display = "none"; xh.style.display = "none"; return; }
+        var f = dates[i].split("-"), txt = "<b>" + f[2] + "/" + f[1] + "/" + f[0] + "</b>";
+        var a = col(defs[0])[i]; txt += "<br>" + defs[1] + ": " + (a === null ? "–" : nf(a, 1));
+        if (defs[2]) { var b2 = defs[2] === "s200" ? s200[i] : col(defs[2])[i], nm = { s200: "Media 200", wma: "WMA150", p200: "% media 200", sum: "Summation", nmin: "Mínimos" }[defs[2]]; txt += "<br>" + nm + ": " + (b2 === null || b2 === undefined ? "–" : nf(b2, 1)); }
+        tip.innerHTML = txt; tip.style.display = "block";
+        tip.style.left = Math.min(e.clientX - r.left + 14, r.width - 150) + "px"; tip.style.top = "8px";
+        var px = 48 + i / Math.max(1, dates.length - 1) * (640 - 60); xh.setAttribute("x1", px); xh.setAttribute("x2", px); xh.style.display = "";
+      });
+      w.addEventListener("mouseleave", function () { tip.style.display = "none"; xh.style.display = "none"; });
+    });
+  }
+
   function route() {
     var h = (location.hash || "#/").replace(/^#/, ""), p = h.split("/").filter(Boolean);
     window.scrollTo(0, 0);
@@ -2140,6 +2241,7 @@
     if (p[0] === "estado") return viewEstado();
     if (p[0] === "nota") return viewNota();
     if (p[0] === "accion" && p[1]) return viewStock(decodeURIComponent(p[1]));
+    if (p[0] === "amplitud") return viewAmplitud();
     if (p[0] === "gestion") return viewGestion();
     if (p[0] === "construir") return gate("construir", "Construir cartera", viewBuild);
     if (p[0] === "categorias") { location.replace("#/"); return; }
