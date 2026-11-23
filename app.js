@@ -52,7 +52,7 @@
   }
   function footer(t) {
     var date = (t && META[t]) || META.rf || META.rv || "";
-    return '<footer class="foot"><span>Datos Morningstar a ' + esc(date) + '</span>' +
+    return (window.NEWSLETTER && window.NEWSLETTER.mini ? window.NEWSLETTER.mini() : "") + '<footer class="foot"><span>Datos Morningstar a ' + esc(date) + '</span>' +
       '<span>Información orientativa. Las rentabilidades pasadas no garantizan resultados futuros.</span></footer>';
   }
   function matches(f, q) {
@@ -2267,6 +2267,8 @@
     if (p[0] === "accion" && p[1]) return viewStock(decodeURIComponent(p[1]));
     if (p[0] === "amplitud") return viewAmplitud();
     if (p[0] === "gestion") return viewGestion();
+    if (p[0] === "newsletter" && window.NEWSLETTER) return window.NEWSLETTER.view(app, setTitle);
+    if (p[0] === "privacidad" && window.NEWSLETTER) return window.NEWSLETTER.privacy(app, setTitle);
     if (p[0] === "construir") return gate("construir", "Construir cartera", viewBuild);
     if (p[0] === "categorias") { location.replace("#/"); return; }
     if (p[0] === "recomendadas") return viewRecommended();
