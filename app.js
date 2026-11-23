@@ -426,7 +426,9 @@
     g += '<text transform="translate(14 ' + (T + (H - T - B) / 2) + ') rotate(-90)" text-anchor="middle" fill="#717171" font-size="11">' + esc(my.l) + "</text>";
     var fr = [], note = "";
     if (state.front) {
-      if (mx.g === "Riesgo" && my.g !== "Riesgo") {
+      if (!state[t].cat) note = "La frontera eficiente solo se calcula dentro de una misma categoría: elige una categoría arriba.";
+      else if (pts.length < 3) note = "Hay menos de 3 fondos con datos en esta categoría, así que no se dibuja la frontera.";
+      else if (mx.g === "Riesgo" && my.g !== "Riesgo") {
         var srt = pts.slice().sort(function (a, b) { return mx.v(a) - mx.v(b) || my.v(b) - my.v(a); }), best = -Infinity;
         srt.forEach(function (f) { if (my.v(f) > best) { fr.push(f); best = my.v(f); } });
         if (fr.length > 1) {
