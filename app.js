@@ -352,7 +352,7 @@
     body.innerHTML = '<div class="table-wrap"><table><thead><tr>' + th("n", "Fondo") +
       c.map(function (x) { return th(x.k, x.l); }).join("") + "</tr></thead><tbody>" +
       rows.map(function (f) {
-        return '<tr data-id="' + esc(f.id) + '" tabindex="0"><td class="fund"><span class="flogo" aria-hidden="true">' + logoOrInit(f.g) + '</span><span class="ftxt"><b>' + esc(f.n) +
+        return '<tr data-id="' + esc(f.id) + '" tabindex="0"><td class="fund">' + (window.FAVS ? window.FAVS.star("f", f.id) : "") + '<span class="flogo" aria-hidden="true">' + logoOrInit(f.g) + '</span><span class="ftxt"><b>' + esc(f.n) +
           (f.idx ? '<span class="tag">Indexado</span>' : "") + "</b><small>" + esc(f.g) + (f.c ? " · " + esc(f.c) : "") +
           "</small></span></td>" + c.map(function (x) { return "<td>" + x.r(f) + "</td>"; }).join("") + "</tr>";
       }).join("") + "</tbody></table></div>";
@@ -516,8 +516,8 @@
     setTitle(f.n);
     var r = f.ret, html = "";
     html += '<div class="topbar"><a href="#/' + f.t + '">← ' + esc(CATS[f.t].title) + '</a></div>';
-    html += "<h1>" + esc(f.n) + "</h1>";
-    html += '<p class="sub">' + esc(f.g) + " · " + esc(f.id) + " · " + esc(f.c) + (f.idx ? ' <span class="tag">Indexado</span>' : "") + "</p>";
+    html += '<h1 class="h1star">' + esc(f.n) + (window.FAVS ? " " + window.FAVS.star("f", f.id) : "") + "</h1>";
+    html += '<p class="sub"><a href="#/gestora/' + encodeURIComponent(f.g) + '">' + esc(f.g) + "</a>" + " · " + esc(f.id) + " · " + esc(f.c) + (f.idx ? ' <span class="tag">Indexado</span>' : "") + "</p>";
     var esd = window.ESTADO && window.ESTADO.fondos && window.ESTADO.fondos[f.id];
     if (esd && esd.e) html += '<p class="sub"><a href="#/estado">Estado semanal</a>: ' + esTag(esd.e) + (esd.p ? " " + esc(esd.p) : "") + "</p>";
     html += '<div class="kpis">' +
@@ -1201,26 +1201,106 @@
     if (lines.length) lines[lines.length - 1].w = Math.round((lines[lines.length - 1].w + 100 - tot) * 10) / 10;
     return { id: "rec-" + pr.k, name: "Cartera " + pr.n.toLowerCase(), amount: null, lines: lines };
   }
+  var REC_KEY = "cf_rec";
+  function loadRec() { try { var v = JSON.parse(localStorage.getItem(REC_KEY) || "{}"); return v && typeof v === "object" && !Array.isArray(v) ? v : {}; } catch (e) { return {}; } }
   function viewRecommended() {
     setTitle("Carteras recomendadas");
     var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Carteras recomendadas</h1>' +
       '<p class="sub">Tres carteras de 6 fondos por perfil, construidas con los datos de la web. Criterio: mejor puntuación Morningstar total (rating como desempate), un fondo por categoría, sin fondos indexados y con un tope de volatilidad a 1 año según el perfil (en la conservadora y la moderada, sin fondos sectoriales ni high yield).</p>' +
-      '<p class="note">Propuesta orientativa y automática, no es asesoramiento personalizado. Rentabilidad pasada no garantiza resultados futuros.</p>';
-    var built = PROFILES.map(buildProfile);
+      '<p class="note">Puedes cambiar pesos, quitar fondos o añadir otros. Los cambios se guardan en este navegador y la rentabilidad se recalcula frente a la propuesta original. Propuesta orientativa y automática, no es asesoramiento personalizado. Rentabilidad pasada no garantiza resultados futuros.</p>';
+    var built = PROFILES.map(buildProfile), EDIT = loadRec();
+    function saveRec() { try { localStorage.setItem(REC_KEY, JSON.stringify(EDIT)); } catch (e) { /* sin almacenamiento */ } }
+    function cur(i) {
+      var k = PROFILES[i].k, e = EDIT[k];
+      if (e && Array.isArray(e.lines)) {
+        var ls = e.lines.filter(function (l) { return l && typeof l.id === "string" && byId(l.id); }).map(function (l) { var w = parseNum(l.w); return { id: l.id, w: w === null ? 0 : Math.max(0, Math.min(100, w)) }; });
+        return { id: built[i].id, name: built[i].name, amount: e.amount > 0 ? e.amount : null, lines: ls };
+      }
+      return { id: built[i].id, name: built[i].name, amount: null, lines: built[i].lines.map(function (l) { return { id: l.id, w: l.w }; }) };
+    }
+    var CUR = PROFILES.map(function (pr, i) { return cur(i); });
+    function persist(i) { EDIT[PROFILES[i].k] = { lines: CUR[i].lines, amount: CUR[i].amount }; saveRec(); }
     PROFILES.forEach(function (pr, i) {
-      var p = built[i];
-      h += '<section class="rec"><div class="rechead"><div><h2>' + esc(pr.n) + '</h2><p class="muted">' + esc(pr.d) + " " + pr.wrf + "% renta fija, " + (100 - pr.wrf) + '% renta variable.</p></div>' +
-        '<button type="button" class="btn" data-copy="' + i + '">Copiar a mis carteras</button></div>' +
-        '<div class="table-wrap"><table><thead><tr><th scope="col">Fondo</th><th scope="col">Peso %</th><th scope="col">Año</th><th scope="col">1 año</th><th scope="col">Vol. 1 año</th><th scope="col">Rating</th></tr></thead><tbody>' +
-        p.lines.map(function (l) {
-          var f = byId(l.id);
-          return '<tr><td class="fund"><a href="#/fondo/' + encodeURIComponent(f.id) + '"><b>' + esc(f.n) + "</b></a><small>" + esc(f.g) + " · " + esc(f.c) + "</small></td><td class=\"num\">" + nf(l.w, 1) + "</td><td>" + ret(f.ret.ytd) + "</td><td>" + ret(f.ret.y1) + '</td><td class="num">' + pct(f.vol[0], false, 1) + "</td><td>" + (f.stars ? stars(f.stars) : "–") + "</td></tr>";
-        }).join("") + "</tbody></table></div>" + summary(p) + "</section>";
+      h += '<section class="rec" id="rec' + i + '"><div class="rechead"><div><h2>' + esc(pr.n) + '</h2><p class="muted">' + esc(pr.d) + " " + pr.wrf + "% renta fija, " + (100 - pr.wrf) + '% renta variable.</p></div>' +
+        '<div class="row"><span class="chg" id="chg' + i + '"></span><button type="button" class="btn ghost" data-reset="' + i + '">Restablecer propuesta</button><button type="button" class="btn" data-copy="' + i + '">Copiar a mis carteras</button></div></div>' +
+        '<div class="search tight">' + icon() + '<input type="search" autocomplete="off" placeholder="Añadir fondo por nombre o ISIN" aria-label="Añadir fondo a ' + esc(pr.n) + '" data-q="' + i + '"></div><div class="results" data-res="' + i + '"></div>' +
+        '<div data-tbl="' + i + '"></div><div data-sum="' + i + '"></div></section>';
     });
     app.innerHTML = h + footer("rv");
+    function tbl(i) {
+      var p = CUR[i], el = app.querySelector('[data-tbl="' + i + '"]');
+      if (!p.lines.length) { el.innerHTML = '<div class="table-wrap"><div class="empty">Sin fondos. Añade alguno con el buscador o restablece la propuesta.</div></div>'; sum(i); return; }
+      el.innerHTML = '<div class="table-wrap"><table><thead><tr><th scope="col">Fondo</th><th scope="col">Peso %</th><th scope="col">Año</th><th scope="col">1 año</th><th scope="col">Vol. 1 año</th><th scope="col">Rating</th><th scope="col"><span class="sr">Quitar</span></th></tr></thead><tbody>' +
+        p.lines.map(function (l, j) {
+          var f = byId(l.id);
+          return '<tr><td class="fund"><a href="#/fondo/' + encodeURIComponent(f.id) + '"><b>' + esc(f.n) + "</b></a><small>" + esc(f.g) + " · " + esc(f.c) + '</small></td><td><input class="inp w" type="number" min="0" max="100" step="0.5" value="' + (l.w || 0) + '" data-w="' + i + ":" + j + '" aria-label="Peso de ' + esc(f.n) + '"></td><td>' + ret(f.ret.ytd) + "</td><td>" + ret(f.ret.y1) + '</td><td class="num">' + pct(f.vol[0], false, 1) + "</td><td>" + (f.stars ? stars(f.stars) : "–") + '</td><td><button type="button" class="x" data-del="' + i + ":" + j + '" aria-label="Quitar ' + esc(f.n) + '">×</button></td></tr>';
+        }).join("") + '</tbody><tfoot><tr><td><b>Total</b></td><td class="num" data-tw="' + i + '"></td><td colspan="5"></td></tr></tfoot></table></div>';
+      el.querySelectorAll("[data-w]").forEach(function (inp) {
+        inp.addEventListener("input", function () {
+          var a = inp.getAttribute("data-w").split(":"), w = parseNum(inp.value);
+          CUR[+a[0]].lines[+a[1]].w = w === null ? 0 : Math.max(0, Math.min(100, w));
+          persist(+a[0]); sum(+a[0]);
+        });
+      });
+      el.querySelectorAll("[data-del]").forEach(function (b) {
+        b.addEventListener("click", function () { var a = b.getAttribute("data-del").split(":"); CUR[+a[0]].lines.splice(+a[1], 1); persist(+a[0]); tbl(+a[0]); });
+      });
+      sum(i);
+    }
+    function same(i) {
+      var a = CUR[i].lines, b = built[i].lines;
+      if (a.length !== b.length) return false;
+      return a.every(function (l, j) { return l.id === b[j].id && Math.abs(l.w - b[j].w) < 0.001; });
+    }
+    function sum(i) {
+      var p = CUR[i], o = built[i], el = app.querySelector('[data-sum="' + i + '"]'), tw = app.querySelector('[data-tw="' + i + '"]');
+      if (tw) tw.textContent = nf(sumW(p), 1) + "%";
+      var ch = !same(i), badge = document.getElementById("chg" + i);
+      badge.textContent = ch ? "Modificada" : "";
+      badge.hidden = !ch;
+      var mets = [["Rentabilidad del año", function (f) { return f.ret.ytd; }, "r"], ["Rentabilidad 1 año", function (f) { return f.ret.y1; }, "r"], ["Volatilidad 1 año", function (f) { return f.vol[0]; }, "v"], ["Sharpe 1 año", function (f) { return f.sharpe[0]; }, "d"]];
+      var cmp = "";
+      if (ch && p.lines.length) {
+        cmp = '<section class="block cmpbox"><h3>Efecto de tus cambios</h3><div class="table-wrap"><table><thead><tr><th scope="col">Métrica (media ponderada)</th><th scope="col">Propuesta original</th><th scope="col">Con tus cambios</th><th scope="col">Diferencia</th></tr></thead><tbody>' +
+          mets.map(function (m) {
+            var a = wAvg(o, m[1]).v, b = wAvg(p, m[1]).v, d = isNum(a) && isNum(b) ? b - a : null;
+            function fm(x) { return m[2] === "r" ? ret(x) : m[2] === "v" ? pct(x, false, 1) : dec(x); }
+            var ds = d === null ? "–" : m[2] === "v" ? '<span class="num">' + (d > 0 ? "+" : "") + nf(d, 1) + ' pp</span>' : m[2] === "d" ? '<span class="num ' + cls(d) + '">' + (d > 0 ? "+" : "") + dec(d) + "</span>" : '<span class="num ' + cls(d) + '">' + (d > 0 ? "+" : "") + nf(d, 2) + ' pp</span>';
+            return "<tr><td>" + m[0] + "</td><td>" + fm(a) + "</td><td>" + fm(b) + "</td><td>" + ds + "</td></tr>";
+          }).join("") + "</tbody></table></div></section>";
+      }
+      el.innerHTML = cmp + (p.lines.length ? summary(p) : "");
+    }
+    PROFILES.forEach(function (pr, i) { tbl(i); });
+    app.querySelectorAll("[data-reset]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var i = +b.getAttribute("data-reset");
+        delete EDIT[PROFILES[i].k]; saveRec();
+        CUR[i] = { id: built[i].id, name: built[i].name, amount: null, lines: built[i].lines.map(function (l) { return { id: l.id, w: l.w }; }) };
+        tbl(i);
+      });
+    });
+    app.querySelectorAll("[data-q]").forEach(function (q) {
+      var i = +q.getAttribute("data-q"), res = app.querySelector('[data-res="' + i + '"]');
+      q.addEventListener("input", function () {
+        var v = q.value.trim();
+        if (!v) { res.innerHTML = ""; return; }
+        res.innerHTML = pickList(v, CUR[i].lines.map(function (l) { return l.id; }), function (f) { return '<a href="#" data-add="' + esc(f.id) + '">' + esc(f.n) + "<small>" + esc(f.g) + " · " + esc(f.c) + "</small></a>"; });
+        res.querySelectorAll("[data-add]").forEach(function (a) {
+          a.addEventListener("click", function (e) {
+            e.preventDefault();
+            if (CUR[i].lines.length >= 40) return;
+            var rest = Math.max(0, Math.round((100 - sumW(CUR[i])) * 100) / 100);
+            CUR[i].lines.push({ id: a.getAttribute("data-add"), w: rest });
+            persist(i); q.value = ""; res.innerHTML = ""; tbl(i);
+          });
+        });
+      });
+    });
     app.querySelectorAll("[data-copy]").forEach(function (b) {
       b.addEventListener("click", function () {
-        var c = cleanPf({ name: built[+b.getAttribute("data-copy")].name, amount: null, lines: built[+b.getAttribute("data-copy")].lines });
+        var i = +b.getAttribute("data-copy");
+        var c = cleanPf({ name: CUR[i].name + (same(i) ? "" : " (modificada)"), amount: null, lines: CUR[i].lines });
         PF.push(c); savePf(); location.hash = "#/cartera/" + encodeURIComponent(c.id);
       });
     });
@@ -1986,7 +2066,7 @@
     var s = stockBy(t);
     if (!s) { viewNotFound(); return; }
     setTitle(s.n);
-    var h = '<div class="topbar"><a href="#/acciones">← Stocks</a></div><div class="fhead"><h1>' + stockLogo(s) + esc(s.n) + '</h1><p class="muted">' + esc(s.t) + (s.g ? " · " + esc(s.g) : "") + (s.px != null ? " · Precio " + dec(s.px) : "") + (s.f ? " · Ficha del " + esc(s.f) : "") + "</p></div>" +
+    var h = '<div class="topbar"><a href="#/acciones">← Stocks</a></div><div class="fhead"><h1>' + stockLogo(s) + esc(s.n) + (window.FAVS ? " " + window.FAVS.star("s", s.t) : "") + '</h1><p class="muted">' + esc(s.t) + (s.g ? " · " + esc(s.g) : "") + (s.px != null ? " · Precio " + dec(s.px) : "") + (s.f ? " · Ficha del " + esc(s.f) : "") + "</p></div>" +
       '<div class="kpis kp6">' + STCOLS.map(function (c) { return kpi(c[1], rcell(c[0], s[c[0]])); }).join("") + "</div>" +
       '<div class="grid2" style="margin-top:22px"><section class="block"><h3>Bloque técnico</h3>' +
       ((s.tec && s.tec.length) ? '<dl class="facts">' + s.tec.map(function (r) { return fact(r[0], esc(r[1])); }).join("") + "</dl>" : "") +
@@ -2264,6 +2344,8 @@
     if (p[0] === "estado") return viewEstado();
     if (p[0] === "nota") return viewNota();
     if (p[0] === "accion" && p[1]) return viewStock(decodeURIComponent(p[1]));
+    if (p[0] === "favoritos" && window.FAVS) return window.FAVS.view(app, setTitle);
+    if (p[0] === "gestora" && p[1] && window.FAVS) return window.FAVS.gestora(app, setTitle, decodeURIComponent(p[1]));
     if (p[0] === "amplitud") return viewAmplitud();
     if (p[0] === "gestion") return viewGestion();
     if (p[0] === "newsletter" && window.NEWSLETTER) return window.NEWSLETTER.view(app, setTitle);
@@ -2274,6 +2356,7 @@
     if (p[0] === "cartera" && p[1]) return viewPortfolio(decodeURIComponent(p[1]));
     return viewNotFound();
   }
+  window.CFUI = { logo: logoOrInit, stockLogo: stockLogo, rcell: rcell, ret: ret, pct: pct, dec: dec, footer: footer };
   window.addEventListener("hashchange", route);
   route();
 })();
