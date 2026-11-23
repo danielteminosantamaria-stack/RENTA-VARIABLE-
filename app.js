@@ -130,7 +130,7 @@
         tile("#/recomendadas", "star", "Herramienta", "Carteras recomendadas", "3 perfiles")
       ]) +
       homeSection("Mercado y seguimiento", [
-        tile("#/acciones", "bolt", "Explorar", "Acciones MarketSurge", stocks().length + (stocks().length === 1 ? " ficha" : " fichas")),
+        tile("#/acciones", "bolt", "Explorar", "Stocks", stocks().length + (stocks().length === 1 ? " ficha" : " fichas")),
         tile("#/estado", "alert", "Cada lunes", "Estado semanal de fondos", "alertas y oportunidades"),
         tile("#/nota", "doc", "Cada día", "Nota diaria", "mercados y macro"),
         tile("#/agenda", "cal", "Semana", "Agenda semanal", "mercado y deuda")
@@ -1817,10 +1817,16 @@
     if (typeof v === "number") return '<span class="rt ' + (v >= 90 ? "r-hi" : v >= 80 ? "r-mid" : "r-lo") + '">' + v + "</span>";
     return '<span class="rt ' + (/^[AB]/.test(v) ? "r-hi" : /^C/.test(v) ? "r-mid" : "r-lo") + '">' + esc(v) + "</span>";
   }
+  function stockLogo(s) {
+    var slug = (s.n || s.t).toLowerCase().replace(/&/g, "and").replace(/\b(inc|corp|corporation|ltd|limited|plc|co|company|holdings?|group|sa|nv|ag|class [a-z])\b\.?/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    var src = s.logo || "https://s3-symbol-logo.tradingview.com/" + slug + "--big.svg", ini = esc((s.t || "?").slice(0, 2));
+    var hue = 0; for (var i = 0; i < (s.t || "").length; i++) hue = (hue * 31 + s.t.charCodeAt(i)) % 360;
+    return '<span class="slogo" style="--h:' + hue + '"><img src="' + esc(src) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()"><em>' + ini + "</em></span>";
+  }
   function viewStocks() {
-    setTitle("Acciones MarketSurge");
+    setTitle("Stocks");
     var all = stocks();
-    var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Acciones MarketSurge</h1>' +
+    var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Stocks</h1>' +
       '<p class="sub">Fichas de acciones individuales con un bloque técnico para tu análisis y un bloque en lenguaje cliente. ' + (all.length ? all.length + (all.length === 1 ? " ficha." : " fichas.") : "") + "</p>";
     if (!all.length) {
       app.innerHTML = h + '<div class="empty box" style="margin-top:18px;padding:34px 20px">Todavía no hay fichas. Envíale a Claude las capturas o el Excel de MarketSurge y se añadirán aquí, con su bloque técnico, su bloque cliente y el PEG calculado.</div>' + footer("rv");
@@ -1840,9 +1846,9 @@
       });
       function th(k, l) { var on = ST.sort === k; return '<th scope="col"' + (on ? ' aria-sort="' + (ST.dir > 0 ? "ascending" : "descending") + '"' : "") + '><button type="button" data-ss="' + k + '">' + l + (on ? (ST.dir > 0 ? " ↑" : " ↓") : "") + "</button></th>"; }
       var b = document.getElementById("stbody");
-      b.innerHTML = list.length ? '<div class="table-wrap"><table><thead><tr>' + th("n", "Acción") + th("g", "Grupo industrial") + STCOLS.map(function (c) { return th(c[0], c[1]); }).join("") + th("f", "Ficha") + "</tr></thead><tbody>" +
+      b.innerHTML = list.length ? '<div class="table-wrap"><table><thead><tr>' + th("n", "Stock") + th("g", "Grupo industrial") + STCOLS.map(function (c) { return th(c[0], c[1]); }).join("") + th("f", "Ficha") + "</tr></thead><tbody>" +
         list.map(function (s) {
-          return '<tr data-t="' + esc(s.t) + '" tabindex="0"><td class="fund"><b>' + esc(s.n) + "</b><small>" + esc(s.t) + '</small></td><td class="muted">' + esc(s.g || "–") + "</td>" + STCOLS.map(function (c) { return "<td>" + rcell(c[0], s[c[0]]) + "</td>"; }).join("") + '<td class="muted">' + esc(s.f || "–") + "</td></tr>";
+          return '<tr data-t="' + esc(s.t) + '" tabindex="0"><td class="fund">' + stockLogo(s) + '<span class="ftxt"><b>' + esc(s.t) + "</b><small>" + esc(s.n) + '</small></span></td><td class="muted">' + esc(s.g || "–") + "</td>" + STCOLS.map(function (c) { return "<td>" + rcell(c[0], s[c[0]]) + "</td>"; }).join("") + '<td class="muted">' + esc(s.f || "–") + "</td></tr>";
         }).join("") + "</tbody></table></div>" : '<div class="table-wrap"><div class="empty">Sin resultados</div></div>';
       b.querySelectorAll("[data-ss]").forEach(function (x) { x.addEventListener("click", function () { var k = x.getAttribute("data-ss"); if (ST.sort === k) ST.dir = -ST.dir; else { ST.sort = k; ST.dir = k === "n" || k === "g" ? 1 : -1; } draw(); }); });
       b.querySelectorAll("tbody tr").forEach(function (tr) { function go() { location.hash = "#/accion/" + encodeURIComponent(tr.getAttribute("data-t")); } tr.addEventListener("click", go); tr.addEventListener("keydown", function (e) { if (e.key === "Enter") go(); }); });
@@ -1853,7 +1859,7 @@
     var s = stockBy(t);
     if (!s) { viewNotFound(); return; }
     setTitle(s.n);
-    var h = '<div class="topbar"><a href="#/acciones">← Acciones</a></div><div class="fhead"><h1>' + esc(s.n) + '</h1><p class="muted">' + esc(s.t) + (s.g ? " · " + esc(s.g) : "") + (s.px != null ? " · Precio " + dec(s.px) : "") + (s.f ? " · Ficha del " + esc(s.f) : "") + "</p></div>" +
+    var h = '<div class="topbar"><a href="#/acciones">← Stocks</a></div><div class="fhead"><h1>' + stockLogo(s) + esc(s.n) + '</h1><p class="muted">' + esc(s.t) + (s.g ? " · " + esc(s.g) : "") + (s.px != null ? " · Precio " + dec(s.px) : "") + (s.f ? " · Ficha del " + esc(s.f) : "") + "</p></div>" +
       '<div class="kpis kp6">' + STCOLS.map(function (c) { return kpi(c[1], rcell(c[0], s[c[0]])); }).join("") + "</div>" +
       '<div class="grid2" style="margin-top:22px"><section class="block"><h3>Bloque técnico</h3>' +
       ((s.tec && s.tec.length) ? '<dl class="facts">' + s.tec.map(function (r) { return fact(r[0], esc(r[1])); }).join("") + "</dl>" : "") +
