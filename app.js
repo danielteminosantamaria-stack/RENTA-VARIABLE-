@@ -830,6 +830,68 @@
     return { id: uid(), name: o.name.slice(0, 80) || "Cartera", amount: a !== null && a > 0 ? a : null, lines: lines };
   }
 
+  // Importar la cartera desde un PDF de Morningstar (ISIN o nombre del fondo + peso o importe)
+  function loadPdfJs() {
+    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    return new Promise(function (ok, ko) {
+      var sc = document.createElement("script");
+      sc.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+      sc.onload = function () { window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; ok(window.pdfjsLib); };
+      sc.onerror = ko; document.head.appendChild(sc);
+    });
+  }
+  function pdfLines(file) {
+    return loadPdfJs().then(function (lib) {
+      return file.arrayBuffer().then(function (buf) { return lib.getDocument({ data: buf }).promise; });
+    }).then(function (doc) {
+      var out = [], chain = Promise.resolve();
+      for (var n = 1; n <= doc.numPages; n++) (function (n) {
+        chain = chain.then(function () { return doc.getPage(n); }).then(function (pg) { return pg.getTextContent(); }).then(function (tc) {
+          var rows = {};
+          tc.items.forEach(function (it) { var y = Math.round(it.transform[5] / 3); (rows[y] = rows[y] || []).push(it); });
+          Object.keys(rows).map(Number).sort(function (a, b) { return b - a; }).forEach(function (y) {
+            out.push(rows[y].sort(function (a, b) { return a.transform[4] - b.transform[4]; }).map(function (i) { return i.str; }).join(" ").replace(/\s+/g, " ").trim());
+          });
+        });
+      })(n);
+      return chain.then(function () { return out; });
+    });
+  }
+  function pdfNums(t) {
+    var res = [], re = /(-?\d{1,3}(?:[.\s]\d{3})*(?:,\d+)?|-?\d+(?:[.,]\d+)?)(\s?%)?/g, m;
+    while ((m = re.exec(t))) {
+      var raw = m[1].replace(/\s/g, ""), v = /,/.test(raw) ? parseFloat(raw.replace(/\./g, "").replace(",", ".")) : /^-?\d{1,3}(\.\d{3})+$/.test(raw) ? parseFloat(raw.replace(/\./g, "")) : parseFloat(raw);
+      if (isFinite(v)) res.push({ v: v, pct: !!m[2] });
+    }
+    return res;
+  }
+  function importPdf(file) {
+    return pdfLines(file).then(function (L) {
+      var found = {}, order = [], miss = [];
+      L.forEach(function (ln, i) {
+        var f = null, isin = (ln.match(/\b[A-Z]{2}[A-Z0-9]{9}\d\b/g) || []).filter(function (x) { return byId(x); })[0];
+        if (isin) f = byId(isin);
+        else { var nl = norm(ln); f = FUNDS.filter(function (x) { return norm(x.n).length > 12 && nl.indexOf(norm(x.n)) !== -1; })[0] || null; }
+        if (!f) {
+          var other = ln.match(/\b[A-Z]{2}[A-Z0-9]{9}\d\b/);
+          if (other && miss.indexOf(other[0]) === -1) miss.push(other[0]);
+          return;
+        }
+        var txt = ln.replace(/\b[A-Z]{2}[A-Z0-9]{9}\d\b/g, " "), nums = pdfNums(txt);
+        if (!nums.length && L[i + 1]) nums = pdfNums(L[i + 1].replace(/\b[A-Z]{2}[A-Z0-9]{9}\d\b/g, " "));
+        var pc = nums.filter(function (x) { return x.pct && x.v > 0 && x.v <= 100; })[0];
+        var am = nums.filter(function (x) { return !x.pct && x.v >= 100; })[0];
+        if (!found[f.id]) { found[f.id] = { id: f.id, w: pc ? pc.v : null, a: am ? am.v : null }; order.push(f.id); }
+      });
+      var rows = order.map(function (k) { return found[k]; });
+      var tot = rows.reduce(function (a, r) { return a + (r.a || 0); }, 0), haveAmt = rows.every(function (r) { return r.a; });
+      rows.forEach(function (r) { if (r.w === null) r.w = haveAmt && tot ? r.a / tot * 100 : 0; });
+      var sw = rows.reduce(function (a, r) { return a + r.w; }, 0);
+      if (sw > 0 && Math.abs(sw - 100) > 0.5 && sw < 110 === false) rows.forEach(function (r) { r.w = r.w / sw * 100; });
+      return { lines: rows.slice(0, 40).map(function (r) { return { id: r.id, w: Math.round(r.w * 100) / 100 }; }), amount: haveAmt && tot ? tot : null, miss: miss };
+    });
+  }
+
   function viewPortfolios() {
     setTitle("Carteras");
     var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Carteras</h1>' +
@@ -845,7 +907,8 @@
       '<input class="inp amt" id="npa" type="number" min="0" step="1000" placeholder="Importe (€), opcional" aria-label="Importe en euros">' +
       '<button class="btn" type="submit">Crear cartera</button></div></form>';
     h += '<div class="row tools2"><button class="btn ghost" type="button" id="pfexp"' + (PF.length ? "" : " disabled") + '>Exportar todas</button>' +
-      '<label class="btn ghost" for="pfimp">Importar</label><input id="pfimp" type="file" accept="application/json,.json" hidden></div><p class="note" id="pfmsg"></p>';
+      '<label class="btn ghost" for="pfimp">Importar (JSON)</label><input id="pfimp" type="file" accept="application/json,.json" hidden>' +
+      '<label class="btn ghost" for="pfpdf">Importar PDF de Morningstar</label><input id="pfpdf" type="file" accept="application/pdf,.pdf" hidden></div><p class="note" id="pfmsg"></p>';
     app.innerHTML = h + footer("rv");
 
     document.getElementById("newpf").addEventListener("submit", function (e) {
@@ -858,6 +921,19 @@
     });
     document.getElementById("pfexp").addEventListener("click", function () {
       download("carteras-cuaderno-de-fondos.json", JSON.stringify({ version: 1, carteras: PF }, null, 1), "application/json");
+    });
+    document.getElementById("pfpdf").addEventListener("change", function (e) {
+      var file = e.target.files && e.target.files[0], msg = document.getElementById("pfmsg");
+      if (!file) return;
+      msg.textContent = "Leyendo el PDF…";
+      importPdf(file).then(function (r) {
+        if (!r.lines.length) { msg.textContent = "No he encontrado ningún fondo de la web en el PDF (busco el ISIN o el nombre del fondo)." + (r.miss.length ? " Sin reconocer: " + r.miss.slice(0, 8).join(", ") + "." : ""); return; }
+        var p = { id: uid(), name: file.name.replace(/\.pdf$/i, "").slice(0, 80) || "Cartera importada", amount: r.amount, lines: r.lines };
+        PF.push(p); savePf(); viewPortfolios();
+        var m = document.getElementById("pfmsg");
+        m.textContent = "Cartera «" + p.name + "» creada con " + r.lines.length + (r.lines.length === 1 ? " fondo" : " fondos") + (r.amount ? " (" + nf(r.amount, 0) + " €)" : "") +
+          ". Revisa los pesos antes de usarla." + (r.miss.length ? " No están en la web: " + r.miss.slice(0, 8).join(", ") + "." : "");
+      }).catch(function () { msg.textContent = "No se ha podido leer el PDF. Comprueba que no esté protegido y que tienes conexión (la lectura usa la librería pdf.js)."; });
     });
     document.getElementById("pfimp").addEventListener("change", function (e) {
       var file = e.target.files && e.target.files[0], msg = document.getElementById("pfmsg");
