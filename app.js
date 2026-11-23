@@ -563,9 +563,9 @@
       var svg = '<svg viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" aria-label="Evolución de 10.000 euros">' +
         '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(10000).toFixed(1) + '" y2="' + Y(10000).toFixed(1) + '" stroke="#bbb" stroke-dasharray="4 3"/>' +
         '<text x="' + (L - 6) + '" y="' + (Y(10000) + 4).toFixed(1) + '" text-anchor="end" font-size="10" fill="#777">10.000</text>' +
-        '<path d="' + line + '" fill="none" stroke="#851a2e" stroke-width="2.2"/>' +
+        '<path d="' + line + '" fill="none" style="stroke:var(--brand)" stroke-width="2.2"/>' +
         pts.map(function (p, i) {
-          return '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(p[1]).toFixed(1) + '" r="3" fill="#851a2e"/>' +
+          return '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(p[1]).toFixed(1) + '" r="3" style="fill:var(--brand)"/>' +
             '<text x="' + X(i).toFixed(1) + '" y="' + (H - 10) + '" text-anchor="middle" font-size="10" fill="#777">' + p[0] + "</text>" +
             (i ? '<text x="' + X(i).toFixed(1) + '" y="' + (Y(p[1]) - 7).toFixed(1) + '" text-anchor="middle" font-size="10" font-weight="600" fill="#333">' + nf(p[1], 0) + "</text>" : "");
         }).join("") + "</svg>";
@@ -2227,13 +2227,37 @@
     });
   }
 
+  // ---------- colores de la gestora ----------
+  var GCOL = {
+    "Renta 4": ["#c8102e", "#6e0a1c"], "Morgan Stanley IM": ["#0b5fa5", "#052e57"], "Man Group": ["#00706a", "#00383a"], "Algebris": ["#1f3a5f", "#0d1b2e"],
+    "PIMCO": ["#0a4a82", "#001a33"], "Buy & Hold": ["#8b5a3c", "#3e2616"], "Vontobel": ["#d9467a", "#6e1b3f"], "M&G": ["#00a37a", "#00473a"], "Amundi": ["#0066b3", "#003561"],
+    "MFS": ["#0c6e7d", "#053840"], "BlackRock": ["#262626", "#000000"], "T. Rowe Price": ["#0a3d91", "#051f4a"], "Alger": ["#1c3d6e", "#0d1f38"], "JPMorgan AM": ["#6b4a2b", "#33220f"],
+    "Jupiter": ["#2b3a8f", "#141b47"], "Findlay Park": ["#1f4e3d", "#0d241b"], "Groupama": ["#2e8b57", "#124a2c"], "Nomura": ["#c1002a", "#600015"], "DNB": ["#007272", "#003a3a"],
+    "Federated Hermes": ["#0a2a5e", "#04132b"], "DWS": ["#1a3ccf", "#0a1b6b"], "Goldman Sachs AM": ["#5b8db8", "#1f4466"], "Goehring & Rozencwajg": ["#7a5c1e", "#3a2b0c"],
+    "Fidelity": ["#3f9a2d", "#1c4a14"], "Robeco": ["#008a92", "#00464a"], "Eleva": ["#e0572d", "#7a2a12"], "Wellington": ["#00205b", "#000f2e"], "Columbia Threadneedle": ["#0076c0", "#003a60"],
+    "Polar Capital": ["#00305e", "#00172e"], "Vanguard": ["#96151d", "#4a0a0e"], "Allianz GI": ["#003781", "#001b40"], "La Financière de l'Echiquier": ["#0b3d5c", "#051e2e"], "Edmond de Rothschild": ["#5a1f35", "#2b0f19"]
+  };
+  function mixHex(h, k) {
+    var n = parseInt(h.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    function m(c) { return Math.round(c + (255 - c) * k); }
+    return "rgb(" + m(r) + "," + m(g) + "," + m(b) + ")";
+  }
+  function gTheme(id) {
+    var f = id ? byId(id) : null, c = f && GCOL[f.g];
+    app.classList.remove("gtheme"); app.style.removeProperty("--brand"); app.style.removeProperty("--brand-2"); app.style.removeProperty("--brand-soft"); app.style.removeProperty("--gd");
+    if (!c) return;
+    app.classList.add("gtheme");
+    app.style.setProperty("--brand", c[0]); app.style.setProperty("--brand-2", c[1]); app.style.setProperty("--brand-soft", mixHex(c[0], 0.9)); app.style.setProperty("--gd", c[1]);
+  }
+
   function route() {
     var h = (location.hash || "#/").replace(/^#/, ""), p = h.split("/").filter(Boolean);
     window.scrollTo(0, 0);
+    gTheme(null);
     if (!p.length) return viewHome();
     if ((p[0] === "rf" || p[0] === "rv") && !p[1]) return viewList(p[0]);
     if ((p[0] === "rf" || p[0] === "rv") && p[1] === "resumen") return viewOverview(p[0]);
-    if (p[0] === "fondo" && p[1]) return viewFund(decodeURIComponent(p[1]));
+    if (p[0] === "fondo" && p[1]) { var fid = decodeURIComponent(p[1]); viewFund(fid); gTheme(fid); return; }
     if (p[0] === "comparar") return viewCompare(p[1]);
     if (p[0] === "carteras") return viewPortfolios();
     if (p[0] === "acciones") return viewStocks();
