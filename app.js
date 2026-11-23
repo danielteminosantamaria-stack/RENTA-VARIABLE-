@@ -124,7 +124,7 @@
       ]) +
       homeSection("Herramientas de cartera", [
         tile("#/gestion", "scan", "Herramienta", "Gestión de carteras", "analizar la del cliente"),
-        tile("#/construir", "build", "Herramienta", "Construir cartera", "con el cliente"),
+        tile("#/construir", "build", "🔒 Privado", "Construir cartera", "con el cliente"),
         tile("#/comparar", "compare", "Herramienta", "Comparador de fondos", "hasta " + CMP_MAX + " fondos"),
         tile("#/carteras", "folder", "Herramienta", "Carteras", PF.length + (PF.length === 1 ? " cartera" : " carteras")),
         tile("#/recomendadas", "star", "Herramienta", "Carteras recomendadas", "3 perfiles")
@@ -1974,6 +1974,31 @@
   }
   if (window.MutationObserver) new MutationObserver(decorate).observe(app, { childList: true });
 
+  // ---------- candado (acceso privado) ----------
+  var LOCK = { salt: "a4c7f9a72b6e2088", hash: "adef6120b993194ec399ceb0e2e3134b5cf5875be57cd9daba806af14712be36", key: "cf_unlock" };
+  function sha(txt) {
+    var enc = new TextEncoder().encode(txt);
+    return crypto.subtle.digest("SHA-256", enc).then(function (b) {
+      return Array.prototype.map.call(new Uint8Array(b), function (x) { return ("0" + x.toString(16)).slice(-2); }).join("");
+    });
+  }
+  function unlocked() { try { return localStorage.getItem(LOCK.key) === LOCK.hash; } catch (e) { return false; } }
+  function gate(id, title, view) {
+    if (unlocked()) return view();
+    setTitle(title);
+    app.innerHTML = '<header class="phero"><h1>🔒 ' + esc(title) + '</h1><p class="sub">Apartado privado. Introduce la contraseña para usarlo.</p></header>' +
+      '<form class="lockbox" id="lockf"><label class="muted" for="lockpw">Contraseña</label><input id="lockpw" type="password" autocomplete="current-password" autofocus>' +
+      '<button type="submit" class="btn primary">Desbloquear</button><p class="lockerr" id="lockerr" hidden>Contraseña incorrecta</p></form>' + footer("rv");
+    document.getElementById("lockf").addEventListener("submit", function (e) {
+      e.preventDefault();
+      sha(LOCK.salt + document.getElementById("lockpw").value).then(function (h) {
+        if (h === LOCK.hash) { try { localStorage.setItem(LOCK.key, h); } catch (x) { /* sin almacenamiento */ } route(); setNav(); }
+        else document.getElementById("lockerr").hidden = false;
+      });
+    });
+  }
+  function setNav() { /* el menú no cambia */ }
+
   function route() {
     var h = (location.hash || "#/").replace(/^#/, ""), p = h.split("/").filter(Boolean);
     window.scrollTo(0, 0);
@@ -1989,7 +2014,7 @@
     if (p[0] === "nota") return viewNota();
     if (p[0] === "accion" && p[1]) return viewStock(decodeURIComponent(p[1]));
     if (p[0] === "gestion") return viewGestion();
-    if (p[0] === "construir") return viewBuild();
+    if (p[0] === "construir") return gate("construir", "Construir cartera", viewBuild);
     if (p[0] === "categorias") return viewCategories(p[1]);
     if (p[0] === "recomendadas") return viewRecommended();
     if (p[0] === "cartera" && p[1]) return viewPortfolio(decodeURIComponent(p[1]));
