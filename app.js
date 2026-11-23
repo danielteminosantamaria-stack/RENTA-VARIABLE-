@@ -502,7 +502,7 @@
       kpi("3 años", ret(r.y3)) + kpi("5 años", ret(r.y5)) + kpi("10 años", ret(r.y10)) + "</div>";
     html += '<p class="note">Rentabilidad de la clase en euros. A 3, 5 y 10 años, anualizada. Fuente: Morningstar, valor liquidativo a ' + esc(f.nd) + ".</p>";
 
-    var docs = [["ficha", "Ficha (KID)", "Documento oficial"], ["informe", "Informe periódico", "Documento oficial"], ["xray", "X-Ray", "Morningstar"], ["ms", "Morningstar", "Ficha online"]]
+    var docs = [["xray", "X-Ray", "Morningstar"], ["ms", "Morningstar", "Ficha online"]]
       .filter(function (d) { return safeUrl(f[d[0]]); })
       .map(function (d) { return '<a class="doc" href="' + esc(f[d[0]]) + '" target="_blank" rel="noopener noreferrer">' + d[1] + "<small>" + d[2] + "</small></a>"; });
     docs.push('<a class="doc" href="#/comparar/' + encodeURIComponent(f.id) + '">Comparar<small>Con otros fondos</small></a>');
