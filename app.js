@@ -2051,7 +2051,7 @@
   if (window.MutationObserver) new MutationObserver(decorate).observe(app, { childList: true });
 
   // ---------- candado (acceso privado) ----------
-  var LOCK = { salt: "a4c7f9a72b6e2088", hash: "adef6120b993194ec399ceb0e2e3134b5cf5875be57cd9daba806af14712be36", key: "cf_unlock" };
+  var LOCK = { salt: "ec5a57c6e2be789b", hash: "e906eba26cf1faf0dcf2cda16ab9de1bd6b1f1d5ea178b80ed5966c6305b090b", key: "cf_unlock" };
   function sha(txt) {
     var enc = new TextEncoder().encode(txt);
     return crypto.subtle.digest("SHA-256", enc).then(function (b) {
