@@ -860,7 +860,7 @@
     var res = [], re = /(-?\d{1,3}(?:[.\s]\d{3})*(?:,\d+)?|-?\d+(?:[.,]\d+)?)(\s?%)?/g, m;
     while ((m = re.exec(t))) {
       var raw = m[1].replace(/\s/g, ""), v = /,/.test(raw) ? parseFloat(raw.replace(/\./g, "").replace(",", ".")) : /^-?\d{1,3}(\.\d{3})+$/.test(raw) ? parseFloat(raw.replace(/\./g, "")) : parseFloat(raw);
-      if (isFinite(v)) res.push({ v: v, pct: !!m[2] });
+      if (isFinite(v)) res.push({ v: v, pct: !!m[2], dec: /[.,]\d{1,4}$/.test(raw) && !/^-?\d{1,3}(\.\d{3})+$/.test(raw) });
     }
     return res;
   }
@@ -878,7 +878,8 @@
         }
         var txt = ln.replace(/\b[A-Z]{2}[A-Z0-9]{9}\d\b/g, " "), nums = pdfNums(txt);
         if (!nums.length && L[i + 1]) nums = pdfNums(L[i + 1].replace(/\b[A-Z]{2}[A-Z0-9]{9}\d\b/g, " "));
-        var pc = nums.filter(function (x) { return x.pct && x.v > 0 && x.v <= 100; })[0];
+        var pc = nums.filter(function (x) { return x.pct && x.v > 0 && x.v <= 100; })[0] ||
+          nums.filter(function (x) { return !x.pct && x.v > 0 && x.v <= 100 && x.dec; })[0];
         var am = nums.filter(function (x) { return !x.pct && x.v >= 100; })[0];
         if (!found[f.id]) { found[f.id] = { id: f.id, w: pc ? pc.v : null, a: am ? am.v : null }; order.push(f.id); }
       });
@@ -886,8 +887,8 @@
       var tot = rows.reduce(function (a, r) { return a + (r.a || 0); }, 0), haveAmt = rows.every(function (r) { return r.a; });
       rows.forEach(function (r) { if (r.w === null) r.w = haveAmt && tot ? r.a / tot * 100 : 0; });
       var sw = rows.reduce(function (a, r) { return a + r.w; }, 0);
-      if (sw > 0 && Math.abs(sw - 100) > 0.5 && sw < 110 === false) rows.forEach(function (r) { r.w = r.w / sw * 100; });
-      return { lines: rows.slice(0, 40).map(function (r) { return { id: r.id, w: Math.round(r.w * 100) / 100 }; }), amount: haveAmt && tot ? tot : null, miss: miss };
+      if (sw > 110) rows.forEach(function (r) { r.w = r.w / sw * 100; });
+      return { sumw: Math.min(sw, 100), lines: rows.slice(0, 40).map(function (r) { return { id: r.id, w: Math.round(r.w * 100) / 100 }; }), amount: haveAmt && tot ? tot : null, miss: miss };
     });
   }
 
@@ -931,7 +932,7 @@
         PF.push(p); savePf(); viewPortfolios();
         var m = document.getElementById("pfmsg");
         m.textContent = "Cartera «" + p.name + "» creada con " + r.lines.length + (r.lines.length === 1 ? " fondo" : " fondos") + (r.amount ? " (" + nf(r.amount, 0) + " €)" : "") +
-          ". Revisa los pesos antes de usarla." + (r.miss.length ? " No están en la web: " + r.miss.slice(0, 8).join(", ") + "." : "");
+          ". Pesos del PDF: " + r.lines.map(function (l) { return nf(l.w, 2) + " %"; }).join(", ") + " (suman " + nf(r.lines.reduce(function (a, l) { return a + l.w; }, 0), 2) + " %)." + (r.lines.some(function (l) { return !l.w; }) ? " Hay fondos sin peso: complétalos en la cartera." : "") + (r.miss.length ? " No están en la web: " + r.miss.slice(0, 8).join(", ") + "." : "");
       }).catch(function () { msg.textContent = "No se ha podido leer el PDF. Comprueba que no esté protegido y que tienes conexión (la lectura usa la librería pdf.js)."; });
     });
     document.getElementById("pfimp").addEventListener("change", function (e) {
