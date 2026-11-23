@@ -94,6 +94,8 @@
       '<a class="cat-card" href="#/gestion"><div class="row"><div><small>Herramienta</small><h2>Gestión de carteras</h2></div><span class="count">analizar la del cliente</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
       '<a class="cat-card" href="#/acciones"><div class="row"><div><small>Explorar</small><h2>Acciones MarketSurge</h2></div><span class="count">' + stocks().length + (stocks().length === 1 ? " ficha" : " fichas") + '</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
       '<a class="cat-card" href="#/agenda"><div class="row"><div><small>Semana</small><h2>Agenda semanal</h2></div><span class="count">mercado y deuda</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
+      '<a class="cat-card" href="#/estado"><div class="row"><div><small>Cada lunes</small><h2>Estado semanal de fondos</h2></div><span class="count">alertas y oportunidades</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
+      '<a class="cat-card" href="#/nota"><div class="row"><div><small>Cada día</small><h2>Nota diaria</h2></div><span class="count">mercados y macro</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
       '<a class="cat-card" href="#/construir"><div class="row"><div><small>Herramienta</small><h2>Construir cartera</h2></div><span class="count">con el cliente</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
       '<a class="cat-card" href="#/comparar"><div class="row"><div><small>Herramienta</small><h2>Comparador de fondos</h2></div><span class="count">hasta ' + CMP_MAX + ' fondos</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
       '<a class="cat-card" href="#/carteras"><div class="row"><div><small>Herramienta</small><h2>Carteras</h2></div><span class="count">' + PF.length + (PF.length === 1 ? " cartera" : " carteras") + '</span></div><span class="arrow" aria-hidden="true">→</span></a>' +
@@ -460,6 +462,8 @@
     html += '<div class="topbar"><a href="#/' + f.t + '">← ' + esc(CATS[f.t].title) + '</a></div>';
     html += "<h1>" + esc(f.n) + "</h1>";
     html += '<p class="sub">' + esc(f.g) + " · " + esc(f.id) + " · " + esc(f.c) + (f.idx ? ' <span class="tag">Indexado</span>' : "") + "</p>";
+    var esd = window.ESTADO && window.ESTADO.fondos && window.ESTADO.fondos[f.id];
+    if (esd && esd.e) html += '<p class="sub"><a href="#/estado">Estado semanal</a>: ' + esTag(esd.e) + (esd.p ? " " + esc(esd.p) : "") + "</p>";
     html += '<div class="kpis">' +
       kpi("Vol. 1 año", pct(f.vol[0], false, 1), true) + kpi("Sharpe 1 año", dec(f.sharpe[0]), true) +
       kpi("Último mes", ret(r.m1)) + kpi("Año", ret(r.ytd)) + kpi("1 año", ret(r.y1)) +
@@ -1822,6 +1826,69 @@
     app.innerHTML = h + footer("rv");
   }
 
+  var ES_ORDER = { "ALERTA": 0, "OPORTUNIDAD": 1, "VIGILAR": 2, "NORMAL": 3, "SIN DATOS": 4 };
+  var ESF = { f: "" };
+  function esTag(st) { return '<span class="estag es-' + String(st || "").toLowerCase().replace(/\s+/g, "") + '">' + esc(st || "") + "</span>"; }
+  function viewEstado() {
+    setTitle("Estado semanal de fondos");
+    var E = window.ESTADO || { fondos: {} };
+    var items = FUNDS.filter(function (f) { return E.fondos && E.fondos[f.id]; });
+    var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Estado semanal de fondos</h1>' +
+      '<p class="sub">' + (E.fecha ? "Informe del " + esc(E.fecha) + ". " : "") + 'Alertas, oportunidades y fondos a vigilar frente a su propio riesgo y a su categoría. Es una lectura de datos, no una recomendación.</p>';
+    if (!items.length) {
+      app.innerHTML = h + '<div class="empty box" style="margin-top:18px;padding:34px 20px">Todavía no hay estado publicado. Se rellenará con el próximo informe semanal (lunes).</div>' + footer("rv");
+      return;
+    }
+    var cnt = {}; items.forEach(function (f) { var s = E.fondos[f.id].e || "NORMAL"; cnt[s] = (cnt[s] || 0) + 1; });
+    if (E.resumen) h += '<div class="box" style="margin-top:14px;padding:16px 18px"><p style="margin:0">' + esc(E.resumen) + "</p></div>";
+    h += '<div class="es-chips">' + ["", "ALERTA", "OPORTUNIDAD", "VIGILAR", "NORMAL", "SIN DATOS"].map(function (s) {
+      var n = s ? (cnt[s] || 0) : items.length;
+      return '<button type="button" class="es-chip' + (ESF.f === s ? " on" : "") + '" data-es="' + s + '">' + (s || "Todos") + " (" + n + ")</button>";
+    }).join("") + '</div><div id="esbody"></div>';
+    app.innerHTML = h + footer("rv");
+    app.querySelectorAll("[data-es]").forEach(function (b) { b.addEventListener("click", function () { ESF.f = b.getAttribute("data-es"); viewEstado(); }); });
+    var groups = {};
+    items.forEach(function (f) { if (!ESF.f || (E.fondos[f.id].e || "NORMAL") === ESF.f) (groups[f.c] = groups[f.c] || []).push(f); });
+    var out = "";
+    Object.keys(groups).sort().forEach(function (c) {
+      var list = groups[c].sort(function (a, b) { var x = E.fondos[a.id], y = E.fondos[b.id]; return (ES_ORDER[x.e] == null ? 9 : ES_ORDER[x.e]) - (ES_ORDER[y.e] == null ? 9 : ES_ORDER[y.e]) || a.n.localeCompare(b.n); });
+      out += '<h3 class="es-cat">' + esc(c) + '</h3><div class="table-wrap"><table class="estable"><thead><tr><th>Fondo</th><th>Estado</th><th>Cambio</th><th>4 semanas</th><th>Sigmas sem.</th><th>Sigmas mes</th><th>Sharpe 3A</th><th>Sharpe 1A</th><th>Por qué</th></tr></thead><tbody>' +
+        list.map(function (f) {
+          var d = E.fondos[f.id];
+          return '<tr><td><a href="#/fondo/' + encodeURIComponent(f.id) + '">' + esc(f.n) + "</a></td><td>" + esTag(d.e) + "</td><td>" + esc(d.c || "") + "</td><td>" +
+            (d.h || []).map(function (x) { return '<i class="esdot es-' + String(x).toLowerCase().replace(/\s+/g, "") + '" title="' + esc(x) + '"></i>'; }).join("") + "</td><td>" + esc(d.sw == null ? "–" : d.sw) + "</td><td>" + esc(d.sm == null ? "–" : d.sm) + "</td><td>" + esc(d.s3 == null ? "–" : d.s3) + "</td><td>" + esc(d.s1 == null ? "–" : d.s1) + '</td><td class="eswhy">' + esc(d.p || "") + "</td></tr>";
+        }).join("") + "</tbody></table></div>";
+    });
+    document.getElementById("esbody").innerHTML = out || '<p class="muted" style="margin-top:16px">Ningún fondo en este estado.</p>';
+  }
+
+  function viewNota() {
+    setTitle("Nota diaria");
+    var N = window.NOTA || {}, a = N.actual;
+    var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Nota diaria</h1>';
+    if (!a) { app.innerHTML = h + '<div class="empty box" style="margin-top:18px;padding:34px 20px">Todavía no hay nota publicada. Aparecerá tras la próxima ejecución diaria.</div>' + footer("rv"); return; }
+    h += '<p class="sub">' + esc(a.titulo || "") + (a.fecha ? " (" + esc(a.fecha) + ")" : "") + ". Material de análisis, no una recomendación.</p>";
+    (a.temas || []).forEach(function (t) { h += '<div class="box" style="margin-top:14px;padding:16px 18px"><h2 style="margin:0 0 6px;font-size:1.05rem">' + esc(t.t) + '</h2><p class="stxt">' + esc(t.r) + "</p></div>"; });
+    if ((a.calendario || []).length) h += '<div class="box" style="margin-top:14px;padding:16px 18px"><h2 style="margin:0 0 8px;font-size:1.05rem">Calendario del día</h2>' + a.calendario.map(function (x) { return '<div class="agrow"><span>' + esc(x) + "</span></div>"; }).join("") + "</div>";
+    function tbl(title, rows) {
+      if (!rows || !rows.length) return "";
+      return '<h3 class="es-cat">' + esc(title) + '</h3><div class="table-wrap"><table><thead><tr><th>Instrumento</th><th>Cierre</th><th>% día</th><th>% año</th></tr></thead><tbody>' +
+        rows.map(function (r) { return "<tr><td>" + esc(r[0]) + "</td><td>" + esc(r[1]) + "</td><td>" + esc(r[2]) + "</td><td>" + esc(r[3]) + "</td></tr>"; }).join("") + "</tbody></table></div>";
+    }
+    var u = a.usa || {};
+    if (u.sesion) h += '<p class="sub" style="margin-top:18px">Sesión americana del ' + esc(u.sesion) + " (vía ETF).</p>";
+    h += tbl("Índices y mega caps", u.indices) + tbl("Sectores", u.sectores);
+    (u.notas || []).forEach(function (x) { h += '<p class="note">' + esc(x) + "</p>"; });
+    if ((a.ibex || []).length) h += '<div class="box" style="margin-top:14px;padding:16px 18px"><h2 style="margin:0 0 8px;font-size:1.05rem">Apuntes del Ibex 35</h2>' + a.ibex.map(function (x) { return '<div class="agrow"><span>' + esc(x) + "</span></div>"; }).join("") + "</div>";
+    if ((N.historial || []).length) {
+      h += '<h3 class="es-cat">Días anteriores</h3>' + N.historial.map(function (d) {
+        return '<details class="box" style="margin-top:8px;padding:10px 16px"><summary><b>' + esc(d.fecha) + "</b> " + esc((d.temas || []).map(function (t) { return t.t; }).join(" · ")) + "</summary>" +
+          (d.temas || []).map(function (t) { return '<p class="stxt" style="margin:8px 0 0"><b>' + esc(t.t) + ".</b> " + esc(t.r) + "</p>"; }).join("") + "</details>";
+      }).join("");
+    }
+    app.innerHTML = h + footer("rv");
+  }
+
   // ---------- router ----------
   function route() {
     var h = (location.hash || "#/").replace(/^#/, ""), p = h.split("/").filter(Boolean);
@@ -1834,6 +1901,8 @@
     if (p[0] === "carteras") return viewPortfolios();
     if (p[0] === "acciones") return viewStocks();
     if (p[0] === "agenda") return viewAgenda();
+    if (p[0] === "estado") return viewEstado();
+    if (p[0] === "nota") return viewNota();
     if (p[0] === "accion" && p[1]) return viewStock(decodeURIComponent(p[1]));
     if (p[0] === "gestion") return viewGestion();
     if (p[0] === "construir") return viewBuild();

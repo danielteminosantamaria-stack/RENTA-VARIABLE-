@@ -462,3 +462,14 @@ td, th { font-variant-numeric: tabular-nums; }
 .agrow:first-of-type { border-top: 0; }
 .agtag { flex: 0 0 auto; min-width: 78px; text-align: center; font-size: .72rem; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #f1e9eb; color: #7a1a2c; }
 .ag-key { background: #c8102e; color: #fff; }
+
+.estag { display: inline-block; font-size: .72rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: #eee; color: #444; white-space: nowrap; }
+.es-alerta { background: #c8102e; color: #fff; } .es-oportunidad { background: #e3f3ea; color: #1d7a45; }
+.es-vigilar { background: #fdf1d9; color: #8a5a00; } .es-normal { background: #eee; color: #555; } .es-sindatos { background: #ddd; color: #666; }
+.es-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; }
+.es-chip { border: 1px solid var(--line, #e3d9dc); background: #fff; border-radius: 999px; padding: 6px 12px; font-size: .85rem; cursor: pointer; }
+.es-chip.on { background: var(--brand); color: #fff; border-color: var(--brand); }
+.es-cat { margin: 22px 0 8px; font-size: .95rem; color: var(--brand); }
+.esdot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 3px; background: #ddd; }
+.esdot.es-alerta { background: #c8102e; } .esdot.es-oportunidad { background: #1d7a45; } .esdot.es-vigilar { background: #e0a100; } .esdot.es-normal { background: #cfcfcf; }
+.estable .eswhy { min-width: 220px; white-space: normal; }
