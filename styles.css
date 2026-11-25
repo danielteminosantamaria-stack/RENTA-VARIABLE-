@@ -927,50 +927,75 @@ body.gopen { overflow: hidden; }
 @media print {
   body.pd > *:not(#deck) { display: none !important; }
   body.pd #deck { display: block !important; }
-  .dk-s { width: 297mm; height: 210mm; box-sizing: border-box; padding: 16mm 20mm 14mm; position: relative; overflow: hidden; break-after: page; page-break-after: always; background: #fff; color: #1a2a4a; font-size: 18.2px; }
+  .dk-s { width: 297mm; height: 210mm; box-sizing: border-box; position: relative; overflow: hidden; break-after: page; page-break-after: always; background: #fff; color: #1a2a4a; font-size: 14px; }
   .dk-s:last-child { break-after: auto; page-break-after: auto; }
-  .dk-cv { background: #c8102e; color: #fff; padding: 0; }
-  .dk-tri { position: absolute; right: 0; top: 0; width: 0; height: 0; border-style: solid; border-width: 0 150mm 210mm 0; border-color: transparent #a30d25 transparent transparent; }
-  .dk-cvt { position: absolute; left: 24mm; top: 70mm; right: 110mm; }
-  .dk-cvt .dk-k { text-transform: uppercase; letter-spacing: .18em; font-size: 16.8px; opacity: .85; margin-bottom: 10px; }
-  .dk-cvt h1 { display: block !important; font-size: 56.0px; line-height: 1.12; margin: 0 0 14px; color: #fff; }
-  .dk-cvt p { font-size: 21.0px; margin: 0; opacity: .92; }
-  .dk-lg { position: absolute; left: 24mm; bottom: 16mm; font-weight: 700; font-size: 22.4px; letter-spacing: .04em; }
-  .dk-hd { border-bottom: 2px solid #c8102e; padding-bottom: 8px; margin-bottom: 14px; }
-  .dk-hd h2 { margin: 0; font-size: 33.6px; color: #c8102e; }
-  .dk-hd p { margin: 3px 0 0; color: #5f6971; font-size: 18.2px; }
-  .dk-ft { position: absolute; left: 20mm; right: 20mm; bottom: 8mm; display: flex; justify-content: space-between; font-size: 14.0px; color: #8a929c; border-top: 1px solid #e3e6ea; padding-top: 4px; }
-  .dk-t { width: 100%; border-collapse: collapse; font-size: 16.8px; }
-  .dk-t th { text-align: left; background: #f0f0f0; padding: 9px 10px; font-size: 15.4px; color: #1a2a4a; }
-  .dk-t td { padding: 9px 10px; border-bottom: 1px solid #e3e6ea; vertical-align: top; }
-  .dk-t small { display: block; color: #8a929c; font-size: 14.0px; }
+  /* portada */
+  .dk-cv { background: linear-gradient(135deg, #1a2a4a 0%, #0f1a30 100%); color: #fff; }
+  .dk-sh1 { position: absolute; right: -40mm; top: -40mm; width: 170mm; height: 170mm; border-radius: 50%; background: #c8102e; opacity: .95; }
+  .dk-sh2 { position: absolute; right: -25mm; bottom: -55mm; width: 100mm; height: 100mm; border-radius: 50%; background: #c8102e; opacity: .35; }
+  .dk-cvt { position: absolute; left: 24mm; top: 56mm; width: 175mm; }
+  .dk-k { text-transform: uppercase; letter-spacing: .22em; font-size: 14px; color: #ff8fa0; margin-bottom: 14px; font-weight: 700; }
+  .dk-cvt h1 { display: block !important; font-size: 50px; line-height: 1.08; margin: 0 0 18px; color: #fff; }
+  .dk-cvt p { font-size: 18px; margin: 0; opacity: .85; }
+  .dk-cst { position: absolute; left: 24mm; right: 24mm; bottom: 34mm; display: flex; gap: 14mm; }
+  .dk-cst div { border-top: 3px solid #c8102e; padding-top: 8px; min-width: 42mm; }
+  .dk-cst b { display: block; font-size: 30px; color: #fff; }
+  .dk-cst span { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #aeb8cc; }
+  .dk-lg { position: absolute; left: 24mm; bottom: 14mm; font-weight: 700; font-size: 15px; letter-spacing: .06em; color: #fff; }
+  /* contenido */
+  .dk-top { background: #1a2a4a; color: #fff; padding: 11mm 18mm 8mm; display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 4px solid #c8102e; }
+  .dk-top h2 { margin: 0; font-size: 28px; color: #fff; line-height: 1.1; }
+  .dk-top p { margin: 4px 0 0; color: #aeb8cc; font-size: 13px; }
+  .dk-bd { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #ff8fa0; font-weight: 700; white-space: nowrap; }
+  .dk-body { padding: 9mm 18mm 0; }
+  .dk-ft { position: absolute; left: 18mm; right: 18mm; bottom: 7mm; display: flex; justify-content: space-between; font-size: 10px; color: #8a929c; }
+  .dk-two { display: flex; gap: 10mm; align-items: flex-start; }
+  .dk-l { flex: 1.5; min-width: 0; }
+  .dk-r { flex: 1; min-width: 0; }
+  .dk-t { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .dk-t th { text-align: left; padding: 6px 8px; font-size: 11px; color: #5f6971; text-transform: uppercase; letter-spacing: .06em; border-bottom: 2px solid #1a2a4a; }
+  .dk-t td { padding: 9px 8px; border-bottom: 1px solid #e8ebef; vertical-align: middle; }
+  .dk-t small { display: block; color: #8a929c; font-size: 10.5px; font-weight: 400; }
   .dk-t .r { text-align: right; white-space: nowrap; }
-  .dk-t tfoot td { font-weight: 700; color: #c8102e; border-top: 2px solid #c8102e; border-bottom: 0; }
-  .dk-sm { font-size: 15.4px; }
-  .dk-sm td, .dk-sm th { padding: 6px 10px; }
-  .dk-two { display: flex; gap: 12mm; align-items: flex-start; }
-  .dk-two > * { flex: 1; }
-  .dk-donut { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-  .dk-dn { width: 80mm; height: 80mm; border-radius: 50%; position: relative; }
-  .dk-dn i { position: absolute; inset: 19mm; background: #fff; border-radius: 50%; }
-  .dk-lgd { display: flex; gap: 14px; font-size: 16.8px; }
-  .dk-lgd u { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border-radius: 2px; }
-  .dk-bars { flex: 1.3; }
-  .dk-br { display: grid; grid-template-columns: 62mm 1fr 18mm; gap: 8px; align-items: center; margin-bottom: 11px; font-size: 16.1px; }
-  .dk-br div { background: #f0f0f0; height: 9px; border-radius: 5px; overflow: hidden; }
-  .dk-br i { display: block; height: 100%; background: #1a2a4a; }
+  .dk-t td.w { width: 38mm; white-space: nowrap; }
+  .dk-t td.w b { margin-left: 6px; }
+  .dk-pb { display: inline-block; width: 22mm; height: 7px; background: #eef0f3; border-radius: 4px; overflow: hidden; vertical-align: middle; }
+  .dk-pb i { display: block; height: 100%; }
+  .dk-cmp th small { text-transform: none; letter-spacing: 0; font-weight: 400; }
+  .dk-cmp td { padding: 8px 8px; }
+  .dk-cmp td:first-child { color: #5f6971; }
+  b.ng { color: #c8102e; }
+  .dk-dn { width: 74mm; height: 74mm; border-radius: 50%; position: relative; margin: 4mm auto 8mm; }
+  .dk-dn i { position: absolute; inset: 18mm; background: #fff; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-style: normal; font-size: 12px; color: #5f6971; text-transform: uppercase; letter-spacing: .08em; }
+  .dk-dn i b { font-size: 34px; color: #1a2a4a; line-height: 1; }
+  .dk-lgd { display: flex; flex-direction: column; gap: 8px; font-size: 14px; padding: 0 8mm; }
+  .dk-lgd span { display: flex; align-items: center; }
+  .dk-lgd u { width: 12px; height: 12px; border-radius: 3px; margin-right: 8px; }
+  .dk-lgd b { margin-left: auto; font-size: 18px; }
+  .dk-kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 7px; margin-bottom: 9mm; }
+  .dk-kpi { background: #f5f6f8; border-radius: 8px; padding: 11px 12px; border-top: 3px solid #c8102e; }
+  .dk-kpi span { display: block; font-size: 10px; color: #5f6971; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+  .dk-kpi b { font-size: 24px; color: #1a2a4a; }
+  .dk-kpi b.ng { color: #c8102e; }
+  .dk-h4 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #5f6971; }
+  .dk-br { display: grid; grid-template-columns: 55mm 1fr 15mm 22mm; gap: 8px; align-items: center; margin-bottom: 9px; font-size: 12px; }
+  .dk-br div { background: #eef0f3; height: 9px; border-radius: 5px; overflow: hidden; }
+  .dk-br i { display: block; height: 100%; }
   .dk-br b { text-align: right; }
-  .dk-kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 12px; }
-  .dk-kpi { border: 1px solid #e3e6ea; border-top: 3px solid #c8102e; border-radius: 6px; padding: 12px 14px; }
-  .dk-kpi span { display: block; font-size: 14.0px; color: #5f6971; text-transform: uppercase; letter-spacing: .05em; }
-  .dk-kpi b { font-size: 28.0px; color: #1a2a4a; }
-  .dk-card { border: 1px solid #e3e6ea; border-left: 4px solid #c8102e; border-radius: 6px; padding: 18px 20px; }
-  .dk-card h3 { margin: 0 0 2px; font-size: 22.4px; color: #1a2a4a; }
-  .dk-card small { color: #8a929c; font-size: 15.4px; }
-  .dk-card ul, .dk-w { margin: 14px 0 0; padding-left: 22px; line-height: 1.6; font-size: 18.2px; }
-  .dk-card li, .dk-w li { margin-bottom: 8px; }
-  .dk-big ul { font-size: 22.4px; }
-  .dk-w { margin-top: 4px; font-size: 19.6px; }
-  .dk-prac { font-size: 16.8px; color: #5f6971; margin-top: 16px; }
-  .dk-dis { position: absolute; left: 20mm; right: 20mm; bottom: 18mm; font-size: 14.7px; color: #5f6971; }
+  .dk-br em { font-style: normal; color: #8a929c; font-size: 11px; }
+  .dk-two .dk-br { grid-template-columns: 50mm 1fr 15mm 20mm; }
+  .dk-watch { background: #fdf3f5; border-left: 4px solid #c8102e; border-radius: 6px; padding: 10px 14px; }
+  .dk-watch h4 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #c8102e; }
+  .dk-watch ul { margin: 0; padding-left: 16px; font-size: 12.5px; line-height: 1.5; }
+  .dk-watch li { margin-bottom: 4px; }
+  .dk-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7mm; margin-bottom: 7mm; }
+  .dk-grid.dk-g2 { grid-template-columns: repeat(2, 1fr); }
+  .dk-card { border: 1px solid #e3e6ea; border-top: 4px solid #c8102e; border-radius: 8px; padding: 12px 14px; background: #fff; }
+  .dk-card h3 { margin: 0 0 3px; font-size: 14.5px; line-height: 1.25; color: #1a2a4a; }
+  .dk-card small { display: block; font-size: 11px; color: #8a929c; margin-bottom: 8px; }
+  .dk-card small u { text-decoration: none; background: #c8102e; color: #fff; border-radius: 9px; padding: 1px 7px; margin-left: 4px; font-weight: 700; }
+  .dk-card p { margin: 0 0 7px; font-size: 12.5px; line-height: 1.45; }
+  .dk-card i { display: block; font-style: normal; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #c8102e; font-weight: 700; }
+  .dk-one { margin-bottom: 8px; }
+  .dk-one h3 { margin-bottom: 8px; }
 }

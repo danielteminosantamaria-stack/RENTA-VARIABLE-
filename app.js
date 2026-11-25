@@ -917,38 +917,54 @@
 
   /* ---- Presentación en PDF (formato cliente) ---- */
   function dkp(v, d) { return isNum(v) ? nf(v, d == null ? 1 : d) + "%" : "n.d."; }
+  function dkv(v, d) { return '<b class="' + (isNum(v) && v < 0 ? "ng" : "") + '">' + dkp(v, d) + "</b>"; }
   function dkDate() { return new Date().toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }); }
-  function dkFoot(n) { return '<div class="dk-ft"><span>Renta 4 Banca Privada · Datos de Morningstar a ' + esc(META && (META.rv || META.rf) || "") + '</span><span>' + n + "</span></div>"; }
+  function dkFoot(n) { return '<div class="dk-ft"><span>Datos de Morningstar a ' + esc(META && (META.rv || META.rf) || "") + '</span><span>' + n + "</span></div>"; }
   function dkSlide(title, sub, body, n) {
-    return '<section class="dk-s"><div class="dk-hd"><h2>' + esc(title) + "</h2>" + (sub ? "<p>" + esc(sub) + "</p>" : "") + "</div>" + body + dkFoot(n) + "</section>";
+    return '<section class="dk-s"><div class="dk-top"><div><h2>' + esc(title) + "</h2>" + (sub ? "<p>" + esc(sub) + "</p>" : "") + '</div><span class="dk-bd">Renta 4 Banca Privada</span></div><div class="dk-body">' + body + "</div>" + dkFoot(n) + "</section>";
   }
-  function dkCover(kicker, title, sub) {
-    return '<section class="dk-s dk-cv"><div class="dk-tri"></div><div class="dk-cvt"><div class="dk-k">' + esc(kicker) + "</div><h1>" + esc(title) + "</h1><p>" + esc(sub) + '</p></div><div class="dk-lg">Renta 4 Banca Privada</div></section>';
+  function dkCover(kicker, title, sub, stats) {
+    return '<section class="dk-s dk-cv"><div class="dk-sh1"></div><div class="dk-sh2"></div><div class="dk-cvt"><div class="dk-k">' + esc(kicker) + "</div><h1>" + esc(title) + "</h1><p>" + esc(sub) + "</p></div>" +
+      (stats && stats.length ? '<div class="dk-cst">' + stats.map(function (s) { return "<div><b>" + esc(s[1]) + "</b><span>" + esc(s[0]) + "</span></div>"; }).join("") + "</div>" : "") + '<div class="dk-lg">Renta 4 Banca Privada</div></section>';
   }
-  function dkKpi(l, v) { return '<div class="dk-kpi"><span>' + esc(l) + "</span><b>" + esc(v) + "</b></div>"; }
+  function dkKpi(l, v, neg) { return '<div class="dk-kpi"><span>' + esc(l) + '</span><b class="' + (neg ? "ng" : "") + '">' + esc(v) + "</b></div>"; }
   function dkIdeas(f) {
     var r = f.ret, rf = f.t === "rf", out = [], v1 = f.vol && f.vol[0], sh = f.sharpe && f.sharpe[0], dd = f.dd && f.dd[4];
     var a = [];
-    if (isNum(r.y3)) a.push("rentabilidad del " + dkp(r.y3) + " anual a tres años" + (isNum(r.y5) ? " y del " + dkp(r.y5) + " a cinco" : ""));
-    if (isNum(r.y1)) a.push(r.y1 < 0 ? "un ajuste del " + dkp(Math.abs(r.y1)) + " en el último año" : "un " + dkp(r.y1) + " en el último año");
-    if (a.length) out.push("Rentabilidad: " + listJoin(a) + ".");
+    if (isNum(r.y3)) a.push(dkp(r.y3) + " anual a tres años");
+    if (isNum(r.y1)) a.push(r.y1 < 0 ? "ajuste del " + dkp(Math.abs(r.y1)) + " en el último año" : dkp(r.y1) + " en el último año");
+    if (a.length) out.push(["Rentabilidad", listJoin(a)]);
     var b = [];
     if (rf) {
       if (isNum(f.dur)) b.push("duración de " + nf(f.dur, 1) + " años");
-      if (f.cal) b.push("calidad crediticia media " + f.cal);
-      if (isNum(f.vto)) b.push("rentabilidad al vencimiento del " + dkp(f.vto, 2));
+      if (f.cal) b.push("calidad " + f.cal);
+      if (isNum(f.vto)) b.push("TIR " + dkp(f.vto, 2));
     } else {
       if (f.reg && f.reg[0]) b.push(nf(f.reg[1], 0) + "% en " + f.reg[0]);
-      if (f.sec && f.sec[0]) b.push(nf(f.sec[1], 0) + "% en el sector " + String(f.sec[0]).toLowerCase());
-      if (isNum(f.top10)) b.push("las diez mayores posiciones suman el " + nf(f.top10, 0) + "%");
+      if (f.sec && f.sec[0]) b.push(nf(f.sec[1], 0) + "% en " + String(f.sec[0]).toLowerCase());
     }
-    if (b.length) out.push("Posicionamiento: " + listJoin(b) + ".");
+    if (b.length) out.push(["Posicionamiento", listJoin(b)]);
     var c = [];
-    if (isNum(v1)) c.push("volatilidad " + volWord(v1) + " del " + dkp(v1));
-    if (isNum(sh)) c.push("Sharpe de " + nf(sh, 2));
-    if (isNum(dd)) c.push("caída máxima histórica del " + dkp(Math.abs(dd)));
-    if (c.length) out.push("Riesgo: " + listJoin(c) + ".");
+    if (isNum(v1)) c.push("volatilidad " + volWord(v1) + " (" + dkp(v1) + ")");
+    if (isNum(sh)) c.push("Sharpe " + nf(sh, 2));
+    if (isNum(dd)) c.push("caída máxima " + dkp(Math.abs(dd)));
+    if (c.length) out.push(["Riesgo", listJoin(c)]);
     return out;
+  }
+  function dkCard(f, chip) {
+    return '<div class="dk-card"><h3>' + esc(f.n) + '</h3><small>' + esc(f.g) + (chip ? ' <u>' + esc(chip) + "</u>" : "") + "</small>" + dkIdeas(f).map(function (t) { return "<p><i>" + t[0] + "</i>" + esc(t[1]) + "</p>"; }).join("") + "</div>";
+  }
+  function dkWatch(fs, extra) {
+    var w = [];
+    fs.forEach(function (f) {
+      var v1 = f.vol && f.vol[0];
+      if (isNum(f.ret.y1) && f.ret.y1 < 0) w.push(f.n + ": ha cedido un " + dkp(Math.abs(f.ret.y1)) + " en el último año; lo valoramos a medio plazo.");
+      else if (isNum(v1) && v1 >= 15) w.push(f.n + ": volatilidad elevada (" + dkp(v1) + ").");
+      else if (isNum(f.top10) && f.top10 >= 50) w.push(f.n + ": cartera concentrada (" + nf(f.top10, 0) + "% en diez posiciones).");
+    });
+    (extra || []).forEach(function (t) { w.push(t); });
+    if (!w.length) w.push("Con los datos actuales no hay alertas relevantes.");
+    return '<div class="dk-watch"><h4>Puntos a vigilar</h4><ul>' + w.slice(0, 4).map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + "</ul></div>";
   }
   function dkPrint(html) {
     var old = document.getElementById("deck"); if (old) old.remove();
@@ -966,87 +982,58 @@
   function deckPortfolio(name, prof, amount, lines) {
     var fs = lines.map(function (l) { return { l: l, f: byId(l.id) }; }).filter(function (x) { return x.f && x.l.w > 0; }), tw = 0, rfW = 0, n = 2, S = [];
     fs.forEach(function (x) { tw += x.l.w; if (x.f.t === "rf") rfW += x.l.w; });
+    var a = wAvgF(lines, function (f) { return f.ret.ytd; }), b = wAvgF(lines, function (f) { return f.ret.y1; }), c3 = wAvgF(lines, function (f) { return f.ret.y3; }), v = wAvgF(lines, function (f) { return f.vol && f.vol[0]; }), sh = wAvgF(lines, function (f) { return f.sharpe && f.sharpe[0]; }), co = wAvgF(lines, function (f) { return pnum(f.cost); });
     var sub = (prof ? "Perfil " + prof.toLowerCase().replace(/a$/, "o") + " · " : "") + (amount > 0 ? nf(amount, 0) + " € · " : "") + dkDate();
-    S.push(dkCover("Propuesta de cartera", name || "Cartera", sub));
-    var rows = fs.slice().sort(function (a, b) { return b.f.t === a.f.t ? b.l.w - a.l.w : (a.f.t === "rf" ? -1 : 1); }).map(function (x) {
-      return "<tr><td><b>" + esc(x.f.n) + "</b><small>" + esc(x.f.g) + " · " + esc(x.f.id) + "</small></td><td>" + esc(x.f.c) + "</td><td class=\"r\"><b>" + nf(x.l.w, 1) + "%</b></td>" + (amount > 0 ? "<td class=\"r\">" + nf(amount * x.l.w / 100, 0) + " €</td>" : "") + "<td class=\"r\">" + dkp(x.f.ret.y1) + "</td><td class=\"r\">" + dkp(x.f.ret.y3) + "</td></tr>";
+    S.push(dkCover("Propuesta de cartera", name || "Cartera", sub, [["Rentabilidad 3 años anual", dkp(c3)], ["Volatilidad media", dkp(v)], ["Fondos", String(fs.length)]]));
+    var rfp = tw ? rfW / tw * 100 : 0, mxw = 1;
+    fs.forEach(function (x) { mxw = Math.max(mxw, x.l.w); });
+    var rows = fs.slice().sort(function (p, q) { return q.f.t === p.f.t ? q.l.w - p.l.w : (p.f.t === "rf" ? -1 : 1); }).map(function (x) {
+      return "<tr><td><b>" + esc(x.f.n) + "</b><small>" + esc(x.f.g) + " · " + esc(x.f.c) + '</small></td><td class="w"><div class="dk-pb"><i style="width:' + (x.l.w / mxw * 100) + '%;background:' + (x.f.t === "rf" ? "#1a2a4a" : "#c8102e") + '"></i></div><b>' + nf(x.l.w, 1) + "%</b></td>" + (amount > 0 ? '<td class="r">' + nf(amount * x.l.w / 100, 0) + " €</td>" : "") + '<td class="r">' + dkv(x.f.ret.y1) + "</td></tr>";
     }).join("");
-    S.push(dkSlide("Composición de la cartera", fs.length + " fondos de gestión activa", '<table class="dk-t"><thead><tr><th>Fondo</th><th>Categoría</th><th class="r">Peso</th>' + (amount > 0 ? '<th class="r">Importe</th>' : "") + '<th class="r">1 año</th><th class="r">3 años anual</th></tr></thead><tbody>' + rows + '</tbody><tfoot><tr><td colspan="2">Total</td><td class="r">' + nf(tw, 1) + "%</td>" + (amount > 0 ? '<td class="r">' + nf(amount * tw / 100, 0) + " €</td>" : "") + "<td></td><td></td></tr></tfoot></table>", n++));
-    var rfp = tw ? rfW / tw * 100 : 0, cats = {};
-    fs.forEach(function (x) { cats[x.f.c] = (cats[x.f.c] || 0) + x.l.w; });
-    var cl = Object.keys(cats).sort(function (a, b) { return cats[b] - cats[a]; }), mx = cats[cl[0]] || 1;
-    S.push(dkSlide("Cómo está repartida", "Entre renta fija, renta variable y categorías",
-      '<div class="dk-two"><div class="dk-donut"><div class="dk-dn" style="background:conic-gradient(#1a2a4a 0 ' + rfp + "%,#c8102e " + rfp + '% 100%)"><i></i></div><div class="dk-lgd"><span><u style="background:#1a2a4a"></u>Renta fija ' + nf(rfp, 0) + '%</span><span><u style="background:#c8102e"></u>Renta variable ' + nf(100 - rfp, 0) + "%</span></div></div>" +
-      '<div class="dk-bars">' + cl.map(function (c) { return '<div class="dk-br"><span>' + esc(c) + '</span><div><i style="width:' + (cats[c] / mx * 100) + '%"></i></div><b>' + nf(cats[c] / (tw || 1) * 100, 1) + "%</b></div>"; }).join("") + "</div></div>", n++));
-    var a = wAvgF(lines, function (f) { return f.ret.ytd; }), b = wAvgF(lines, function (f) { return f.ret.y1; }), c3 = wAvgF(lines, function (f) { return f.ret.y3; }), v = wAvgF(lines, function (f) { return f.vol && f.vol[0]; }), sh = wAvgF(lines, function (f) { return f.sharpe && f.sharpe[0]; }), dd = wAvgF(lines, function (f) { return f.dd && f.dd[4]; }), co = wAvgF(lines, function (f) { return pnum(f.cost); });
-    var rk = fs.map(function (x) { return "<tr><td>" + esc(x.f.n) + '</td><td class="r">' + dkp(x.f.ret.ytd) + '</td><td class="r">' + dkp(x.f.ret.y1) + '</td><td class="r">' + dkp(x.f.vol && x.f.vol[0]) + '</td><td class="r">' + (x.f.sharpe && isNum(x.f.sharpe[0]) ? nf(x.f.sharpe[0], 2) : "n.d.") + '</td><td class="r">' + dkp(x.f.dd && isNum(x.f.dd[4]) ? Math.abs(x.f.dd[4]) : null) + "</td></tr>"; }).join("");
+    S.push(dkSlide("Composición de la cartera", fs.length + " fondos de gestión activa",
+      '<div class="dk-two"><div class="dk-l"><table class="dk-t"><thead><tr><th>Fondo</th><th>Peso</th>' + (amount > 0 ? '<th class="r">Importe</th>' : "") + '<th class="r">1 año</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<div class="dk-r"><div class="dk-dn" style="background:conic-gradient(#1a2a4a 0 ' + rfp + "%,#c8102e " + rfp + '% 100%)"><i><b>' + nf(fs.length, 0) + "</b>fondos</i></div>" +
+      '<div class="dk-lgd"><span><u style="background:#1a2a4a"></u>Renta fija<b>' + nf(rfp, 0) + '%</b></span><span><u style="background:#c8102e"></u>Renta variable<b>' + nf(100 - rfp, 0) + "%</b></span></div></div></div>", n++));
+    var mx = 1;
+    fs.forEach(function (x) { if (isNum(x.f.ret.y1)) mx = Math.max(mx, Math.abs(x.f.ret.y1)); });
+    var bars = fs.map(function (x) {
+      var y1 = x.f.ret.y1, v1 = x.f.vol && x.f.vol[0];
+      return '<div class="dk-br"><span>' + esc(x.f.n) + '</span><div><i style="width:' + (isNum(y1) ? Math.max(2, Math.abs(y1) / mx * 100) : 0) + "%;background:" + (isNum(y1) && y1 < 0 ? "#9aa3b2" : "#c8102e") + '"></i></div><b>' + dkp(y1) + "</b><em>vol. " + dkp(v1) + "</em></div>";
+    }).join("");
+    var extra = []; var big = fs.slice().sort(function (p, q) { return q.l.w - p.l.w; })[0];
+    if (big && big.l.w >= 25) extra.push("Mayor posición: " + big.f.n + " (" + nf(big.l.w, 1) + "% de la cartera).");
+    if (Math.abs(tw - 100) > 0.5) extra.push("Los pesos suman " + nf(tw, 1) + "%.");
     S.push(dkSlide("Rentabilidad y riesgo", "Medias ponderadas por el peso de cada fondo",
-      '<div class="dk-kpis">' + dkKpi("En el año", dkp(a)) + dkKpi("Último año", dkp(b)) + dkKpi("3 años anual", dkp(c3)) + dkKpi("Volatilidad", dkp(v)) + dkKpi("Sharpe", isNum(sh) ? nf(sh, 2) : "n.d.") + dkKpi("Coste medio", dkp(co, 2)) + "</div>" +
-      '<table class="dk-t dk-sm"><thead><tr><th>Fondo</th><th class="r">Año</th><th class="r">1 año</th><th class="r">Volatilidad</th><th class="r">Sharpe</th><th class="r">Caída máx.</th></tr></thead><tbody>' + rk + "</tbody></table>", n++));
-    for (var i = 0; i < fs.length; i += 2) {
-      var pair = fs.slice(i, i + 2);
-      S.push(dkSlide("Ideas clave por fondo", "", '<div class="dk-two">' + pair.map(function (x) {
-        return '<div class="dk-card"><h3>' + esc(x.f.n) + "</h3><small>" + esc(x.f.g) + " · " + esc(x.f.c) + " · peso " + nf(x.l.w, 1) + "%</small><ul>" + dkIdeas(x.f).map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + "</ul></div>";
-      }).join("") + "</div>", n++));
+      '<div class="dk-kpis">' + dkKpi("En el año", dkp(a), a < 0) + dkKpi("Último año", dkp(b), b < 0) + dkKpi("3 años anual", dkp(c3), c3 < 0) + dkKpi("Volatilidad", dkp(v)) + dkKpi("Sharpe", isNum(sh) ? nf(sh, 2) : "n.d.") + dkKpi("Coste medio", dkp(co, 2)) + "</div>" +
+      '<div class="dk-two"><div class="dk-l"><h4 class="dk-h4">Rentabilidad a un año por fondo</h4>' + bars + '</div><div class="dk-r">' + dkWatch(fs.map(function (x) { return x.f; }), extra) + "</div></div>", n++));
+    for (var i = 0; i < fs.length; i += 6) {
+      S.push(dkSlide("Ideas clave por fondo", "", '<div class="dk-grid">' + fs.slice(i, i + 6).map(function (x) { return dkCard(x.f, nf(x.l.w, 1) + "%"); }).join("") + "</div>", n++));
     }
-    var w = [], big = fs.slice().sort(function (p, q) { return q.l.w - p.l.w; })[0];
-    fs.forEach(function (x) {
-      var f = x.f, v1 = f.vol && f.vol[0];
-      if (isNum(f.ret.y1) && f.ret.y1 < 0) w.push(f.n + ": ha cedido un " + dkp(Math.abs(f.ret.y1)) + " en el último año; lo seguimos de cerca y lo valoramos a medio plazo.");
-      else if (isNum(v1) && v1 >= 15) w.push(f.n + ": volatilidad elevada (" + dkp(v1) + "), con oscilaciones amplias a corto plazo.");
-      else if (isNum(f.top10) && f.top10 >= 50) w.push(f.n + ": cartera concentrada, las diez mayores posiciones suman el " + nf(f.top10, 0) + "%.");
-    });
-    if (big && big.l.w >= 25) w.push("Mayor posición: " + big.f.n + " con un " + nf(big.l.w, 1) + "% de la cartera.");
-    if (Math.abs(tw - 100) > 0.5) w.push("Los pesos suman " + nf(tw, 1) + "%.");
-    if (!w.length) w.push("Con los datos actuales no hay alertas relevantes. Revisaremos la cartera periódicamente.");
-    S.push(dkSlide("Puntos a vigilar", "Lo que seguiremos con atención", '<ul class="dk-w">' + w.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + '</ul><p class="dk-dis">La rentabilidad pasada no garantiza resultados futuros. Los datos proceden de Morningstar y esta información es orientativa, no constituye asesoramiento personalizado.</p>', n++));
-    dkPrint(S.join(""));
-  }
-  function deckCompare(fs) {
-    var S = [], n = 2, y = mailYear();
-    S.push(dkCover("Comparativa de fondos", fs.length + " fondos", fs.map(function (f) { return f.n; }).join(" · ")));
-    var rows = [["Gestora", function (f) { return esc(f.g); }], ["Categoría", function (f) { return esc(f.c); }],
-      ["En el año", function (f) { return dkp(f.ret.ytd); }], ["1 año", function (f) { return dkp(f.ret.y1); }], ["3 años anual", function (f) { return dkp(f.ret.y3); }], ["5 años anual", function (f) { return dkp(f.ret.y5); }],
-      ["Volatilidad 1 año", function (f) { return dkp(f.vol && f.vol[0]); }], ["Sharpe", function (f) { return f.sharpe && isNum(f.sharpe[0]) ? nf(f.sharpe[0], 2) : "n.d."; }],
-      ["Alpha 3 años", function (f) { return isNum(f.alpha) ? nf(f.alpha, 2) : "n.d."; }], ["Caída máxima", function (f) { return dkp(f.dd && isNum(f.dd[4]) ? Math.abs(f.dd[4]) : null); }],
-      ["Morningstar", function (f) { return f.stars ? f.stars + " estrellas" : "n.d."; }], ["Coste neto", function (f) { return esc(f.cost || "n.d."); }]];
-    S.push(dkSlide("Comparativa", "Datos de Morningstar a " + (META && (META.rv || META.rf) || ""),
-      '<table class="dk-t dk-sm"><thead><tr><th></th>' + fs.map(function (f) { return '<th class="r">' + esc(f.n) + "</th>"; }).join("") + "</tr></thead><tbody>" +
-      rows.map(function (r) { return "<tr><td><b>" + r[0] + "</b></td>" + fs.map(function (f) { return '<td class="r">' + r[1](f) + "</td>"; }).join("") + "</tr>"; }).join("") + "</tbody></table>", n++));
-    for (var i = 0; i < fs.length; i += 2) {
-      S.push(dkSlide("Ideas clave por fondo", "", '<div class="dk-two">' + fs.slice(i, i + 2).map(function (f) {
-        return '<div class="dk-card"><h3>' + esc(f.n) + "</h3><small>" + esc(f.g) + " · " + esc(f.c) + "</small><ul>" + dkIdeas(f).map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + "</ul></div>";
-      }).join("") + "</div>", n++));
-    }
-    var w = [];
-    fs.forEach(function (f) {
-      var v1 = f.vol && f.vol[0];
-      if (isNum(f.ret.y1) && f.ret.y1 < 0) w.push(f.n + ": ha cedido un " + dkp(Math.abs(f.ret.y1)) + " en el último año; conviene valorarlo a medio plazo.");
-      else if (isNum(v1) && v1 >= 15) w.push(f.n + ": volatilidad elevada (" + dkp(v1) + ").");
-      else if (isNum(f.top10) && f.top10 >= 50) w.push(f.n + ": cartera concentrada (diez mayores posiciones: " + nf(f.top10, 0) + "%).");
-    });
-    if (!w.length) w.push("Con los datos actuales no hay alertas relevantes en ninguno de los fondos.");
-    S.push(dkSlide("Puntos a vigilar", "", '<ul class="dk-w">' + w.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + '</ul>', n++));
     dkPrint(S.join(""));
   }
   function deckFund(f) {
-    var r = f.ret, y = mailYear(), n = 2, S = [], v1 = f.vol && f.vol[0], sh = f.sharpe && f.sharpe[0];
-    S.push(dkCover("Ficha de fondo", f.n, f.g + " · " + f.c + " · " + dkDate()));
+    var r = f.ret, y = mailYear(), v1 = f.vol && f.vol[0], sh = f.sharpe && f.sharpe[0], S = [];
+    S.push(dkCover("Ficha de fondo", f.n, f.g + " · " + f.c + " · " + dkDate(), [["3 años anual", dkp(r.y3)], ["Volatilidad", dkp(v1)], ["Sharpe", isNum(sh) ? nf(sh, 2) : "n.d."]]));
     var yrs = (f.ann || []).map(function (v, i) { return { y: i === 0 ? "Año actual" : String(y - i), v: v }; }).filter(function (o, i) { return i <= 5 && isNum(o.v); }), mxv = 1;
     yrs.forEach(function (o) { mxv = Math.max(mxv, Math.abs(o.v)); });
-    S.push(dkSlide("Resumen y rentabilidades", f.id + " · datos a " + dlong(f.nd),
-      '<div class="dk-kpis">' + dkKpi("En el año", dkp(r.ytd)) + dkKpi("Último año", dkp(r.y1)) + dkKpi("3 años anual", dkp(r.y3)) + dkKpi("5 años anual", dkp(r.y5)) + dkKpi("Volatilidad", dkp(v1)) + dkKpi("Sharpe", isNum(sh) ? nf(sh, 2) : "n.d.") + "</div>" +
-      '<div class="dk-two"><table class="dk-t dk-sm"><thead><tr><th>Periodo</th><th class="r">Rentabilidad</th></tr></thead><tbody>' + [["1 semana", r.w1], ["1 mes", r.m1], ["3 meses", r.m3], ["6 meses", r.m6], ["En el año", r.ytd], ["1 año", r.y1], ["3 años anual", r.y3], ["5 años anual", r.y5], ["10 años anual", r.y10]].filter(function (p) { return isNum(p[1]); }).map(function (p) { return "<tr><td>" + p[0] + '</td><td class="r">' + dkp(p[1]) + "</td></tr>"; }).join("") + "</tbody></table>" +
-      '<div class="dk-bars">' + yrs.map(function (o) { return '<div class="dk-br"><span>' + o.y + '</span><div><i style="width:' + Math.max(3, Math.abs(o.v) / mxv * 100) + "%;background:" + (o.v < 0 ? "#9aa3b2" : "#c8102e") + '"></i></div><b>' + dkp(o.v) + "</b></div>"; }).join("") + "</div></div>", n++));
-    S.push(dkSlide("Ideas clave", f.n, '<div class="dk-card dk-big"><ul>' + dkIdeas(f).map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + "</ul></div>", n++));
-    var d = ["ISIN " + f.id]; if (f.cost) d.push("coste neto " + f.cost); if (f.aum) d.push("patrimonio de " + String(f.aum).replace(/\s*EUR$/, "").replace(".", ",") + " millones de euros"); if (f.cre) d.push("creado el " + dlong(f.cre)); if (f.stars) d.push("Morningstar: " + f.stars + (f.stars === 1 ? " estrella" : " estrellas"));
-    var w = [];
-    if (isNum(v1) && v1 >= 15) w.push("Volatilidad elevada: puede registrar oscilaciones amplias a corto plazo.");
-    if (isNum(f.top10) && f.top10 >= 45) w.push("Cartera concentrada: pocas posiciones explican buena parte del resultado.");
-    if (f.worst && isNum(f.worst[0]) && f.worst[0] < 0) w.push("El peor mes del último año supuso un retroceso del " + dkp(Math.abs(f.worst[0])) + ".");
-    if (isNum(f.alpha) && f.alpha < 0) w.push("En tres años ha quedado algo por debajo de su referencia.");
-    if (!w.length) w.push("Con los datos actuales no hay alertas relevantes.");
-    S.push(dkSlide("Puntos a vigilar", "", '<ul class="dk-w">' + w.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + '</ul>', n++));
+    S.push(dkSlide(f.n, f.g + " · " + f.c,
+      '<div class="dk-kpis">' + dkKpi("En el año", dkp(r.ytd), r.ytd < 0) + dkKpi("Último año", dkp(r.y1), r.y1 < 0) + dkKpi("3 años anual", dkp(r.y3), r.y3 < 0) + dkKpi("5 años anual", dkp(r.y5), r.y5 < 0) + dkKpi("Volatilidad", dkp(v1)) + dkKpi("Sharpe", isNum(sh) ? nf(sh, 2) : "n.d.") + "</div>" +
+      '<div class="dk-two"><div class="dk-l"><h4 class="dk-h4">Año a año</h4>' + yrs.map(function (o) { return '<div class="dk-br"><span>' + o.y + '</span><div><i style="width:' + Math.max(2, Math.abs(o.v) / mxv * 100) + "%;background:" + (o.v < 0 ? "#9aa3b2" : "#c8102e") + '"></i></div><b>' + dkp(o.v) + "</b></div>"; }).join("") +
+      '</div><div class="dk-r"><div class="dk-card dk-one"><h3>Ideas clave</h3>' + dkIdeas(f).map(function (t) { return "<p><i>" + t[0] + "</i>" + esc(t[1]) + "</p>"; }).join("") + "</div>" + dkWatch([f]) + "</div></div>", 2));
+    dkPrint(S.join(""));
+  }
+  function deckCompare(fs) {
+    var S = [], n = 2;
+    S.push(dkCover("Comparativa de fondos", fs.length + " fondos", fs.map(function (f) { return f.n; }).join(" · ")));
+    var rows = [["Categoría", function (f) { return esc(f.c); }],
+      ["En el año", function (f) { return dkv(f.ret.ytd); }], ["1 año", function (f) { return dkv(f.ret.y1); }], ["3 años anual", function (f) { return dkv(f.ret.y3); }], ["5 años anual", function (f) { return dkv(f.ret.y5); }],
+      ["Volatilidad", function (f) { return dkp(f.vol && f.vol[0]); }], ["Sharpe", function (f) { return f.sharpe && isNum(f.sharpe[0]) ? nf(f.sharpe[0], 2) : "n.d."; }],
+      ["Caída máxima", function (f) { return dkp(f.dd && isNum(f.dd[4]) ? Math.abs(f.dd[4]) : null); }],
+      ["Morningstar", function (f) { return f.stars ? f.stars + " estrellas" : "n.d."; }], ["Coste neto", function (f) { return esc(f.cost || "n.d."); }]];
+    S.push(dkSlide("Comparativa", "Datos de Morningstar a " + (META && (META.rv || META.rf) || ""),
+      '<table class="dk-t dk-cmp"><thead><tr><th></th>' + fs.map(function (f) { return '<th class="r">' + esc(f.n) + "<small>" + esc(f.g) + "</small></th>"; }).join("") + "</tr></thead><tbody>" +
+      rows.map(function (r) { return "<tr><td><b>" + r[0] + "</b></td>" + fs.map(function (f) { return '<td class="r">' + r[1](f) + "</td>"; }).join("") + "</tr>"; }).join("") + "</tbody></table>", n++));
+    S.push(dkSlide("Ideas clave y puntos a vigilar", "", '<div class="dk-grid dk-g' + Math.min(fs.length, 3) + '">' + fs.map(function (f) { return dkCard(f); }).join("") + "</div>" + dkWatch(fs), n++));
     dkPrint(S.join(""));
   }
 
