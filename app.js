@@ -521,7 +521,7 @@
     html += '<p class="sub"><a href="#/gestora/' + encodeURIComponent(f.g) + '">' + esc(f.g) + "</a>" + " · " + esc(f.id) + " · " + esc(f.c) + vlTag(f) + (f.idx ? ' <span class="tag">Indexado</span>' : "") + "</p>";
     var esd = window.ESTADO && window.ESTADO.fondos && window.ESTADO.fondos[f.id];
     if (esd && esd.e) html += '<p class="sub"><a href="#/estado">Estado semanal</a>: ' + esTag(esd.e) + (esd.p ? " " + esc(esd.p) : "") + "</p>";
-    html += '<div class="kpis">' +
+    html += '<div class="row tools2" id="fundtools"></div><div class="kpis">' +
       kpi("Vol. 1 año", pct(f.vol[0], false, 1), true) + kpi("Sharpe 1 año", dec(f.sharpe[0]), true) +
       kpi("Último mes", ret(r.m1)) + kpi("Año", ret(r.ytd)) + kpi("1 año", ret(r.y1)) +
       kpi("3 años", ret(r.y3)) + kpi("5 años", ret(r.y5)) + kpi("10 años", ret(r.y10)) + "</div>";
@@ -652,6 +652,8 @@
       : '<p class="muted">Todavía no hay comentarios de la gestora para este fondo.</p>') + "</section>";
     html += "</div>" + footer(f.t);
     app.innerHTML = html;
+    var ft = document.getElementById("fundtools");
+    if (ft) { ft.appendChild(mailBtn(function () { return fundMail(f); })); ft.appendChild(pdfBtn(function () { return ["Ficha del fondo: " + f.n, f.g + " · " + f.id]; })); }
     var apb = document.getElementById("addpfBtn");
     if (apb) apb.addEventListener("click", function () {
       var p = pfById(document.getElementById("addpf").value);
@@ -708,6 +710,94 @@
       d.innerHTML = "<h1 class=\"ph\">" + esc(t[0]) + "</h1><p>" + esc(t[1]) + " · " + new Date().toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }) + "</p>";
       window.print();
     });
+    return b;
+  }
+
+  /* ---- Correo y PDF ---- */
+  var MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  function mailClean(t) {
+    return String(t == null ? "" : t).replace(/[\u2014\u2013\u2212]/g, ",").replace(/(^|[\s(])-(?=\d)/g, "$1menos ").replace(/\s[-\/]\s/g, ", ").replace(/[-\/]/g, " ").replace(/ {2,}/g, " ").replace(/ +,/g, ",").replace(/[ \t]+\n/g, "\n");
+  }
+  function dlong(d) { var m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(d || ""); return m ? (+m[1]) + " de " + MESES[+m[2] - 1] + " de " + m[3] : (d || ""); }
+  function plainP(v, d) { return isNum(v) ? pct(v, false, d == null ? 1 : d) : "sin dato"; }
+  function wAvgL(lines, key) {
+    var tw = 0, r = 0;
+    lines.forEach(function (l) { var f = byId(l.id); if (f && l.w > 0 && isNum(f.ret[key])) { tw += l.w; r += l.w * f.ret[key]; } });
+    return tw ? r / tw : null;
+  }
+  function linesText(lines, amount) {
+    var tw = 0; lines.forEach(function (l) { tw += l.w; });
+    var out = lines.map(function (l, i) {
+      var f = byId(l.id); if (!f) return "";
+      return (i + 1) + ". " + f.n + " (" + f.g + "): " + nf(l.w, 1) + "%" + (amount > 0 ? ", " + nf(amount * l.w / 100, 0) + " €" : "") + ", rentabilidad a 1 año " + plainP(f.ret.y1) + ".";
+    }).filter(Boolean).join("\n");
+    out += "\n\nPeso total: " + nf(tw, 1) + "%.";
+    var a = wAvgL(lines, "ytd"), b = wAvgL(lines, "y1"), c = wAvgL(lines, "y3");
+    out += "\nRentabilidad media ponderada con los datos actuales: en el año " + plainP(a) + ", a 1 año " + plainP(b) + ", a 3 años anualizada " + plainP(c) + ".";
+    return out;
+  }
+  var MAIL_PIE = "\n\nLa rentabilidad pasada no garantiza resultados futuros. Datos de Morningstar. Este mensaje es informativo y no constituye asesoramiento personalizado.\n\nUn saludo,";
+  function fundMail(f) {
+    var r = f.ret, t = "Hola,\n\nTe paso la información del fondo " + f.n + " (" + f.g + ", ISIN " + f.id + ").\n\n" +
+      "Categoría Morningstar: " + f.c + "\nValor liquidativo a " + dlong(f.nd) + (f.nav ? ": " + String(f.nav).replace(/^EUR\s*/, "").replace(".", ",") + " euros" : "") + "\n\n" +
+      "Rentabilidad:\n• Último mes: " + plainP(r.m1) + "\n• En el año: " + plainP(r.ytd) + "\n• 1 año: " + plainP(r.y1) + "\n• 3 años (anualizada): " + plainP(r.y3) + "\n• 5 años (anualizada): " + plainP(r.y5) + "\n\n" +
+      "Riesgo: volatilidad a 1 año " + plainP(f.vol && f.vol[0]) + ", ratio de Sharpe a 1 año " + (f.sharpe && isNum(f.sharpe[0]) ? nf(f.sharpe[0], 2) : "sin dato") + "." +
+      (f.stars ? "\nRating Morningstar: " + f.stars + " estrellas." : "") + (f.cost ? "\nCoste neto: " + f.cost + "." : "") + MAIL_PIE;
+    return { subject: "Fondo " + f.n, body: mailClean(t) };
+  }
+  function pfMail(name, amount, lines, extra) {
+    var t = "Hola,\n\nTe paso la cartera \"" + (name || "Cartera") + "\"" + (amount > 0 ? " para un importe de " + nf(amount, 0) + " euros" : "") + ".\n\nComposición:\n" + linesText(lines, amount) + (extra ? "\n\n" + extra : "") + MAIL_PIE;
+    return { subject: "Cartera " + (name || ""), body: mailClean(t) };
+  }
+  function mailModal(m) {
+    var ov = document.getElementById("mailov");
+    if (ov) ov.remove();
+    ov = document.createElement("div"); ov.id = "mailov"; ov.className = "mov"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-label", "Redactar correo");
+    ov.innerHTML = '<div class="mbox"><div class="mhd"><b>Correo</b><button type="button" class="gx" id="mclose">Cerrar</button></div>' +
+      '<label class="mlb">Asunto<input class="inp" id="msub" maxlength="200"></label><label class="mlb">Mensaje<textarea class="inp" id="mbody" rows="16"></textarea></label>' +
+      '<div class="row"><button type="button" class="btn" id="mcopy">Copiar mensaje</button><button type="button" class="btn ghost" id="mcopys">Copiar asunto</button><a class="btn ghost" id="mopen" href="#">Abrir en mi correo</a></div>' +
+      '<p class="note" id="mnote">Puedes editar el texto antes de copiarlo. Sin destinatario: añádelo en tu correo.</p></div>';
+    document.body.appendChild(ov);
+    var sub = ov.querySelector("#msub"), body = ov.querySelector("#mbody"), note = ov.querySelector("#mnote");
+    sub.value = m.subject; body.value = m.body;
+    function close() { ov.remove(); document.removeEventListener("keydown", esc2); }
+    function esc2(e) { if (e.key === "Escape") close(); }
+    document.addEventListener("keydown", esc2);
+    ov.addEventListener("click", function (e) { if (e.target === ov) close(); });
+    ov.querySelector("#mclose").addEventListener("click", close);
+    function copy(txt, msg) {
+      function ok() { note.textContent = msg; }
+      function fb() { body.focus(); body.select(); try { document.execCommand("copy"); ok(); } catch (x) { note.textContent = "No se pudo copiar, selecciona el texto y cópialo a mano."; } }
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, fb); else fb();
+    }
+    ov.querySelector("#mcopy").addEventListener("click", function () { copy(body.value, "Mensaje copiado."); });
+    ov.querySelector("#mcopys").addEventListener("click", function () { copy(sub.value, "Asunto copiado."); });
+    ov.querySelector("#mopen").addEventListener("click", function (e) {
+      e.preventDefault();
+      var b = body.value, cut = b.length > 1800;
+      if (cut) b = b.slice(0, 1800) + "...";
+      location.href = "mailto:?subject=" + encodeURIComponent(sub.value) + "&body=" + encodeURIComponent(b);
+      if (cut) note.textContent = "El mensaje es largo: tu correo solo recibe el principio. Usa Copiar mensaje para llevarlo entero.";
+    });
+    body.focus();
+  }
+  function mailBtn(fn, cls) {
+    var b = document.createElement("button"); b.type = "button"; b.className = cls || "btn ghost"; b.textContent = "Correo";
+    b.addEventListener("click", function () { mailModal(fn()); });
+    return b;
+  }
+  function pdfNow(title, sub, only) {
+    var d = document.getElementById("printhead");
+    if (!d) { d = document.createElement("div"); d.id = "printhead"; d.className = "printhead"; app.insertBefore(d, app.firstChild); }
+    d.innerHTML = '<h1 class="ph">' + esc(title) + "</h1><p>" + esc(sub) + " · " + new Date().toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }) + "</p>";
+    if (only) { only.classList.add("pr-on"); document.body.classList.add("po"); }
+    function done() { if (only) only.classList.remove("pr-on"); document.body.classList.remove("po"); window.removeEventListener("afterprint", done); }
+    window.addEventListener("afterprint", done);
+    window.print();
+  }
+  function pdfBtn(titleFn, only) {
+    var b = document.createElement("button"); b.type = "button"; b.className = "btn ghost"; b.textContent = "Descargar PDF";
+    b.addEventListener("click", function () { var t = titleFn(); pdfNow(t[0], t[1], only ? only() : null); });
     return b;
   }
 
@@ -1023,7 +1113,8 @@
     app.innerHTML = h + footer("rv");
 
     var pdfb = printBar(function () { var nm = document.getElementById("pfname"); var am = document.getElementById("pfamt"); return ["Cartera: " + (nm && nm.value || p.name), (am && am.value ? nf(+am.value, 0) + " €" : "Sin importe indicado")]; });
-    document.getElementById("pfpdfslot").replaceWith(pdfb);
+    var mailb = mailBtn(function () { var nm = document.getElementById("pfname"), am = document.getElementById("pfamt"); return pfMail(nm && nm.value || p.name, am && am.value ? +am.value : 0, p.lines); });
+    var slot = document.getElementById("pfpdfslot"); slot.replaceWith(pdfb); pdfb.parentNode.insertBefore(mailb, pdfb);
     function save() { savePf(); }
     function renderTable() {
       var t = document.getElementById("pftable");
@@ -1257,7 +1348,7 @@
     }
     PROFILES.forEach(function (pr, i) {
       h += '<section class="rec" id="rec' + i + '"><div class="rechead"><div><h2>' + esc(pr.n) + '</h2><p class="muted">' + esc(pr.d) + " " + pr.wrf + "% renta fija, " + (100 - pr.wrf) + '% renta variable.</p></div>' +
-        '<div class="row"><span class="chg" id="chg' + i + '"></span><button type="button" class="btn ghost" data-reset="' + i + '">Restablecer propuesta</button><button type="button" class="btn" data-copy="' + i + '">Copiar a mis carteras</button></div></div>' +
+        '<div class="row"><span class="chg" id="chg' + i + '"></span><button type="button" class="btn ghost" data-reset="' + i + '">Restablecer propuesta</button><button type="button" class="btn ghost" data-mail="' + i + '">Correo</button><button type="button" class="btn ghost" data-pdf="' + i + '">Descargar PDF</button><button type="button" class="btn" data-copy="' + i + '">Copiar a mis carteras</button></div></div>' +
         '<div class="search tight">' + icon() + '<input type="search" autocomplete="off" placeholder="Añadir fondo por nombre o ISIN" aria-label="Añadir fondo a ' + esc(pr.n) + '" data-q="' + i + '"></div><div class="results" data-res="' + i + '"></div>' +
         '<div data-tbl="' + i + '"></div><div data-sum="' + i + '"></div></section>';
     });
@@ -1349,6 +1440,12 @@
           });
         });
       });
+    });
+    app.querySelectorAll("[data-mail]").forEach(function (b) {
+      b.addEventListener("click", function () { var i = +b.getAttribute("data-mail"); mailModal(pfMail(CUR[i].name, CUR[i].amount || 0, CUR[i].lines, "Perfil: " + PROFILES[i].n.toLowerCase() + ".")); });
+    });
+    app.querySelectorAll("[data-pdf]").forEach(function (b) {
+      b.addEventListener("click", function () { var i = +b.getAttribute("data-pdf"); pdfNow("Cartera recomendada: " + CUR[i].name, "Perfil " + PROFILES[i].n.toLowerCase(), document.getElementById("rec" + i)); });
     });
     app.querySelectorAll("[data-copy]").forEach(function (b) {
       b.addEventListener("click", function () {
@@ -1535,7 +1632,7 @@
         '<p class="bkm"><span data-hq="' + b.k + '"></span><span class="bst" data-st="' + b.k + '"></span></p><div class="cands" id="c-' + b.k + '"></div></div>';
     });
     h += '<div id="btotal"></div><div id="bsum"></div><div class="row tools2"><button type="button" class="btn" id="bsave">Guardar en mis carteras</button>' +
-      '<button type="button" class="btn ghost" id="bnorm">Ajustar a 100%</button><button type="button" class="btn ghost" id="breset">Valores del perfil</button></div>';
+      '<button type="button" class="btn ghost" id="bmail">Correo</button><button type="button" class="btn ghost" id="bpdf">Descargar PDF</button><button type="button" class="btn ghost" id="bnorm">Ajustar a 100%</button><button type="button" class="btn ghost" id="breset">Valores del perfil</button></div>';
     app.innerHTML = h + footer("rv");
 
     function total() { return BUCKETS.reduce(function (a, b) { return a + (bld.w[b.k] || 0); }, 0); }
@@ -1598,6 +1695,8 @@
       keys.forEach(function (k) { bld.w[k] = Math.round(bld.w[k] / t * 100); sum += bld.w[k]; if (bld.w[k] > bld.w[big]) big = k; });
       bld.w[big] += 100 - sum; drawAll();
     });
+    document.getElementById("bmail").addEventListener("click", function () { var nm = document.getElementById("bname"), am = document.getElementById("bamt"); mailModal(pfMail(nm && nm.value || bld.name, am && am.value ? +am.value : 0, bldLines(), "Perfil: " + BPROF[bld.profile].n.toLowerCase() + ".")); });
+    document.getElementById("bpdf").addEventListener("click", function () { var nm = document.getElementById("bname"); pdfNow("Cartera: " + (nm && nm.value || bld.name || "Sin nombre"), "Perfil " + BPROF[bld.profile].n.toLowerCase()); });
     document.getElementById("bsave").addEventListener("click", function () {
       var lines = bldLines();
       if (!lines.length) return;
@@ -1986,10 +2085,10 @@
       prop.lines.map(function (x) { var f = byId(x.id); return '<tr><td class="fund"><a href="#/fondo/' + encodeURIComponent(f.id) + '"><b>' + esc(f.n) + "</b></a><small>" + esc(f.g) + " · " + esc(bname(bucketOf(f))) + (x.notes.length ? " · " + esc(x.notes.join("; ")) : "") + '</small></td><td class="num">' + nf(x.w, 1) + '%</td><td class="num">' + (tot ? nf(tot * x.w / 100, 0) + " €" : "–") + "</td></tr>"; }).join("") +
       '</tbody></table></div></section><section class="block"><h3>Antes y después</h3><div class="table-wrap"><table><thead><tr><th scope="col"></th><th scope="col">Actual</th><th scope="col">Propuesta</th></tr></thead><tbody>' +
       cmpRows.map(function (r) { return "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td><td><b>" + r[2] + "</b></td></tr>"; }).join("") + '</tbody></table></div><p class="note">Los cambios se hacen manteniendo el peso de cada categoría dentro de la horquilla del perfil y sustituyendo solo los fondos marcados. Para el traspaso, calcula las participaciones por fondo.</p></section></div>' +
-      '<div class="row tools2"><button type="button" class="btn" id="gcsave">Guardar propuesta en mis carteras</button><button type="button" class="btn ghost" id="gcprint">Descargar informe en PDF</button></div>' +
+      '<div class="row tools2"><button type="button" class="btn" id="gcsave">Guardar propuesta en mis carteras</button><button type="button" class="btn ghost" id="gcmail">Correo</button><button type="button" class="btn ghost" id="gcprint">Descargar informe en PDF</button></div>' +
       '<p class="note">Análisis automático y orientativo con datos de Morningstar y reglas propias. Antes de proponer nada al cliente hay que revisar su idoneidad, su horizonte y su fiscalidad, y las plusvalías latentes que genere cada traspaso.</p>';
     h += gcTransfersHtml(L, prop, tot) + gcStressHtml(L, prop, tot, pr);
-    gcLast = { prop: prop, tot: tot };
+    gcLast = { prop: prop, tot: tot, acts: acts, cmp: cmpRows.map(function (r) { return [r[0], String(r[1]).replace(/<[^>]*>/g, ""), String(r[2]).replace(/<[^>]*>/g, "")]; }) };
     return h;
   }
   var gcLast = null;
@@ -2040,6 +2139,14 @@
       if (ph) ph.innerHTML = "<h1>Informe de análisis de cartera</h1><p><b>" + esc(gc.name || "Cartera del cliente") + "</b> · Perfil " + esc(BPROF[gc.profile].n.toLowerCase()) + " · " + new Date().toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }) + " · Datos Morningstar a " + esc(META.rv || META.rf || "") + "</p>";
       var pb2 = document.getElementById("gcprint");
       if (pb2) pb2.addEventListener("click", function () { window.print(); });
+      var mb2 = document.getElementById("gcmail");
+      if (mb2) mb2.addEventListener("click", function () {
+        if (!gcLast) return;
+        var ex = "Mejoras propuestas:\n" + (gcLast.acts.length ? gcLast.acts.map(function (a, i) { return (i + 1) + ". " + a; }).join("\n") : "La cartera está bien construida para el perfil; no se proponen cambios.") +
+          "\n\nAntes y después (actual frente a propuesta):\n" + gcLast.cmp.map(function (r) { return "• " + r[0] + ": " + r[1] + " frente a " + r[2]; }).join("\n");
+        var m = pfMail((gc.name || "Cartera del cliente") + " (propuesta de revisión)", gcLast.tot || 0, gcLast.prop.lines.map(function (x) { return { id: x.id, w: x.w }; }), "Perfil " + BPROF[gc.profile].n.toLowerCase() + ".\n\n" + ex);
+        mailModal(m);
+      });
       var sv = document.getElementById("gcsave");
       if (sv) sv.addEventListener("click", function () {
         var c = cleanPf({ name: (gc.name || "Cartera") + " (propuesta)", amount: gcLast.tot || null, lines: gcLast.prop.lines.map(function (x) { return { id: x.id, w: x.w }; }) });
