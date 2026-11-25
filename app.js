@@ -822,7 +822,6 @@
     if (f.cost) d.push("coste neto " + f.cost);
     if (f.aum) d.push("patrimonio de " + String(f.aum).replace(/\s*EUR$/, "").replace(".", ",") + " millones de euros");
     if (f.cre) d.push("creado el " + dlong(f.cre));
-    L.push(pick(["Gracias por la confianza que depositas en mí.", "Agradezco de verdad la confianza que mantienes conmigo.", "Te agradezco mucho tu confianza."]) + " " + pick(ACOMP), "");
     L.push(pick(["Si te parece bien, lo comentamos con calma y vemos qué papel podría jugar en tu cartera según tu perfil y tu horizonte de inversión. Quedo a tu disposición para cualquier duda.", "Cuando quieras lo vemos con más detalle y valoramos si encaja con tu perfil y tus objetivos. Quedo a tu disposición.", "Si te interesa, lo repasamos juntos y vemos cómo podría encajar en tu cartera. Cualquier duda, me dices."]));
     return { subject: "Información del fondo " + f.n, body: mailClean(L.join("\n") + MAIL_PIE) };
   }
@@ -862,7 +861,6 @@
     if (worst && worst !== best) P.push(pq > 0 ? "El de comportamiento más contenido es " + worst.f.n + " (" + plainP(worst.f.ret.y1) + ")." : "El fondo con un comportamiento más moderado en el último año es " + worst.f.n + " (" + plainP(worst.f.ret.y1) + "), que seguimos con atención.");
     if (Math.abs(tw - 100) > 0.5) P.push("Ten en cuenta que los pesos suman " + nf(tw, 1) + "%.");
     L.push(pick(["A tener en cuenta", "Detalles de la cartera", "Para valorar"]), P.join(" ") + (pq < 0 ? " Es una cartera pensada para el medio y largo plazo, y los movimientos recientes entran dentro de lo esperable." : ""), "");
-    L.push(pick(["Gracias por la confianza que depositas en mí.", "Agradezco de verdad la confianza que mantienes conmigo.", "Te agradezco mucho tu confianza."]) + " " + pick(ACOMP), "");
     L.push(pick(["Si te parece, la repasamos juntos y la ajustamos a tu perfil de riesgo y a tus objetivos. Quedo a tu disposición para cualquier duda.", "Cuando te venga bien la comentamos con calma y la adaptamos a lo que necesites. Quedo a tu disposición.", "Si te encaja, la vemos juntos y afinamos lo que haga falta. Cualquier duda, me dices."]));
     return { subject: "Propuesta de cartera: " + (name || ""), body: mailClean(L.join("\n") + MAIL_PIE) };
   }
