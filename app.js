@@ -822,7 +822,6 @@
     if (f.cost) d.push("coste neto " + f.cost);
     if (f.aum) d.push("patrimonio de " + String(f.aum).replace(/\s*EUR$/, "").replace(".", ",") + " millones de euros");
     if (f.cre) d.push("creado el " + dlong(f.cre));
-    L.push("Datos prácticos", listJoin(d).replace(/^./, function (c) { return c.toUpperCase(); }) + ".", "");
     L.push(pick(["Gracias por la confianza que depositas en mí.", "Agradezco de verdad la confianza que mantienes conmigo.", "Te agradezco mucho tu confianza."]) + " " + pick(ACOMP), "");
     L.push(pick(["Si te parece bien, lo comentamos con calma y vemos qué papel podría jugar en tu cartera según tu perfil y tu horizonte de inversión. Quedo a tu disposición para cualquier duda.", "Cuando quieras lo vemos con más detalle y valoramos si encaja con tu perfil y tus objetivos. Quedo a tu disposición.", "Si te interesa, lo repasamos juntos y vemos cómo podría encajar en tu cartera. Cualquier duda, me dices."]));
     return { subject: "Información del fondo " + f.n, body: mailClean(L.join("\n") + MAIL_PIE) };
