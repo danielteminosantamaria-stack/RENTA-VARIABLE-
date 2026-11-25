@@ -740,7 +740,7 @@
       return (i + 1) + ". " + f.n + " (" + f.g + ")\n   Peso " + nf(l.w, 1) + "%" + (amount > 0 ? ", " + nf(amount * l.w / 100, 0) + " €" : "") + ", " + f.c + ". Rentabilidad a 1 año: " + plainP(f.ret.y1) + ".";
     }).filter(Boolean).join("\n");
   }
-  var MAIL_PIE = "\n\nComo siempre, te recuerdo que la rentabilidad pasada no garantiza resultados futuros. Los datos proceden de Morningstar y esta información es orientativa, no constituye asesoramiento personalizado.\n\nUn cordial saludo,\nDaniel\nRenta 4 Banca Privada";
+  var MAIL_PIE = "\n\nComo siempre, te recuerdo que la rentabilidad pasada no garantiza resultados futuros. Los datos proceden de Morningstar y esta información es orientativa, no constituye asesoramiento personalizado.";
   function listJoin(a) { return a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " y " + a[a.length - 1]; }
   function fundMail(f) {
     var r = f.ret, rf = f.t === "rf", y = mailYear(), L = [], v1 = f.vol && f.vol[0], sh = f.sharpe && f.sharpe[0];
@@ -826,13 +826,12 @@
     if (ov) ov.remove();
     ov = document.createElement("div"); ov.id = "mailov"; ov.className = "mov"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-label", "Redactar correo");
     ov.innerHTML = '<div class="mbox"><div class="mhd"><b>Correo</b><button type="button" class="gx" id="mclose">Cerrar</button></div>' +
-      '<label class="mlb">Nombre de quien lo recibe (opcional)<input class="inp" id="mname" maxlength="60" placeholder="Por ejemplo, Carlos"></label><label class="mlb">Asunto<input class="inp" id="msub" maxlength="200"></label><label class="mlb">Mensaje<textarea class="inp" id="mbody" rows="16"></textarea></label>' +
+      '<label class="mlb">Asunto<input class="inp" id="msub" maxlength="200"></label><label class="mlb">Mensaje<textarea class="inp" id="mbody" rows="16"></textarea></label>' +
       '<div class="row"><button type="button" class="btn" id="mcopy">Copiar mensaje</button><button type="button" class="btn ghost" id="mcopys">Copiar asunto</button><a class="btn ghost" id="mopen" href="#">Abrir en mi correo</a></div>' +
       '<p class="note" id="mnote">Puedes editar el texto antes de copiarlo. Sin destinatario: añádelo en tu correo.</p></div>';
     document.body.appendChild(ov);
     var sub = ov.querySelector("#msub"), body = ov.querySelector("#mbody"), note = ov.querySelector("#mnote");
     sub.value = m.subject; body.value = m.body;
-    ov.querySelector("#mname").addEventListener("input", function () { var n = this.value.trim(); body.value = body.value.replace(/^Hola[^\n]*,/, "Hola" + (n ? " " + mailClean(n) : "") + ","); });
     function close() { ov.remove(); document.removeEventListener("keydown", esc2); }
     function esc2(e) { if (e.key === "Escape") close(); }
     document.addEventListener("keydown", esc2);
