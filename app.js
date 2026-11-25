@@ -1006,6 +1006,33 @@
     S.push(dkSlide("Puntos a vigilar", "Lo que seguiremos con atención", '<ul class="dk-w">' + w.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + '</ul><p class="dk-dis">La rentabilidad pasada no garantiza resultados futuros. Los datos proceden de Morningstar y esta información es orientativa, no constituye asesoramiento personalizado.</p>', n++));
     dkPrint(S.join(""));
   }
+  function deckCompare(fs) {
+    var S = [], n = 2, y = mailYear();
+    S.push(dkCover("Comparativa de fondos", fs.length + " fondos", fs.map(function (f) { return f.n; }).join(" · ")));
+    var rows = [["Gestora", function (f) { return esc(f.g); }], ["Categoría", function (f) { return esc(f.c); }],
+      ["En el año", function (f) { return dkp(f.ret.ytd); }], ["1 año", function (f) { return dkp(f.ret.y1); }], ["3 años anual", function (f) { return dkp(f.ret.y3); }], ["5 años anual", function (f) { return dkp(f.ret.y5); }],
+      ["Volatilidad 1 año", function (f) { return dkp(f.vol && f.vol[0]); }], ["Sharpe", function (f) { return f.sharpe && isNum(f.sharpe[0]) ? nf(f.sharpe[0], 2) : "n.d."; }],
+      ["Alpha 3 años", function (f) { return isNum(f.alpha) ? nf(f.alpha, 2) : "n.d."; }], ["Caída máxima", function (f) { return dkp(f.dd && isNum(f.dd[4]) ? Math.abs(f.dd[4]) : null); }],
+      ["Morningstar", function (f) { return f.stars ? f.stars + " estrellas" : "n.d."; }], ["Coste neto", function (f) { return esc(f.cost || "n.d."); }]];
+    S.push(dkSlide("Comparativa", "Datos de Morningstar a " + (META && (META.rv || META.rf) || ""),
+      '<table class="dk-t dk-sm"><thead><tr><th></th>' + fs.map(function (f) { return '<th class="r">' + esc(f.n) + "</th>"; }).join("") + "</tr></thead><tbody>" +
+      rows.map(function (r) { return "<tr><td><b>" + r[0] + "</b></td>" + fs.map(function (f) { return '<td class="r">' + r[1](f) + "</td>"; }).join("") + "</tr>"; }).join("") + "</tbody></table>", n++));
+    for (var i = 0; i < fs.length; i += 2) {
+      S.push(dkSlide("Ideas clave por fondo", "", '<div class="dk-two">' + fs.slice(i, i + 2).map(function (f) {
+        return '<div class="dk-card"><h3>' + esc(f.n) + "</h3><small>" + esc(f.g) + " · " + esc(f.c) + "</small><ul>" + dkIdeas(f).map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + "</ul></div>";
+      }).join("") + "</div>", n++));
+    }
+    var w = [];
+    fs.forEach(function (f) {
+      var v1 = f.vol && f.vol[0];
+      if (isNum(f.ret.y1) && f.ret.y1 < 0) w.push(f.n + ": ha cedido un " + dkp(Math.abs(f.ret.y1)) + " en el último año; conviene valorarlo a medio plazo.");
+      else if (isNum(v1) && v1 >= 15) w.push(f.n + ": volatilidad elevada (" + dkp(v1) + ").");
+      else if (isNum(f.top10) && f.top10 >= 50) w.push(f.n + ": cartera concentrada (diez mayores posiciones: " + nf(f.top10, 0) + "%).");
+    });
+    if (!w.length) w.push("Con los datos actuales no hay alertas relevantes en ninguno de los fondos.");
+    S.push(dkSlide("Puntos a vigilar", "", '<ul class="dk-w">' + w.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + '</ul><p class="dk-dis">La rentabilidad pasada no garantiza resultados futuros. Los datos proceden de Morningstar y esta información es orientativa, no constituye asesoramiento personalizado.</p>', n++));
+    dkPrint(S.join(""));
+  }
   function deckFund(f) {
     var r = f.ret, y = mailYear(), n = 2, S = [], v1 = f.vol && f.vol[0], sh = f.sharpe && f.sharpe[0];
     S.push(dkCover("Ficha de fondo", f.n, f.g + " · " + f.c + " · " + dkDate()));
@@ -1043,7 +1070,7 @@
     }
     h += fs.length >= 2 ? cmpTable(fs) + cmpChart(fs) : '<p class="muted" style="margin-top:20px">Añade al menos 2 fondos para compararlos.</p>';
     app.innerHTML = h + footer("rv");
-    if (fs.length >= 2) { var cb = printBar(function () { return ["Comparativa de fondos", fs.map(function (f) { return f.n; }).join(", ")]; }); var tb = document.createElement("div"); tb.className = "row tools2"; tb.appendChild(cb); app.appendChild(tb); }
+    if (fs.length >= 2) { var cb = deckBtn(function () { deckCompare(fs); }); var tb = document.createElement("div"); tb.className = "row tools2"; tb.appendChild(cb); app.appendChild(tb); }
     var cq = document.getElementById("cq");
     if (cq) cq.addEventListener("input", function () {
       var v = cq.value.trim(), res = document.getElementById("cres");
