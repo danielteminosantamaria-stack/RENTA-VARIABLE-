@@ -2310,7 +2310,7 @@
     h += tbl("Índices y mega caps", u.indices) + tbl("Sectores", u.sectores);
     (u.notas || []).forEach(function (x) { h += '<p class="note">' + esc(x) + "</p>"; });
     if ((a.ibex || []).length) h += '<div class="box" style="margin-top:14px;padding:16px 18px"><h2 style="margin:0 0 8px;font-size:1.05rem">Apuntes del Ibex 35</h2>' + a.ibex.map(function (x) { return '<div class="agrow"><span>' + esc(x) + "</span></div>"; }).join("") + "</div>";
-    if ((N.historial || []).length) {
+    if (false) {
       h += '<h3 class="es-cat">Días anteriores</h3>' + N.historial.map(function (d) {
         return '<details class="box" style="margin-top:8px;padding:10px 16px"><summary><b>' + esc(d.fecha) + "</b> " + esc((d.temas || []).map(function (t) { return t.t; }).join(" · ")) + "</summary>" +
           (d.temas || []).map(function (t) { return '<p class="stxt" style="margin:8px 0 0"><b>' + esc(t.t) + ".</b> " + esc(t.r) + "</p>"; }).join("") + "</details>";
