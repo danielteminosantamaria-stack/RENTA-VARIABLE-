@@ -47,6 +47,7 @@
     var L = window.LOGOS || {}, D = window.LOGODOM || {}, src = L[g] ? "logos/" + L[g] : D[g] ? "https://www.google.com/s2/favicons?sz=128&domain=" + encodeURIComponent(D[g]) : null;
     return src ? '<img src="' + esc(src) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.textContent=\'' + esc(initials(g)) + '\'">' : esc(initials(g));
   }
+  function vlTag(f) { var d = String(f.nd || ""); return d ? ' · <span class="vl" title="Fecha del valor liquidativo: ' + esc(d) + '">VL ' + esc(d.slice(0, 5)) + "</span>" : ""; }
   function icon() {
     return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
   }
@@ -353,7 +354,7 @@
       c.map(function (x) { return th(x.k, x.l); }).join("") + "</tr></thead><tbody>" +
       rows.map(function (f) {
         return '<tr data-id="' + esc(f.id) + '" tabindex="0"><td class="fund">' + (window.FAVS ? window.FAVS.star("f", f.id) : "") + '<span class="flogo" aria-hidden="true">' + logoOrInit(f.g) + '</span><span class="ftxt"><b>' + esc(f.n) +
-          (f.idx ? '<span class="tag">Indexado</span>' : "") + "</b><small>" + esc(f.g) + (f.c ? " · " + esc(f.c) : "") +
+          (f.idx ? '<span class="tag">Indexado</span>' : "") + "</b><small>" + esc(f.g) + (f.c ? " · " + esc(f.c) : "") + vlTag(f) +
           "</small></span></td>" + c.map(function (x) { return "<td>" + x.r(f) + "</td>"; }).join("") + "</tr>";
       }).join("") + "</tbody></table></div>";
     body.querySelectorAll("[data-sort]").forEach(function (b) {
@@ -517,14 +518,14 @@
     var r = f.ret, html = "";
     html += '<div class="topbar"><a href="#/' + f.t + '">← ' + esc(CATS[f.t].title) + '</a></div>';
     html += '<h1 class="h1star">' + esc(f.n) + (window.FAVS ? " " + window.FAVS.star("f", f.id) : "") + "</h1>";
-    html += '<p class="sub"><a href="#/gestora/' + encodeURIComponent(f.g) + '">' + esc(f.g) + "</a>" + " · " + esc(f.id) + " · " + esc(f.c) + (f.idx ? ' <span class="tag">Indexado</span>' : "") + "</p>";
+    html += '<p class="sub"><a href="#/gestora/' + encodeURIComponent(f.g) + '">' + esc(f.g) + "</a>" + " · " + esc(f.id) + " · " + esc(f.c) + vlTag(f) + (f.idx ? ' <span class="tag">Indexado</span>' : "") + "</p>";
     var esd = window.ESTADO && window.ESTADO.fondos && window.ESTADO.fondos[f.id];
     if (esd && esd.e) html += '<p class="sub"><a href="#/estado">Estado semanal</a>: ' + esTag(esd.e) + (esd.p ? " " + esc(esd.p) : "") + "</p>";
     html += '<div class="kpis">' +
       kpi("Vol. 1 año", pct(f.vol[0], false, 1), true) + kpi("Sharpe 1 año", dec(f.sharpe[0]), true) +
       kpi("Último mes", ret(r.m1)) + kpi("Año", ret(r.ytd)) + kpi("1 año", ret(r.y1)) +
       kpi("3 años", ret(r.y3)) + kpi("5 años", ret(r.y5)) + kpi("10 años", ret(r.y10)) + "</div>";
-    html += '<p class="note">Rentabilidad de la clase en euros. A 3, 5 y 10 años, anualizada. Fuente: Morningstar, valor liquidativo a ' + esc(f.nd) + ".</p>";
+    html += '<p class="note">Rentabilidad de la clase en euros. A 3, 5 y 10 años, anualizada. Fuente: Morningstar, valor liquidativo a ' + esc(f.nd) + ". La rentabilidad de la semana cubre los 7 días naturales hasta esa fecha.</p>";
 
     var docs = [["xray", "X-Ray", "Morningstar"], ["ms", "Morningstar", "Ficha online"]]
       .filter(function (d) { return safeUrl(f[d[0]]); })
@@ -1030,7 +1031,7 @@
       t.innerHTML = '<div class="table-wrap" style="margin-top:14px"><table><thead><tr><th scope="col">Fondo</th><th scope="col">Peso %</th><th scope="col">Importe</th><th scope="col">Año</th><th scope="col">1 año</th><th scope="col">Vol. 1 año</th><th scope="col">Sharpe 1 año</th><th scope="col">Aporta al año</th><th scope="col"><span class="sr">Quitar</span></th></tr></thead><tbody>' +
         p.lines.map(function (l, i) {
           var f = byId(l.id);
-          return '<tr data-i="' + i + '" class="pfrow"><td class="fund"><a href="#/fondo/' + encodeURIComponent(f.id) + '"><b>' + esc(f.n) + (f.idx ? '<span class="tag">Indexado</span>' : "") + "</b></a><small>" + esc(f.g) + " · " + esc(f.c) + "</small></td>" +
+          return '<tr data-i="' + i + '" class="pfrow"><td class="fund"><a href="#/fondo/' + encodeURIComponent(f.id) + '"><b>' + esc(f.n) + (f.idx ? '<span class="tag">Indexado</span>' : "") + "</b></a><small>" + esc(f.g) + " · " + esc(f.c) + vlTag(f) + "</small></td>" +
             '<td><input class="inp w" type="number" min="0" max="100" step="0.5" value="' + (l.w || 0) + '" data-w="' + i + '" aria-label="Peso de ' + esc(f.n) + '"></td>' +
             '<td class="num" data-imp="' + i + '"></td><td>' + ret(f.ret.ytd) + "</td><td>" + ret(f.ret.y1) + '</td><td class="num">' + pct(f.vol[0], false, 1) + '</td><td class="num">' + dec(f.sharpe[0]) + '</td><td class="num" data-ap="' + i + '"></td>' +
             '<td><button type="button" class="x" data-del="' + i + '" aria-label="Quitar ' + esc(f.n) + '">×</button></td></tr>';
@@ -1267,7 +1268,7 @@
       el.innerHTML = '<div class="table-wrap"><table><thead><tr><th scope="col">Fondo</th><th scope="col">Peso %</th><th scope="col">Año</th><th scope="col">1 año</th><th scope="col">Vol. 1 año</th><th scope="col">Rating</th><th scope="col"><span class="sr">Quitar</span></th></tr></thead><tbody>' +
         p.lines.map(function (l, j) {
           var f = byId(l.id);
-          return '<tr><td class="fund"><a href="#/fondo/' + encodeURIComponent(f.id) + '"><b>' + esc(f.n) + "</b></a><small>" + esc(f.g) + " · " + esc(f.c) + '</small></td><td><input class="inp w" type="number" min="0" max="100" step="0.5" value="' + (l.w || 0) + '" data-w="' + i + ":" + j + '" aria-label="Peso de ' + esc(f.n) + '"></td><td>' + ret(f.ret.ytd) + "</td><td>" + ret(f.ret.y1) + '</td><td class="num">' + pct(f.vol[0], false, 1) + "</td><td>" + (f.stars ? stars(f.stars) : "–") + '</td><td><button type="button" class="x" data-del="' + i + ":" + j + '" aria-label="Quitar ' + esc(f.n) + '">×</button></td></tr>';
+          return '<tr><td class="fund"><a href="#/fondo/' + encodeURIComponent(f.id) + '"><b>' + esc(f.n) + "</b></a><small>" + esc(f.g) + " · " + esc(f.c) + vlTag(f) + '</small></td><td><input class="inp w" type="number" min="0" max="100" step="0.5" value="' + (l.w || 0) + '" data-w="' + i + ":" + j + '" aria-label="Peso de ' + esc(f.n) + '"></td><td>' + ret(f.ret.ytd) + "</td><td>" + ret(f.ret.y1) + '</td><td class="num">' + pct(f.vol[0], false, 1) + "</td><td>" + (f.stars ? stars(f.stars) : "–") + '</td><td><button type="button" class="x" data-del="' + i + ":" + j + '" aria-label="Quitar ' + esc(f.n) + '">×</button></td></tr>';
         }).join("") + '</tbody><tfoot><tr><td><b>Total</b></td><td class="num" data-tw="' + i + '"></td><td colspan="5"></td></tr></tfoot></table></div>';
       el.querySelectorAll("[data-w]").forEach(function (inp) {
         inp.addEventListener("input", function () {
@@ -2408,7 +2409,7 @@
     if (p[0] === "cartera" && p[1]) return viewPortfolio(decodeURIComponent(p[1]));
     return viewNotFound();
   }
-  window.CFUI = { logo: logoOrInit, stockLogo: stockLogo, rcell: rcell, ret: ret, pct: pct, dec: dec, footer: footer };
+  window.CFUI = { vl: vlTag, logo: logoOrInit, stockLogo: stockLogo, rcell: rcell, ret: ret, pct: pct, dec: dec, footer: footer };
   window.addEventListener("hashchange", route);
   route();
 })();

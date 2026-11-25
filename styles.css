@@ -906,3 +906,5 @@ body.gopen { overflow: hidden; }
 .chlog li { display: flex; gap: 14px; padding: 8px 14px; border-bottom: 1px solid var(--line); font-size: 13px; }
 .chlog li:last-child { border-bottom: 0; }
 .chlog time { flex: 0 0 auto; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 118px; }
+
+.vl { white-space: nowrap; }
