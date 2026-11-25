@@ -798,7 +798,6 @@
     var w = [];
     if (isNum(v1) && v1 >= 15) w.push("su volatilidad es elevada y puede registrar oscilaciones amplias a corto plazo");
     if (isNum(f.top10) && f.top10 >= 45) w.push("la cartera está concentrada, con pocas posiciones explicando buena parte del resultado");
-    if (f.skew && isNum(f.skew[0]) && f.skew[0] < -1) w.push("los meses malos pueden ser peores de lo que sugiere su volatilidad");
     if (isNum(f.alpha) && f.alpha < 0) w.push("en tres años ha quedado algo por debajo de su referencia (alpha de " + nf(f.alpha, 2) + ")");
     if (w.length) risk += (q > 0 ? " Como en toda inversión, conviene recordar que " : " Conviene tener presente que ") + listJoin(w) + ".";
     if (risk && q < 0) risk += " Son oscilaciones normales en este tipo de activos y el objetivo del fondo es a medio y largo plazo.";
