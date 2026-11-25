@@ -2326,7 +2326,7 @@
   function viewEstado() {
     setTitle("Estado semanal de fondos");
     var E = window.ESTADO || { fondos: {} };
-    var items = FUNDS.filter(function (f) { return E.fondos && E.fondos[f.id]; });
+    var items = FUNDS.filter(function (f) { return f.t === "rv" && E.fondos && E.fondos[f.id]; });
     var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Estado semanal de fondos</h1>' +
       '<p class="sub">' + (E.fecha ? "Informe del " + esc(E.fecha) + ". " : "") + 'Alertas, oportunidades y fondos a vigilar frente a su propio riesgo y a su categoría. Es una lectura de datos, no una recomendación.</p>';
     if (!items.length) {
