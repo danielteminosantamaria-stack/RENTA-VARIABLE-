@@ -1233,7 +1233,6 @@
     }
     var missing = p.lines.filter(function (l) { var f = byId(l.id); return !isNum(f.ret.y1) || !isNum(f.vol[0]); }).map(function (l) { return byId(l.id).n; });
     if (missing.length) ck.push(["warn", "Faltan datos de 1 año en: " + missing.join(", ") + ". Las medias usan solo los fondos con dato."]);
-    h += '<section class="block" style="margin-top:26px"><h3>Comprobaciones</h3><ul class="checks">' + ck.map(function (c) { return '<li class="' + c[0] + '"><i></i><span>' + esc(c[1]) + "</span></li>"; }).join("") + "</ul></section>";
 
     h += '<div class="grid2">';
     // Composición
