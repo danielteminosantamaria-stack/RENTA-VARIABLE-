@@ -725,29 +725,94 @@
     lines.forEach(function (l) { var f = byId(l.id); if (f && l.w > 0 && isNum(f.ret[key])) { tw += l.w; r += l.w * f.ret[key]; } });
     return tw ? r / tw : null;
   }
-  function linesText(lines, amount) {
-    var tw = 0; lines.forEach(function (l) { tw += l.w; });
-    var out = lines.map(function (l, i) {
-      var f = byId(l.id); if (!f) return "";
-      return (i + 1) + ". " + f.n + " (" + f.g + "): " + nf(l.w, 1) + "%" + (amount > 0 ? ", " + nf(amount * l.w / 100, 0) + " €" : "") + ", rentabilidad a 1 año " + plainP(f.ret.y1) + ".";
-    }).filter(Boolean).join("\n");
-    out += "\n\nPeso total: " + nf(tw, 1) + "%.";
-    var a = wAvgL(lines, "ytd"), b = wAvgL(lines, "y1"), c = wAvgL(lines, "y3");
-    out += "\nRentabilidad media ponderada con los datos actuales: en el año " + plainP(a) + ", a 1 año " + plainP(b) + ", a 3 años anualizada " + plainP(c) + ".";
-    return out;
+  function pnum(v) { var x = parseFloat(String(v == null ? "" : v).replace("%", "").replace(",", ".")); return isFinite(x) ? x : null; }
+  function wAvgF(lines, fn) {
+    var tw = 0, r = 0;
+    lines.forEach(function (l) { var f = byId(l.id), v = f ? fn(f) : null; if (f && l.w > 0 && isNum(v)) { tw += l.w; r += l.w * v; } });
+    return tw ? r / tw : null;
   }
-  var MAIL_PIE = "\n\nLa rentabilidad pasada no garantiza resultados futuros. Datos de Morningstar. Este mensaje es informativo y no constituye asesoramiento personalizado.\n\nUn saludo,";
+  function mailYear() { var m = /(\d{4})$/.exec((META && (META.rv || META.rf)) || ""); return m ? +m[1] : new Date().getFullYear(); }
+  function volWord(v) { return !isNum(v) ? "" : v < 5 ? "baja" : v < 12 ? "moderada" : "elevada"; }
+  function shWord(v) { return !isNum(v) ? "" : v >= 1 ? "muy buena" : v >= 0.5 ? "buena" : v > 0 ? "moderada" : "floja"; }
+  function linesText(lines, amount) {
+    return lines.map(function (l, i) {
+      var f = byId(l.id); if (!f) return "";
+      return (i + 1) + ". " + f.n + " (" + f.g + ")\n   Peso " + nf(l.w, 1) + "%" + (amount > 0 ? ", " + nf(amount * l.w / 100, 0) + " €" : "") + ", " + f.c + ". Rentabilidad a 1 año: " + plainP(f.ret.y1) + ".";
+    }).filter(Boolean).join("\n");
+  }
+  var MAIL_PIE = "\n\nLa rentabilidad pasada no garantiza resultados futuros. Datos de Morningstar. Este mensaje es informativo y no constituye asesoramiento personalizado ni una recomendación de inversión.\n\nUn cordial saludo,";
   function fundMail(f) {
-    var r = f.ret, t = "Hola,\n\nTe paso la información del fondo " + f.n + " (" + f.g + ", ISIN " + f.id + ").\n\n" +
-      "Categoría Morningstar: " + f.c + "\nValor liquidativo a " + dlong(f.nd) + (f.nav ? ": " + String(f.nav).replace(/^EUR\s*/, "").replace(".", ",") + " euros" : "") + "\n\n" +
-      "Rentabilidad:\n• Último mes: " + plainP(r.m1) + "\n• En el año: " + plainP(r.ytd) + "\n• 1 año: " + plainP(r.y1) + "\n• 3 años (anualizada): " + plainP(r.y3) + "\n• 5 años (anualizada): " + plainP(r.y5) + "\n\n" +
-      "Riesgo: volatilidad a 1 año " + plainP(f.vol && f.vol[0]) + ", ratio de Sharpe a 1 año " + (f.sharpe && isNum(f.sharpe[0]) ? nf(f.sharpe[0], 2) : "sin dato") + "." +
-      (f.stars ? "\nRating Morningstar: " + f.stars + " estrellas." : "") + (f.cost ? "\nCoste neto: " + f.cost + "." : "") + MAIL_PIE;
-    return { subject: "Fondo " + f.n, body: mailClean(t) };
+    var r = f.ret, rf = f.t === "rf", y = mailYear(), L = [];
+    L.push("Hola,", "", "Te escribo para presentarte " + f.n + ", un fondo de " + f.g + " de la categoría " + f.c + ", con datos actualizados a " + dlong(f.nd) + ".", "");
+    var hi = [];
+    if (f.stars) hi.push("Calificación de " + f.stars + " estrellas de Morningstar" + (f.score && isNum(f.score[3]) ? " y puntuación global de " + nf(f.score[3], 2) : "") + ".");
+    if (isNum(r.y3)) hi.push("Ha rentado un " + plainP(r.y3) + " anual en los últimos 3 años" + (isNum(r.y5) ? " y un " + plainP(r.y5) + " anual en 5 años" : "") + ".");
+    if (isNum(r.y1)) hi.push("En el último año acumula un " + plainP(r.y1) + (isNum(r.ytd) ? " (" + plainP(r.ytd) + " en lo que va de año)" : "") + ".");
+    if (f.sharpe && isNum(f.sharpe[0])) hi.push("Relación entre rentabilidad y riesgo " + shWord(f.sharpe[0]) + " (Sharpe a 1 año de " + nf(f.sharpe[0], 2) + ") con volatilidad " + volWord(f.vol && f.vol[0]) + " (" + plainP(f.vol && f.vol[0]) + ").");
+    if (isNum(f.alpha) && f.alpha >= 0.5) hi.push("Aporta un alpha positivo de " + nf(f.alpha, 2) + " a 3 años frente a su referencia.");
+    if (hi.length) { L.push("LO MÁS DESTACADO"); hi.forEach(function (x) { L.push("• " + x); }); L.push(""); }
+    L.push("CÓMO HA RENDIDO", "• Última semana: " + plainP(r.w1), "• Último mes: " + plainP(r.m1), "• 3 meses: " + plainP(r.m3), "• 6 meses: " + plainP(r.m6), "• En el año: " + plainP(r.ytd), "• 1 año: " + plainP(r.y1), "• 3 años (anualizada): " + plainP(r.y3), "• 5 años (anualizada): " + plainP(r.y5));
+    if (isNum(r.y10)) L.push("• 10 años (anualizada): " + plainP(r.y10));
+    var yrs = [];
+    (f.ann || []).forEach(function (v, i) { if (i >= 1 && i <= 5 && isNum(v)) yrs.push((y - i) + ": " + plainP(v)); });
+    if (yrs.length) L.push("", "Año a año: " + yrs.join(", ") + ".");
+    L.push("", "CÓMO SE COMPORTA EN LOS MALOS MOMENTOS");
+    if (f.dd && isNum(f.dd[4])) L.push("• Caída máxima histórica: " + plainP(f.dd[4]));
+    if (f.worst && isNum(f.worst[0])) L.push("• Peor mes del último año: " + plainP(f.worst[0]));
+    if (f.pos && isNum(f.pos[0])) L.push("• Meses positivos en el último año: " + nf(f.pos[0], 0) + "%");
+    if (isNum(f.beta)) L.push("• Beta a 3 años: " + nf(f.beta, 2) + (f.beta < 0.8 ? " (amortigua las caídas del mercado)" : f.beta > 1.1 ? " (amplifica los movimientos del mercado)" : " (sigue al mercado de cerca)"));
+    L.push("", "QUÉ LLEVA DENTRO");
+    if (rf) {
+      if (isNum(f.dur)) L.push("• Duración: " + nf(f.dur, 1) + " años");
+      if (f.cal) L.push("• Calidad crediticia media: " + f.cal);
+      if (isNum(f.vto)) L.push("• Rentabilidad al vencimiento: " + plainP(f.vto, 2));
+    } else {
+      if (f.reg && f.reg[0]) L.push("• Región principal: " + f.reg[0] + " (" + nf(f.reg[1], 0) + "%)");
+      if (f.sec && f.sec[0]) L.push("• Sector principal: " + f.sec[0] + " (" + nf(f.sec[1], 0) + "%)");
+      if (isNum(f.per)) L.push("• PER medio de la cartera: " + nf(f.per, 1));
+    }
+    if (isNum(f.top10)) L.push("• Concentración: las 10 mayores posiciones pesan un " + nf(f.top10, 0) + "%");
+    var cm = (window.COMMENTS && window.COMMENTS[f.id]) || [];
+    if (cm.length && cm[0].t) L.push("", "COMENTARIO DE LA GESTORA (" + (cm[0].d || "último") + ")", cm[0].t);
+    var w = [];
+    if (f.vol && isNum(f.vol[0]) && f.vol[0] >= 15) w.push("Volatilidad elevada: puede registrar oscilaciones amplias en el corto plazo.");
+    if (isNum(f.top10) && f.top10 >= 45) w.push("Cartera concentrada: pocas posiciones explican buena parte del resultado.");
+    if (f.skew && isNum(f.skew[0]) && f.skew[0] < -1) w.push("Los meses malos pueden ser peores de lo que sugiere su volatilidad.");
+    if (f.stars && f.stars <= 2) w.push("Su calificación Morningstar es baja (" + f.stars + " estrellas).");
+    if (isNum(f.alpha) && f.alpha < 0) w.push("En 3 años no ha superado a su referencia (alpha de " + nf(f.alpha, 2) + ").");
+    if (w.length) { L.push("", "A TENER EN CUENTA"); w.forEach(function (x) { L.push("• " + x); }); }
+    L.push("", "DATOS PRÁCTICOS", "• ISIN: " + f.id);
+    if (f.cost) L.push("• Coste neto: " + f.cost);
+    if (f.aum) L.push("• Patrimonio del fondo: " + String(f.aum).replace(/\s*EUR$/, "").replace(".", ",") + " millones de euros");
+    if (f.cre) L.push("• Fecha de creación: " + dlong(f.cre));
+    L.push("", "Si te encaja, lo vemos con calma y valoramos qué papel podría jugar en tu cartera según tu perfil y tu horizonte.");
+    return { subject: f.n + ": ficha y puntos clave", body: mailClean(L.join("\n") + MAIL_PIE) };
   }
   function pfMail(name, amount, lines, extra) {
-    var t = "Hola,\n\nTe paso la cartera \"" + (name || "Cartera") + "\"" + (amount > 0 ? " para un importe de " + nf(amount, 0) + " euros" : "") + ".\n\nComposición:\n" + linesText(lines, amount) + (extra ? "\n\n" + extra : "") + MAIL_PIE;
-    return { subject: "Cartera " + (name || ""), body: mailClean(t) };
+    var L = [], fs = lines.map(function (l) { return { l: l, f: byId(l.id) }; }).filter(function (x) { return x.f; }), tw = 0, rfW = 0, gs = {}, idx = 0;
+    lines.forEach(function (l) { tw += l.w; });
+    fs.forEach(function (x) { if (x.f.t === "rf") rfW += x.l.w; gs[x.f.g] = 1; if (x.f.idx) idx++; });
+    L.push("Hola,", "", "Te paso la propuesta de cartera \"" + (name || "Cartera") + "\"" + (amount > 0 ? " para un importe de " + nf(amount, 0) + " euros" : "") + ", con datos de Morningstar a " + dlong(META && (META.rv || META.rf)) + ".", "");
+    L.push("RESUMEN");
+    L.push("• " + fs.length + " fondos de " + Object.keys(gs).length + " gestoras distintas");
+    if (tw > 0) L.push("• Reparto: " + nf(rfW / tw * 100, 0) + "% renta fija y " + nf((tw - rfW) / tw * 100, 0) + "% renta variable");
+    var a = wAvgF(lines, function (f) { return f.ret.ytd; }), b = wAvgF(lines, function (f) { return f.ret.y1; }), c = wAvgF(lines, function (f) { return f.ret.y3; }), v = wAvgF(lines, function (f) { return f.vol && f.vol[0]; }), sh = wAvgF(lines, function (f) { return f.sharpe && f.sharpe[0]; }), co = wAvgF(lines, function (f) { return pnum(f.cost); });
+    L.push("• Rentabilidad media ponderada: " + plainP(a) + " en el año, " + plainP(b) + " a 1 año y " + plainP(c) + " anual a 3 años");
+    if (isNum(v)) L.push("• Volatilidad media a 1 año: " + plainP(v) + (isNum(sh) ? " y Sharpe medio de " + nf(sh, 2) : ""));
+    if (isNum(co)) L.push("• Coste neto medio: " + plainP(co, 2));
+    L.push("", "COMPOSICIÓN", linesText(lines, amount), "");
+    var sorted = fs.slice().sort(function (p, q) { return q.l.w - p.l.w; }), best = null, worst = null;
+    fs.forEach(function (x) { if (isNum(x.f.ret.y1)) { if (!best || x.f.ret.y1 > best.f.ret.y1) best = x; if (!worst || x.f.ret.y1 < worst.f.ret.y1) worst = x; } });
+    var P = [];
+    if (sorted.length) P.push("Mayor posición: " + sorted[0].f.n + " (" + nf(sorted[0].l.w, 1) + "%).");
+    if (best) P.push("Mejor fondo a 1 año: " + best.f.n + " (" + plainP(best.f.ret.y1) + ").");
+    if (worst && worst !== best) P.push("Fondo más rezagado a 1 año: " + worst.f.n + " (" + plainP(worst.f.ret.y1) + ").");
+    P.push(idx ? "Incluye " + idx + " fondos indexados." : "Todos los fondos son de gestión activa.");
+    if (Math.abs(tw - 100) > 0.5) P.push("Los pesos suman " + nf(tw, 1) + "%.");
+    L.push("PUNTOS A DESTACAR"); P.forEach(function (x) { L.push("• " + x); });
+    if (extra) L.push("", extra);
+    L.push("", "Quedo a tu disposición para repasarla juntos y ajustarla a tu perfil de riesgo y a tus objetivos.");
+    return { subject: "Propuesta de cartera: " + (name || ""), body: mailClean(L.join("\n") + MAIL_PIE) };
   }
   function mailModal(m) {
     var ov = document.getElementById("mailov");
