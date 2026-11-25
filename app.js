@@ -653,7 +653,7 @@
     html += "</div>" + footer(f.t);
     app.innerHTML = html;
     var ft = document.getElementById("fundtools");
-    if (ft) { if (unlocked()) ft.appendChild(mailBtn(function () { return fundMail(f); })); ft.appendChild(pdfBtn(function () { return ["Ficha del fondo: " + f.n, f.g + " · " + f.id]; })); }
+    if (ft) { if (unlocked()) ft.appendChild(mailBtn(function () { return fundMail(f); })); ft.appendChild(deckBtn(function () { deckFund(f); })); }
     var apb = document.getElementById("addpfBtn");
     if (apb) apb.addEventListener("click", function () {
       var p = pfById(document.getElementById("addpf").value);
@@ -917,6 +917,114 @@
     var b = document.createElement("button"); b.type = "button"; b.className = "btn ghost"; b.textContent = "Descargar PDF";
     b.addEventListener("click", function () { var t = titleFn(); pdfNow(t[0], t[1], only ? only() : null); });
     return b;
+  }
+
+  /* ---- Presentación en PDF (formato cliente) ---- */
+  function dkp(v, d) { return isNum(v) ? nf(v, d == null ? 1 : d) + "%" : "n.d."; }
+  function dkDate() { return new Date().toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }); }
+  function dkFoot(n) { return '<div class="dk-ft"><span>Renta 4 Banca Privada · Datos de Morningstar a ' + esc(META && (META.rv || META.rf) || "") + '</span><span>' + n + "</span></div>"; }
+  function dkSlide(title, sub, body, n) {
+    return '<section class="dk-s"><div class="dk-hd"><h2>' + esc(title) + "</h2>" + (sub ? "<p>" + esc(sub) + "</p>" : "") + "</div>" + body + dkFoot(n) + "</section>";
+  }
+  function dkCover(kicker, title, sub) {
+    return '<section class="dk-s dk-cv"><div class="dk-tri"></div><div class="dk-cvt"><div class="dk-k">' + esc(kicker) + "</div><h1>" + esc(title) + "</h1><p>" + esc(sub) + '</p></div><div class="dk-lg">Renta 4 Banca Privada</div></section>';
+  }
+  function dkKpi(l, v) { return '<div class="dk-kpi"><span>' + esc(l) + "</span><b>" + esc(v) + "</b></div>"; }
+  function dkIdeas(f) {
+    var r = f.ret, rf = f.t === "rf", out = [], v1 = f.vol && f.vol[0], sh = f.sharpe && f.sharpe[0], dd = f.dd && f.dd[4];
+    var a = [];
+    if (isNum(r.y3)) a.push("rentabilidad del " + dkp(r.y3) + " anual a tres años" + (isNum(r.y5) ? " y del " + dkp(r.y5) + " a cinco" : ""));
+    if (isNum(r.y1)) a.push(r.y1 < 0 ? "un ajuste del " + dkp(Math.abs(r.y1)) + " en el último año" : "un " + dkp(r.y1) + " en el último año");
+    if (a.length) out.push("Rentabilidad: " + listJoin(a) + ".");
+    var b = [];
+    if (rf) {
+      if (isNum(f.dur)) b.push("duración de " + nf(f.dur, 1) + " años");
+      if (f.cal) b.push("calidad crediticia media " + f.cal);
+      if (isNum(f.vto)) b.push("rentabilidad al vencimiento del " + dkp(f.vto, 2));
+    } else {
+      if (f.reg && f.reg[0]) b.push(nf(f.reg[1], 0) + "% en " + f.reg[0]);
+      if (f.sec && f.sec[0]) b.push(nf(f.sec[1], 0) + "% en el sector " + String(f.sec[0]).toLowerCase());
+      if (isNum(f.top10)) b.push("las diez mayores posiciones suman el " + nf(f.top10, 0) + "%");
+    }
+    if (b.length) out.push("Posicionamiento: " + listJoin(b) + ".");
+    var c = [];
+    if (isNum(v1)) c.push("volatilidad " + volWord(v1) + " del " + dkp(v1));
+    if (isNum(sh)) c.push("Sharpe de " + nf(sh, 2));
+    if (isNum(dd)) c.push("caída máxima histórica del " + dkp(Math.abs(dd)));
+    if (c.length) out.push("Riesgo: " + listJoin(c) + ".");
+    return out;
+  }
+  function dkPrint(html) {
+    var old = document.getElementById("deck"); if (old) old.remove();
+    var d = document.createElement("div"); d.id = "deck"; d.innerHTML = html; document.body.appendChild(d);
+    var st = document.createElement("style"); st.id = "deckpage"; st.textContent = "@media print{@page{size:A4 landscape;margin:0}}"; document.head.appendChild(st);
+    document.body.classList.add("pd");
+    function done() { document.body.classList.remove("pd"); d.remove(); st.remove(); window.removeEventListener("afterprint", done); }
+    window.addEventListener("afterprint", done);
+    setTimeout(function () { window.print(); }, 150);
+  }
+  function deckBtn(fn) {
+    var b = document.createElement("button"); b.type = "button"; b.className = "btn ghost"; b.textContent = "Descargar PDF";
+    b.addEventListener("click", fn); return b;
+  }
+  function deckPortfolio(name, prof, amount, lines) {
+    var fs = lines.map(function (l) { return { l: l, f: byId(l.id) }; }).filter(function (x) { return x.f && x.l.w > 0; }), tw = 0, rfW = 0, n = 2, S = [];
+    fs.forEach(function (x) { tw += x.l.w; if (x.f.t === "rf") rfW += x.l.w; });
+    var sub = (prof ? "Perfil " + prof.toLowerCase().replace(/a$/, "o") + " · " : "") + (amount > 0 ? nf(amount, 0) + " € · " : "") + dkDate();
+    S.push(dkCover("Propuesta de cartera", name || "Cartera", sub));
+    var rows = fs.slice().sort(function (a, b) { return b.f.t === a.f.t ? b.l.w - a.l.w : (a.f.t === "rf" ? -1 : 1); }).map(function (x) {
+      return "<tr><td><b>" + esc(x.f.n) + "</b><small>" + esc(x.f.g) + " · " + esc(x.f.id) + "</small></td><td>" + esc(x.f.c) + "</td><td class=\"r\"><b>" + nf(x.l.w, 1) + "%</b></td>" + (amount > 0 ? "<td class=\"r\">" + nf(amount * x.l.w / 100, 0) + " €</td>" : "") + "<td class=\"r\">" + dkp(x.f.ret.y1) + "</td><td class=\"r\">" + dkp(x.f.ret.y3) + "</td></tr>";
+    }).join("");
+    S.push(dkSlide("Composición de la cartera", fs.length + " fondos de gestión activa", '<table class="dk-t"><thead><tr><th>Fondo</th><th>Categoría</th><th class="r">Peso</th>' + (amount > 0 ? '<th class="r">Importe</th>' : "") + '<th class="r">1 año</th><th class="r">3 años anual</th></tr></thead><tbody>' + rows + '</tbody><tfoot><tr><td colspan="2">Total</td><td class="r">' + nf(tw, 1) + "%</td>" + (amount > 0 ? '<td class="r">' + nf(amount * tw / 100, 0) + " €</td>" : "") + "<td></td><td></td></tr></tfoot></table>", n++));
+    var rfp = tw ? rfW / tw * 100 : 0, cats = {};
+    fs.forEach(function (x) { cats[x.f.c] = (cats[x.f.c] || 0) + x.l.w; });
+    var cl = Object.keys(cats).sort(function (a, b) { return cats[b] - cats[a]; }), mx = cats[cl[0]] || 1;
+    S.push(dkSlide("Cómo está repartida", "Entre renta fija, renta variable y categorías",
+      '<div class="dk-two"><div class="dk-donut"><div class="dk-dn" style="background:conic-gradient(#1a2a4a 0 ' + rfp + "%,#c8102e " + rfp + '% 100%)"><i></i></div><div class="dk-lgd"><span><u style="background:#1a2a4a"></u>Renta fija ' + nf(rfp, 0) + '%</span><span><u style="background:#c8102e"></u>Renta variable ' + nf(100 - rfp, 0) + "%</span></div></div>" +
+      '<div class="dk-bars">' + cl.map(function (c) { return '<div class="dk-br"><span>' + esc(c) + '</span><div><i style="width:' + (cats[c] / mx * 100) + '%"></i></div><b>' + nf(cats[c] / (tw || 1) * 100, 1) + "%</b></div>"; }).join("") + "</div></div>", n++));
+    var a = wAvgF(lines, function (f) { return f.ret.ytd; }), b = wAvgF(lines, function (f) { return f.ret.y1; }), c3 = wAvgF(lines, function (f) { return f.ret.y3; }), v = wAvgF(lines, function (f) { return f.vol && f.vol[0]; }), sh = wAvgF(lines, function (f) { return f.sharpe && f.sharpe[0]; }), dd = wAvgF(lines, function (f) { return f.dd && f.dd[4]; }), co = wAvgF(lines, function (f) { return pnum(f.cost); });
+    var rk = fs.map(function (x) { return "<tr><td>" + esc(x.f.n) + '</td><td class="r">' + dkp(x.f.ret.ytd) + '</td><td class="r">' + dkp(x.f.ret.y1) + '</td><td class="r">' + dkp(x.f.vol && x.f.vol[0]) + '</td><td class="r">' + (x.f.sharpe && isNum(x.f.sharpe[0]) ? nf(x.f.sharpe[0], 2) : "n.d.") + '</td><td class="r">' + dkp(x.f.dd && isNum(x.f.dd[4]) ? Math.abs(x.f.dd[4]) : null) + "</td></tr>"; }).join("");
+    S.push(dkSlide("Rentabilidad y riesgo", "Medias ponderadas por el peso de cada fondo",
+      '<div class="dk-kpis">' + dkKpi("En el año", dkp(a)) + dkKpi("Último año", dkp(b)) + dkKpi("3 años anual", dkp(c3)) + dkKpi("Volatilidad", dkp(v)) + dkKpi("Sharpe", isNum(sh) ? nf(sh, 2) : "n.d.") + dkKpi("Coste medio", dkp(co, 2)) + "</div>" +
+      '<table class="dk-t dk-sm"><thead><tr><th>Fondo</th><th class="r">Año</th><th class="r">1 año</th><th class="r">Volatilidad</th><th class="r">Sharpe</th><th class="r">Caída máx.</th></tr></thead><tbody>' + rk + "</tbody></table>", n++));
+    for (var i = 0; i < fs.length; i += 2) {
+      var pair = fs.slice(i, i + 2);
+      S.push(dkSlide("Ideas clave por fondo", "", '<div class="dk-two">' + pair.map(function (x) {
+        return '<div class="dk-card"><h3>' + esc(x.f.n) + "</h3><small>" + esc(x.f.g) + " · " + esc(x.f.c) + " · peso " + nf(x.l.w, 1) + "%</small><ul>" + dkIdeas(x.f).map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + "</ul></div>";
+      }).join("") + "</div>", n++));
+    }
+    var w = [], big = fs.slice().sort(function (p, q) { return q.l.w - p.l.w; })[0];
+    fs.forEach(function (x) {
+      var f = x.f, v1 = f.vol && f.vol[0];
+      if (isNum(f.ret.y1) && f.ret.y1 < 0) w.push(f.n + ": ha cedido un " + dkp(Math.abs(f.ret.y1)) + " en el último año; lo seguimos de cerca y lo valoramos a medio plazo.");
+      else if (isNum(v1) && v1 >= 15) w.push(f.n + ": volatilidad elevada (" + dkp(v1) + "), con oscilaciones amplias a corto plazo.");
+      else if (isNum(f.top10) && f.top10 >= 50) w.push(f.n + ": cartera concentrada, las diez mayores posiciones suman el " + nf(f.top10, 0) + "%.");
+    });
+    if (big && big.l.w >= 25) w.push("Mayor posición: " + big.f.n + " con un " + nf(big.l.w, 1) + "% de la cartera.");
+    if (Math.abs(tw - 100) > 0.5) w.push("Los pesos suman " + nf(tw, 1) + "%.");
+    if (!w.length) w.push("Con los datos actuales no hay alertas relevantes. Revisaremos la cartera periódicamente.");
+    S.push(dkSlide("Puntos a vigilar", "Lo que seguiremos con atención", '<ul class="dk-w">' + w.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + '</ul><p class="dk-dis">La rentabilidad pasada no garantiza resultados futuros. Los datos proceden de Morningstar y esta información es orientativa, no constituye asesoramiento personalizado.</p>', n++));
+    dkPrint(S.join(""));
+  }
+  function deckFund(f) {
+    var r = f.ret, y = mailYear(), n = 2, S = [], v1 = f.vol && f.vol[0], sh = f.sharpe && f.sharpe[0];
+    S.push(dkCover("Ficha de fondo", f.n, f.g + " · " + f.c + " · " + dkDate()));
+    var yrs = (f.ann || []).map(function (v, i) { return { y: i === 0 ? "Año actual" : String(y - i), v: v }; }).filter(function (o, i) { return i <= 5 && isNum(o.v); }), mxv = 1;
+    yrs.forEach(function (o) { mxv = Math.max(mxv, Math.abs(o.v)); });
+    S.push(dkSlide("Resumen y rentabilidades", f.id + " · datos a " + dlong(f.nd),
+      '<div class="dk-kpis">' + dkKpi("En el año", dkp(r.ytd)) + dkKpi("Último año", dkp(r.y1)) + dkKpi("3 años anual", dkp(r.y3)) + dkKpi("5 años anual", dkp(r.y5)) + dkKpi("Volatilidad", dkp(v1)) + dkKpi("Sharpe", isNum(sh) ? nf(sh, 2) : "n.d.") + "</div>" +
+      '<div class="dk-two"><table class="dk-t dk-sm"><thead><tr><th>Periodo</th><th class="r">Rentabilidad</th></tr></thead><tbody>' + [["1 semana", r.w1], ["1 mes", r.m1], ["3 meses", r.m3], ["6 meses", r.m6], ["En el año", r.ytd], ["1 año", r.y1], ["3 años anual", r.y3], ["5 años anual", r.y5], ["10 años anual", r.y10]].filter(function (p) { return isNum(p[1]); }).map(function (p) { return "<tr><td>" + p[0] + '</td><td class="r">' + dkp(p[1]) + "</td></tr>"; }).join("") + "</tbody></table>" +
+      '<div class="dk-bars">' + yrs.map(function (o) { return '<div class="dk-br"><span>' + o.y + '</span><div><i style="width:' + Math.max(3, Math.abs(o.v) / mxv * 100) + "%;background:" + (o.v < 0 ? "#9aa3b2" : "#c8102e") + '"></i></div><b>' + dkp(o.v) + "</b></div>"; }).join("") + "</div></div>", n++));
+    S.push(dkSlide("Ideas clave", f.n, '<div class="dk-card dk-big"><ul>' + dkIdeas(f).map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + "</ul></div>", n++));
+    var d = ["ISIN " + f.id]; if (f.cost) d.push("coste neto " + f.cost); if (f.aum) d.push("patrimonio de " + String(f.aum).replace(/\s*EUR$/, "").replace(".", ",") + " millones de euros"); if (f.cre) d.push("creado el " + dlong(f.cre)); if (f.stars) d.push("Morningstar: " + f.stars + (f.stars === 1 ? " estrella" : " estrellas"));
+    var w = [];
+    if (isNum(v1) && v1 >= 15) w.push("Volatilidad elevada: puede registrar oscilaciones amplias a corto plazo.");
+    if (isNum(f.top10) && f.top10 >= 45) w.push("Cartera concentrada: pocas posiciones explican buena parte del resultado.");
+    if (f.worst && isNum(f.worst[0]) && f.worst[0] < 0) w.push("El peor mes del último año supuso un retroceso del " + dkp(Math.abs(f.worst[0])) + ".");
+    if (isNum(f.alpha) && f.alpha < 0) w.push("En tres años ha quedado algo por debajo de su referencia.");
+    if (!w.length) w.push("Con los datos actuales no hay alertas relevantes.");
+    S.push(dkSlide("Puntos a vigilar y datos prácticos", "", '<ul class="dk-w">' + w.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + '</ul><p class="dk-prac">' + esc(listJoin(d).replace(/^./, function (c) { return c.toUpperCase(); })) + '.</p><p class="dk-dis">La rentabilidad pasada no garantiza resultados futuros. Los datos proceden de Morningstar y esta información es orientativa, no constituye asesoramiento personalizado.</p>', n++));
+    dkPrint(S.join(""));
   }
 
   function viewCompare(raw) {
@@ -1230,7 +1338,7 @@
       '<button class="btn ghost danger" type="button" id="pfdel">Eliminar cartera</button></div>';
     app.innerHTML = h + footer("rv");
 
-    var pdfb = printBar(function () { var nm = document.getElementById("pfname"); var am = document.getElementById("pfamt"); return ["Cartera: " + (nm && nm.value || p.name), (am && am.value ? nf(+am.value, 0) + " €" : "Sin importe indicado")]; });
+    var pdfb = deckBtn(function () { var nm = document.getElementById("pfname"), am = document.getElementById("pfamt"); deckPortfolio(nm && nm.value || p.name, "", am && am.value ? +am.value : 0, p.lines); });
     var mailb = mailBtn(function () { var nm = document.getElementById("pfname"), am = document.getElementById("pfamt"); return pfMail(nm && nm.value || p.name, am && am.value ? +am.value : 0, p.lines); });
     var slot = document.getElementById("pfpdfslot"); slot.replaceWith(pdfb); if (unlocked()) pdfb.parentNode.insertBefore(mailb, pdfb);
     function save() { savePf(); }
@@ -1562,7 +1670,7 @@
       b.addEventListener("click", function () { var i = +b.getAttribute("data-mail"); mailModal(pfMail(CUR[i].name, CUR[i].amount || 0, CUR[i].lines, "Perfil: " + PROFILES[i].n.toLowerCase() + ".")); });
     });
     app.querySelectorAll("[data-pdf]").forEach(function (b) {
-      b.addEventListener("click", function () { var i = +b.getAttribute("data-pdf"); pdfNow("Cartera recomendada: " + CUR[i].name, "Perfil " + PROFILES[i].n.toLowerCase(), document.getElementById("rec" + i)); });
+      b.addEventListener("click", function () { var i = +b.getAttribute("data-pdf"); deckPortfolio(CUR[i].name, PROFILES[i].n, CUR[i].amount || 0, CUR[i].lines); });
     });
     app.querySelectorAll("[data-copy]").forEach(function (b) {
       b.addEventListener("click", function () {
@@ -1813,7 +1921,7 @@
       bld.w[big] += 100 - sum; drawAll();
     });
     document.getElementById("bmail").addEventListener("click", function () { var nm = document.getElementById("bname"), am = document.getElementById("bamt"); mailModal(pfMail(nm && nm.value || bld.name, am && am.value ? +am.value : 0, bldLines(), "Perfil: " + BPROF[bld.profile].n.toLowerCase() + ".")); });
-    document.getElementById("bpdf").addEventListener("click", function () { var nm = document.getElementById("bname"); pdfNow("Cartera: " + (nm && nm.value || bld.name || "Sin nombre"), "Perfil " + BPROF[bld.profile].n.toLowerCase()); });
+    document.getElementById("bpdf").addEventListener("click", function () { var nm = document.getElementById("bname"), am = document.getElementById("bamt"); deckPortfolio(nm && nm.value || bld.name || "Cartera", BPROF[bld.profile].n, am && am.value ? +am.value : 0, bldLines()); });
     document.getElementById("bsave").addEventListener("click", function () {
       var lines = bldLines();
       if (!lines.length) return;

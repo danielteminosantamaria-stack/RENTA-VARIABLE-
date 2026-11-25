@@ -921,3 +921,56 @@ body.gopen { overflow: hidden; }
 .privlk { opacity: .35; text-decoration: none; margin-left: 10px; font-size: 13px; }
 .privlk:hover { opacity: 1; }
 @media print { .privlk { display: none !important; } }
+
+/* ===== Presentación PDF ===== */
+@media screen { #deck { display: none !important; } }
+@media print {
+  body.pd > *:not(#deck) { display: none !important; }
+  body.pd #deck { display: block !important; }
+  .dk-s { width: 297mm; height: 210mm; box-sizing: border-box; padding: 16mm 20mm 14mm; position: relative; overflow: hidden; break-after: page; page-break-after: always; background: #fff; color: #1a2a4a; font-size: 18.2px; }
+  .dk-s:last-child { break-after: auto; page-break-after: auto; }
+  .dk-cv { background: #c8102e; color: #fff; padding: 0; }
+  .dk-tri { position: absolute; right: 0; top: 0; width: 0; height: 0; border-style: solid; border-width: 0 150mm 210mm 0; border-color: transparent #a30d25 transparent transparent; }
+  .dk-cvt { position: absolute; left: 24mm; top: 70mm; right: 110mm; }
+  .dk-cvt .dk-k { text-transform: uppercase; letter-spacing: .18em; font-size: 16.8px; opacity: .85; margin-bottom: 10px; }
+  .dk-cvt h1 { display: block !important; font-size: 56.0px; line-height: 1.12; margin: 0 0 14px; color: #fff; }
+  .dk-cvt p { font-size: 21.0px; margin: 0; opacity: .92; }
+  .dk-lg { position: absolute; left: 24mm; bottom: 16mm; font-weight: 700; font-size: 22.4px; letter-spacing: .04em; }
+  .dk-hd { border-bottom: 2px solid #c8102e; padding-bottom: 8px; margin-bottom: 14px; }
+  .dk-hd h2 { margin: 0; font-size: 33.6px; color: #c8102e; }
+  .dk-hd p { margin: 3px 0 0; color: #5f6971; font-size: 18.2px; }
+  .dk-ft { position: absolute; left: 20mm; right: 20mm; bottom: 8mm; display: flex; justify-content: space-between; font-size: 14.0px; color: #8a929c; border-top: 1px solid #e3e6ea; padding-top: 4px; }
+  .dk-t { width: 100%; border-collapse: collapse; font-size: 16.8px; }
+  .dk-t th { text-align: left; background: #f0f0f0; padding: 9px 10px; font-size: 15.4px; color: #1a2a4a; }
+  .dk-t td { padding: 9px 10px; border-bottom: 1px solid #e3e6ea; vertical-align: top; }
+  .dk-t small { display: block; color: #8a929c; font-size: 14.0px; }
+  .dk-t .r { text-align: right; white-space: nowrap; }
+  .dk-t tfoot td { font-weight: 700; color: #c8102e; border-top: 2px solid #c8102e; border-bottom: 0; }
+  .dk-sm { font-size: 15.4px; }
+  .dk-sm td, .dk-sm th { padding: 6px 10px; }
+  .dk-two { display: flex; gap: 12mm; align-items: flex-start; }
+  .dk-two > * { flex: 1; }
+  .dk-donut { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .dk-dn { width: 80mm; height: 80mm; border-radius: 50%; position: relative; }
+  .dk-dn i { position: absolute; inset: 19mm; background: #fff; border-radius: 50%; }
+  .dk-lgd { display: flex; gap: 14px; font-size: 16.8px; }
+  .dk-lgd u { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border-radius: 2px; }
+  .dk-bars { flex: 1.3; }
+  .dk-br { display: grid; grid-template-columns: 62mm 1fr 18mm; gap: 8px; align-items: center; margin-bottom: 11px; font-size: 16.1px; }
+  .dk-br div { background: #f0f0f0; height: 9px; border-radius: 5px; overflow: hidden; }
+  .dk-br i { display: block; height: 100%; background: #1a2a4a; }
+  .dk-br b { text-align: right; }
+  .dk-kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 12px; }
+  .dk-kpi { border: 1px solid #e3e6ea; border-top: 3px solid #c8102e; border-radius: 6px; padding: 12px 14px; }
+  .dk-kpi span { display: block; font-size: 14.0px; color: #5f6971; text-transform: uppercase; letter-spacing: .05em; }
+  .dk-kpi b { font-size: 28.0px; color: #1a2a4a; }
+  .dk-card { border: 1px solid #e3e6ea; border-left: 4px solid #c8102e; border-radius: 6px; padding: 18px 20px; }
+  .dk-card h3 { margin: 0 0 2px; font-size: 22.4px; color: #1a2a4a; }
+  .dk-card small { color: #8a929c; font-size: 15.4px; }
+  .dk-card ul, .dk-w { margin: 14px 0 0; padding-left: 22px; line-height: 1.6; font-size: 18.2px; }
+  .dk-card li, .dk-w li { margin-bottom: 8px; }
+  .dk-big ul { font-size: 22.4px; }
+  .dk-w { margin-top: 4px; font-size: 19.6px; }
+  .dk-prac { font-size: 16.8px; color: #5f6971; margin-top: 16px; }
+  .dk-dis { position: absolute; left: 20mm; right: 20mm; bottom: 18mm; font-size: 14.7px; color: #5f6971; }
+}
