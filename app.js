@@ -822,7 +822,7 @@
     if (f.aum) d.push("patrimonio de " + String(f.aum).replace(/\s*EUR$/, "").replace(".", ",") + " millones de euros");
     if (f.cre) d.push("creado el " + dlong(f.cre));
     L.push(pick(["Si te parece bien, lo comentamos con calma y vemos qué papel podría jugar en tu cartera según tu perfil y tu horizonte de inversión. Quedo a tu disposición para cualquier duda.", "Cuando quieras lo vemos con más detalle y valoramos si encaja con tu perfil y tus objetivos. Quedo a tu disposición.", "Si te interesa, lo repasamos juntos y vemos cómo podría encajar en tu cartera. Cualquier duda, me dices."]));
-    return { subject: "Información del fondo " + f.n, body: mailClean(L.join("\n")) };
+    return { subject: "Información del fondo " + f.n, body: mailClean(L.join("\n")), chart: function () { return mcFund(f); } };
   }
   function pfMail(name, amount, lines, extra) {
     var L = [], fs = lines.map(function (l) { return { l: l, f: byId(l.id) }; }).filter(function (x) { return x.f; }), tw = 0, rfW = 0, gs = {}, idx = 0;
@@ -861,15 +861,62 @@
     if (Math.abs(tw - 100) > 0.5) P.push("Ten en cuenta que los pesos suman " + nf(tw, 1) + "%.");
     L.push(pick(["A tener en cuenta", "Detalles de la cartera", "Para valorar"]), P.join(" ") + (pq < 0 ? " Es una cartera pensada para el medio y largo plazo, y los movimientos recientes entran dentro de lo esperable." : ""), "");
     L.push(pick(["Si te parece, la repasamos juntos y la ajustamos a tu perfil de riesgo y a tus objetivos. Quedo a tu disposición para cualquier duda.", "Cuando te venga bien la comentamos con calma y la adaptamos a lo que necesites. Quedo a tu disposición.", "Si te encaja, la vemos juntos y afinamos lo que haga falta. Cualquier duda, me dices."]));
-    return { subject: "Propuesta de cartera: " + (name || ""), body: mailClean(L.join("\n")) };
+    return { subject: "Propuesta de cartera: " + (name || ""), body: mailClean(L.join("\n")), chart: function () { return mcPf(name, amount, fs.filter(function (x) { return x.l.w > 0; }), tw, rfW); } };
+  }
+  /* ---- Gráficos para los correos ---- */
+  function mcCanvas(h) { var c = document.createElement("canvas"); c.width = 1200; c.height = h; var g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, 1200, h); return [c, g]; }
+  function mcTitle(g, t, sub) {
+    g.fillStyle = "#c8102e"; g.fillRect(0, 0, 1200, 10);
+    g.fillStyle = "#1a2a4a"; g.font = "bold 38px Arial, sans-serif"; g.textAlign = "left"; g.fillText(t.length > 52 ? t.slice(0, 50) + "…" : t, 50, 74);
+    g.fillStyle = "#6b7480"; g.font = "24px Arial, sans-serif"; g.fillText(sub, 50, 110);
+  }
+  function mcFund(f) {
+    var y = mailYear(), items = [];
+    (f.ann || []).forEach(function (v, i) { if (i <= 5 && isNum(v)) items.push([i === 0 ? "Año actual" : String(y - i), v]); });
+    var sub = "Rentabilidad año a año";
+    if (items.length < 3) { items = [["1 mes", f.ret.m1], ["3 meses", f.ret.m3], ["6 meses", f.ret.m6], ["En el año", f.ret.ytd], ["1 año", f.ret.y1], ["3 años anual", f.ret.y3]].filter(function (p) { return isNum(p[1]); }); sub = "Rentabilidad por periodos"; }
+    items.reverse();
+    var H = 150 + items.length * 62 + 40, cg = mcCanvas(H), c = cg[0], g = cg[1];
+    mcTitle(g, f.n, sub + " · datos a " + dlong(f.nd));
+    var mx = 1; items.forEach(function (p) { mx = Math.max(mx, Math.abs(p[1])); });
+    var x0 = 230, w = 700;
+    items.forEach(function (p, i) {
+      var yy = 150 + i * 62;
+      g.fillStyle = "#1a2a4a"; g.font = "26px Arial, sans-serif"; g.textAlign = "right"; g.fillText(p[0], x0 - 20, yy + 32);
+      g.fillStyle = "#eef0f3"; g.fillRect(x0, yy + 6, w, 34);
+      g.fillStyle = p[1] < 0 ? "#9aa3b2" : "#c8102e"; g.fillRect(x0, yy + 6, Math.max(6, Math.abs(p[1]) / mx * w), 34);
+      g.fillStyle = "#1a2a4a"; g.font = "bold 26px Arial, sans-serif"; g.textAlign = "left"; g.fillText(nf(p[1], 1) + "%", x0 + w + 16, yy + 32);
+    });
+    return c.toDataURL("image/png");
+  }
+  function mcPf(name, amount, fs, tw, rfW) {
+    var H = Math.max(620, 170 + fs.length * 56), cg = mcCanvas(H), c = cg[0], g = cg[1];
+    mcTitle(g, name || "Cartera", "Composición" + (amount > 0 ? " · " + nf(amount, 0) + " €" : ""));
+    var cx = 260, cy = 330, R = 150, rfp = tw ? rfW / tw : 0, a0 = -Math.PI / 2;
+    g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, R, a0, a0 + rfp * 2 * Math.PI); g.closePath(); g.fillStyle = "#1a2a4a"; g.fill();
+    g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, R, a0 + rfp * 2 * Math.PI, a0 + 2 * Math.PI); g.closePath(); g.fillStyle = "#c8102e"; g.fill();
+    g.beginPath(); g.arc(cx, cy, R * 0.58, 0, 2 * Math.PI); g.fillStyle = "#fff"; g.fill();
+    g.fillStyle = "#1a2a4a"; g.textAlign = "center"; g.font = "bold 54px Arial, sans-serif"; g.fillText(String(fs.length), cx, cy + 14); g.font = "20px Arial, sans-serif"; g.fillStyle = "#6b7480"; g.fillText("FONDOS", cx, cy + 44);
+    g.textAlign = "left"; g.font = "24px Arial, sans-serif";
+    g.fillStyle = "#1a2a4a"; g.fillRect(90, 565, 20, 20); g.fillText("Renta fija " + nf(rfp * 100, 0) + "%", 120, (565) + 18);
+    g.fillStyle = "#c8102e"; g.fillRect(330, 565, 20, 20); g.fillStyle = "#1a2a4a"; g.fillText("Renta variable " + nf(100 - rfp * 100, 0) + "%", 360, (565) + 18);
+    var mx = 1; fs.forEach(function (x) { mx = Math.max(mx, x.l.w); });
+    fs.slice().sort(function (p, q) { return q.l.w - p.l.w; }).forEach(function (x, i) {
+      var yy = 150 + i * 56, bw = 360, bx = 640, nm = x.f.n.length > 30 ? x.f.n.slice(0, 29) + "…" : x.f.n;
+      g.fillStyle = "#1a2a4a"; g.font = "21px Arial, sans-serif"; g.textAlign = "left"; g.fillText(nm, 520, yy + 4);
+      g.fillStyle = "#eef0f3"; g.fillRect(520, yy + 14, bw + 120, 16);
+      g.fillStyle = x.f.t === "rf" ? "#1a2a4a" : "#c8102e"; g.fillRect(520, yy + 14, Math.max(6, x.l.w / mx * (bw + 120)), 16);
+      g.fillStyle = "#1a2a4a"; g.font = "bold 22px Arial, sans-serif"; g.textAlign = "right"; g.fillText(nf(x.l.w, 1) + "%", 1150, yy + 4);
+    });
+    return c.toDataURL("image/png");
   }
   function mailModal(m) {
     var ov = document.getElementById("mailov");
     if (ov) ov.remove();
     ov = document.createElement("div"); ov.id = "mailov"; ov.className = "mov"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-label", "Redactar correo");
     ov.innerHTML = '<div class="mbox"><div class="mhd"><b>Correo</b><button type="button" class="gx" id="mclose">Cerrar</button></div>' +
-      '<label class="mlb">Asunto<input class="inp" id="msub" maxlength="200"></label><label class="mlb">Mensaje<textarea class="inp" id="mbody" rows="16"></textarea></label>' +
-      '<div class="row"><button type="button" class="btn" id="mcopy">Copiar mensaje</button><button type="button" class="btn ghost" id="mcopys">Copiar asunto</button><a class="btn ghost" id="mopen" href="#">Abrir en mi correo</a></div>' +
+      '<label class="mlb">Asunto<input class="inp" id="msub" maxlength="200"></label><label class="mlb">Mensaje<textarea class="inp" id="mbody" rows="16"></textarea></label>' + (m.chart ? '<div class="mlb">Gráfico del correo<img id="mimg" alt="Gráfico" style="display:block;width:100%;max-width:560px;border:1px solid #e3e6ea;border-radius:8px;margin-top:6px"></div>' : "") +
+      '<div class="row">' + (m.chart ? '<button type="button" class="btn" id="mcopyr">Copiar con gráfico</button>' : "") + '<button type="button" class="btn' + (m.chart ? " ghost" : "") + '" id="mcopy">Copiar mensaje</button>' + (m.chart ? '<a class="btn ghost" id="mdl" href="#" download="grafico.png">Descargar gráfico</a>' : "") + '<button type="button" class="btn ghost" id="mcopys">Copiar asunto</button><a class="btn ghost" id="mopen" href="#">Abrir en mi correo</a></div>' +
       '<p class="note" id="mnote">Puedes editar el texto antes de copiarlo. Sin destinatario: añádelo en tu correo.</p></div>';
     document.body.appendChild(ov);
     var sub = ov.querySelector("#msub"), body = ov.querySelector("#mbody"), note = ov.querySelector("#mnote");
@@ -885,6 +932,25 @@
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, fb); else fb();
     }
     ov.querySelector("#mcopy").addEventListener("click", function () { copy(body.value, "Mensaje copiado."); });
+    if (m.chart) {
+      var url = ""; try { url = m.chart(); } catch (x) { url = ""; }
+      var im = ov.querySelector("#mimg"), dl = ov.querySelector("#mdl"), cr = ov.querySelector("#mcopyr");
+      if (url) { im.src = url; dl.href = url; } else { im.style.display = "none"; }
+      cr.addEventListener("click", function () {
+        var blocks = body.value.split(/\n\s*\n/), h = "", tx = body.value;
+        blocks.forEach(function (bl, i) {
+          var ls = bl.split("\n").filter(function (x) { return x.trim(); });
+          if (!ls.length) return;
+          var head = ls.length > 1 && ls[0].length <= 42 && !/[.:]$/.test(ls[0]) && !/^[•·]/.test(ls[0]) && !/^\d+\./.test(ls[0]);
+          h += "<p style=\"margin:0 0 14px;font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#1a2a4a\">" + (head ? "<b>" + esc(ls[0]) + "</b><br>" + ls.slice(1).map(esc).join("<br>") : ls.map(esc).join("<br>")) + "</p>";
+          if (i === 2 && url) h += "<p style=\"margin:0 0 14px\"><img src=\"" + url + "\" width=\"600\" alt=\"Gráfico\"></p>";
+        });
+        function fb() { note.textContent = "Tu navegador no permite copiar con formato. Usa Copiar mensaje y Descargar gráfico, y adjunta la imagen."; }
+        if (navigator.clipboard && window.ClipboardItem) {
+          navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([h], { type: "text/html" }), "text/plain": new Blob([tx], { type: "text/plain" }) })]).then(function () { note.textContent = "Copiado con el gráfico. Pégalo en tu correo (si no sale la imagen, usa Descargar gráfico y adjúntala)."; }, fb);
+        } else fb();
+      });
+    }
     ov.querySelector("#mcopys").addEventListener("click", function () { copy(sub.value, "Asunto copiado."); });
     ov.querySelector("#mopen").addEventListener("click", function (e) {
       e.preventDefault();
