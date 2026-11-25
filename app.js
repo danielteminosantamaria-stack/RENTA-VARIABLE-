@@ -188,10 +188,6 @@
     P("ddmax", "Caída máxima", "Riesgo", function (f) { return f.dd[4]; }, { u: "%", d: 1 }),
     P("worst1", "Peor mes 1 año", "Riesgo", function (f) { return f.worst[0]; }, { u: "%", d: 1 }),
     P("pos1", "Meses en positivo 1 año", "Riesgo", function (f) { return f.pos[0]; }, { u: "%", d: 0 }),
-    P("skew1", "Asimetría 1 año", "Distribución", function (f) { return f.skew[0]; }),
-    P("skew3", "Asimetría 3 años", "Distribución", function (f) { return f.skew[1]; }),
-    P("kurt1", "Curtosis 1 año", "Distribución", function (f) { return f.kurt[0]; }),
-    P("kurt3", "Curtosis 3 años", "Distribución", function (f) { return f.kurt[1]; }),
     P("top10", "Peso top 10", "Otros", function (f) { return f.top10; }, { u: "%", d: 1 }),
     P("cost", "Coste neto", "Otros", function (f) { var n = parseFloat(String(f.cost || "").replace(",", ".")); return isFinite(n) ? n : null; }, { u: "%", d: 2 })
   ];
@@ -598,9 +594,7 @@
       ["Ratio MAR", f.mar, function (v) { return dec(v); }],
       ["Peor mes", f.worst, function (v) { return pct(v, false, 1); }],
       ["Meses en positivo", f.pos, function (v) { return pct(v, false, 0); }],
-      ["Caída máxima", [f.dd[0], f.dd[1], f.dd[2]], function (v) { return pct(v, false, 1); }],
-      ["Asimetría", f.skew, function (v) { return dec(v); }],
-      ["Curtosis", f.kurt, function (v) { return dec(v); }]
+      ["Caída máxima", [f.dd[0], f.dd[1], f.dd[2]], function (v) { return pct(v, false, 1); }]
     ].filter(function (x) { return x[1].some(isNum); });
     if (rows.length) {
       html += '<section class="block"><h3>Riesgo</h3><table class="rtable"><thead><tr><th scope="col"></th><th scope="col">1 año</th><th scope="col">3 años</th><th scope="col">5 años</th></tr></thead><tbody>' +
