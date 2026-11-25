@@ -1219,7 +1219,41 @@
       return { id: built[i].id, name: built[i].name, amount: null, lines: built[i].lines.map(function (l) { return { id: l.id, w: l.w }; }) };
     }
     var CUR = PROFILES.map(function (pr, i) { return cur(i); });
-    function persist(i) { EDIT[PROFILES[i].k] = { lines: CUR[i].lines, amount: CUR[i].amount }; saveRec(); }
+    PROFILES.forEach(function (pr, i) { ensureStart(i); });
+    function copyL(ls) { return ls.map(function (l) { return { id: l.id, w: l.w }; }); }
+    function navsFor(ids) { var o = {}; ids.forEach(function (id) { var f = byId(id), n = f ? navOf(f) : null; if (isNum(n) && n > 0) o[id] = n; }); return o; }
+    function ent(i) { var k = PROFILES[i].k; return EDIT[k] = EDIT[k] || {}; }
+    function ensureStart(i) {
+      var e = ent(i);
+      if (!e.start || !Array.isArray(e.start.lines0)) { e.start = { t: new Date().toISOString(), lines0: copyL(CUR[i].lines), navs: navsFor(CUR[i].lines.map(function (l) { return l.id; })) }; e.log = []; saveRec(); }
+      if (!Array.isArray(e.log)) e.log = [];
+    }
+    function persist(i) { var e = ent(i); e.lines = CUR[i].lines; e.amount = CUR[i].amount; saveRec(); }
+    function logChange(i, txt, beforeIds) {
+      var e = ent(i), ids = CUR[i].lines.map(function (l) { return l.id; });
+      (beforeIds || []).forEach(function (id) { if (ids.indexOf(id) === -1) ids.push(id); });
+      e.log.push({ t: new Date().toISOString(), txt: txt, lines: copyL(CUR[i].lines), navs: navsFor(ids) });
+      saveRec();
+    }
+    function fname(id) { var f = byId(id); return f ? f.n : id; }
+    function seg(lines, a, b) { var tw = 0, r = 0; lines.forEach(function (l) { var x = a[l.id], y = b[l.id]; if (l.w > 0 && x && y) { tw += l.w; r += l.w * (y / x - 1); } }); return tw ? r / tw : 0; }
+    function chain(points, now) { var acc = 1; points.forEach(function (pt, j) { acc *= 1 + seg(pt.lines, pt.navs, j + 1 < points.length ? points[j + 1].navs : now); }); return (acc - 1) * 100; }
+    function fdt(t) { try { return new Date(t).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" }); } catch (x) { return t; } }
+    function track(i) {
+      var e = ent(i), st = e.start;
+      if (!st) return "";
+      var all = {}; st.lines0.forEach(function (l) { all[l.id] = 1; }); e.log.forEach(function (g) { g.lines.forEach(function (l) { all[l.id] = 1; }); });
+      CUR[i].lines.forEach(function (l) { all[l.id] = 1; });
+      var now = navsFor(Object.keys(all)), pts = [{ lines: st.lines0, navs: st.navs }].concat(e.log.map(function (g) { return { lines: g.lines, navs: g.navs }; }));
+      var withCh = chain(pts, now), without = chain([pts[0]], now), d = withCh - without;
+      var nd = FUNDS.length ? FUNDS[0].nd : "";
+      var h = '<section class="block trk"><h3>Seguimiento desde el ' + esc(fdt(st.t)) + "</h3>" +
+        '<div class="kpis">' + kpi("Con tus cambios", ret(withCh), true) + kpi("Sin cambios", ret(without)) + kpi("Efecto de los cambios", '<span class="num ' + cls(d) + '">' + (d > 0 ? "+" : "") + nf(d, 2) + " pp</span>") + "</div>" +
+        '<p class="note">Rentabilidad acumulada con el valor liquidativo de cada fondo cuando se guardó cada cambio frente al último dato disponible' + (nd ? " (" + esc(nd) + ")" : "") + '. Los datos se actualizan cada semana, así que la cifra se mueve cuando entra un dato nuevo. Se supone que tras cada cambio la cartera queda con los pesos indicados. No incluye comisiones ni impuestos.</p>' +
+        '<h4 class="logh">Registro de cambios</h4>';
+      h += e.log.length ? '<ol class="chlog">' + e.log.slice().reverse().map(function (g) { return "<li><time>" + esc(fdt(g.t)) + "</time><span>" + esc(g.txt) + "</span></li>"; }).join("") + "</ol>" : '<p class="muted">Todavía no has hecho cambios sobre la propuesta.</p>';
+      return h + '<button type="button" class="btn ghost sm" data-rst="' + i + '">Reiniciar seguimiento desde hoy</button></section>';
+    }
     PROFILES.forEach(function (pr, i) {
       h += '<section class="rec" id="rec' + i + '"><div class="rechead"><div><h2>' + esc(pr.n) + '</h2><p class="muted">' + esc(pr.d) + " " + pr.wrf + "% renta fija, " + (100 - pr.wrf) + '% renta variable.</p></div>' +
         '<div class="row"><span class="chg" id="chg' + i + '"></span><button type="button" class="btn ghost" data-reset="' + i + '">Restablecer propuesta</button><button type="button" class="btn" data-copy="' + i + '">Copiar a mis carteras</button></div></div>' +
@@ -1241,9 +1275,19 @@
           CUR[+a[0]].lines[+a[1]].w = w === null ? 0 : Math.max(0, Math.min(100, w));
           persist(+a[0]); sum(+a[0]);
         });
+        inp.addEventListener("focus", function () { inp.setAttribute("data-prev", String(inp.value)); });
+        inp.addEventListener("change", function () {
+          var a = inp.getAttribute("data-w").split(":"), i = +a[0], l = CUR[i].lines[+a[1]], pv = parseNum(inp.getAttribute("data-prev"));
+          if (pv === null || Math.abs(pv - l.w) < 0.001) return;
+          logChange(i, "Peso de " + fname(l.id) + ": " + nf(pv, 1) + "% a " + nf(l.w, 1) + "%", []);
+          inp.setAttribute("data-prev", String(inp.value)); sum(i);
+        });
       });
       el.querySelectorAll("[data-del]").forEach(function (b) {
-        b.addEventListener("click", function () { var a = b.getAttribute("data-del").split(":"); CUR[+a[0]].lines.splice(+a[1], 1); persist(+a[0]); tbl(+a[0]); });
+        b.addEventListener("click", function () {
+          var a = b.getAttribute("data-del").split(":"), i = +a[0], before = CUR[i].lines.map(function (l) { return l.id; }), rm = CUR[i].lines.splice(+a[1], 1)[0];
+          persist(i); logChange(i, "Quitado " + fname(rm.id) + " (" + nf(rm.w, 1) + "%)", before); tbl(i);
+        });
       });
       sum(i);
     }
@@ -1269,14 +1313,21 @@
             return "<tr><td>" + m[0] + "</td><td>" + fm(a) + "</td><td>" + fm(b) + "</td><td>" + ds + "</td></tr>";
           }).join("") + "</tbody></table></div></section>";
       }
-      el.innerHTML = cmp + (p.lines.length ? summary(p) : "");
+      el.innerHTML = track(i) + cmp + (p.lines.length ? summary(p) : "");
+      var rb = el.querySelector("[data-rst]");
+      if (rb) rb.addEventListener("click", function () {
+        if (!window.confirm("Se borrará el registro de cambios y el seguimiento empezará hoy con la cartera actual. ¿Continuar?")) return;
+        var e = ent(i); delete e.start; ensureStart(i); sum(i);
+      });
     }
     PROFILES.forEach(function (pr, i) { tbl(i); });
     app.querySelectorAll("[data-reset]").forEach(function (b) {
       b.addEventListener("click", function () {
         var i = +b.getAttribute("data-reset");
-        delete EDIT[PROFILES[i].k]; saveRec();
-        CUR[i] = { id: built[i].id, name: built[i].name, amount: null, lines: built[i].lines.map(function (l) { return { id: l.id, w: l.w }; }) };
+        var before = CUR[i].lines.map(function (l) { return l.id; });
+        delete ent(i).lines; saveRec();
+        CUR[i] = { id: built[i].id, name: built[i].name, amount: null, lines: copyL(built[i].lines) };
+        logChange(i, "Restablecida la propuesta original", before);
         tbl(i);
       });
     });
@@ -1291,8 +1342,9 @@
             e.preventDefault();
             if (CUR[i].lines.length >= 40) return;
             var rest = Math.max(0, Math.round((100 - sumW(CUR[i])) * 100) / 100);
+            var before = CUR[i].lines.map(function (l) { return l.id; });
             CUR[i].lines.push({ id: a.getAttribute("data-add"), w: rest });
-            persist(i); q.value = ""; res.innerHTML = ""; tbl(i);
+            persist(i); logChange(i, "Añadido " + fname(a.getAttribute("data-add")) + " (" + nf(rest, 1) + "%)", before); q.value = ""; res.innerHTML = ""; tbl(i);
           });
         });
       });
