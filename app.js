@@ -54,7 +54,7 @@
   function footer(t) {
     var date = (t && META[t]) || META.rf || META.rv || "";
     return (window.NEWSLETTER && window.NEWSLETTER.mini ? window.NEWSLETTER.mini() : "") + '<footer class="foot"><span>Datos Morningstar a ' + esc(date) + '</span>' +
-      '<span>Información orientativa. Las rentabilidades pasadas no garantizan resultados futuros.</span></footer>';
+      '<span>Información orientativa. Las rentabilidades pasadas no garantizan resultados futuros.</span><a class="privlk" href="#/acceso" title="Acceso privado">' + (unlocked() ? "🔓" : "🔒") + '</a></footer>';
   }
   function matches(f, q) {
     var n = norm(q);
@@ -653,7 +653,7 @@
     html += "</div>" + footer(f.t);
     app.innerHTML = html;
     var ft = document.getElementById("fundtools");
-    if (ft) { ft.appendChild(mailBtn(function () { return fundMail(f); })); ft.appendChild(pdfBtn(function () { return ["Ficha del fondo: " + f.n, f.g + " · " + f.id]; })); }
+    if (ft) { if (unlocked()) ft.appendChild(mailBtn(function () { return fundMail(f); })); ft.appendChild(pdfBtn(function () { return ["Ficha del fondo: " + f.n, f.g + " · " + f.id]; })); }
     var apb = document.getElementById("addpfBtn");
     if (apb) apb.addEventListener("click", function () {
       var p = pfById(document.getElementById("addpf").value);
@@ -1179,7 +1179,7 @@
 
     var pdfb = printBar(function () { var nm = document.getElementById("pfname"); var am = document.getElementById("pfamt"); return ["Cartera: " + (nm && nm.value || p.name), (am && am.value ? nf(+am.value, 0) + " €" : "Sin importe indicado")]; });
     var mailb = mailBtn(function () { var nm = document.getElementById("pfname"), am = document.getElementById("pfamt"); return pfMail(nm && nm.value || p.name, am && am.value ? +am.value : 0, p.lines); });
-    var slot = document.getElementById("pfpdfslot"); slot.replaceWith(pdfb); pdfb.parentNode.insertBefore(mailb, pdfb);
+    var slot = document.getElementById("pfpdfslot"); slot.replaceWith(pdfb); if (unlocked()) pdfb.parentNode.insertBefore(mailb, pdfb);
     function save() { savePf(); }
     function renderTable() {
       var t = document.getElementById("pftable");
@@ -1412,7 +1412,7 @@
     }
     PROFILES.forEach(function (pr, i) {
       h += '<section class="rec" id="rec' + i + '"><div class="rechead"><div><h2>' + esc(pr.n) + '</h2><p class="muted">' + esc(pr.d) + " " + pr.wrf + "% renta fija, " + (100 - pr.wrf) + '% renta variable.</p></div>' +
-        '<div class="row"><span class="chg" id="chg' + i + '"></span><button type="button" class="btn ghost" data-reset="' + i + '">Restablecer propuesta</button><button type="button" class="btn ghost" data-mail="' + i + '">Correo</button><button type="button" class="btn ghost" data-pdf="' + i + '">Descargar PDF</button><button type="button" class="btn" data-copy="' + i + '">Copiar a mis carteras</button></div></div>' +
+        '<div class="row"><span class="chg" id="chg' + i + '"></span><button type="button" class="btn ghost" data-reset="' + i + '">Restablecer propuesta</button>' + (unlocked() ? '<button type="button" class="btn ghost" data-mail="' + i + '">Correo</button>' : "") + '<button type="button" class="btn ghost" data-pdf="' + i + '">Descargar PDF</button><button type="button" class="btn" data-copy="' + i + '">Copiar a mis carteras</button></div></div>' +
         '<div class="search tight">' + icon() + '<input type="search" autocomplete="off" placeholder="Añadir fondo por nombre o ISIN" aria-label="Añadir fondo a ' + esc(pr.n) + '" data-q="' + i + '"></div><div class="results" data-res="' + i + '"></div>' +
         '<div data-tbl="' + i + '"></div><div data-sum="' + i + '"></div></section>';
     });
@@ -2429,6 +2429,12 @@
     });
   }
   function setNav() { /* el menú no cambia */ }
+  function viewAcceso() {
+    setTitle("Acceso privado");
+    app.innerHTML = '<div class="topbar"><a href="#/">← Inicio</a></div><header class="phero"><h1>🔓 Acceso privado activo</h1><p class="sub">En este navegador tienes desbloqueadas las funciones privadas (por ejemplo, el botón Correo en fondos y carteras, Construir cartera y la revisión de cartera). Los demás visitantes no las ven.</p></header>' +
+      '<div class="row tools2"><button type="button" class="btn ghost" id="privout">Cerrar acceso privado</button></div>' + footer("rv");
+    document.getElementById("privout").addEventListener("click", function () { try { localStorage.removeItem(LOCK.key); } catch (e) { /* sin almacenamiento */ } location.hash = "#/"; route(); });
+  }
 
   // ---------- amplitud de mercado (datos cifrados) ----------
   var AMP = { data: null, range: 126 };
@@ -2570,6 +2576,7 @@
     if (p[0] === "accion" && p[1]) return viewStock(decodeURIComponent(p[1]));
     if (p[0] === "favoritos" && window.FAVS) return window.FAVS.view(app, setTitle);
     if (p[0] === "gestora" && p[1] && window.FAVS) return window.FAVS.gestora(app, setTitle, decodeURIComponent(p[1]));
+    if (p[0] === "acceso") return gate("acceso", "Acceso privado", viewAcceso);
     if (p[0] === "amplitud") return viewAmplitud();
     if (p[0] === "gestion") return viewGestion();
     if (p[0] === "newsletter" && window.NEWSLETTER) return window.NEWSLETTER.view(app, setTitle);

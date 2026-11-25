@@ -917,3 +917,7 @@ body.gopen { overflow: hidden; }
 .mlb .inp { display: block; width: 100%; margin-top: 4px; font-family: inherit; font-size: 14px; color: var(--text); box-sizing: border-box; }
 .mlb textarea.inp { line-height: 1.5; resize: vertical; }
 @media print { .mov, #mailov { display: none !important; } body.po .rec:not(.pr-on) { display: none !important; } body.po .rec .rechead .row, body.po .rec .muted + .row { display: none !important; } }
+
+.privlk { opacity: .35; text-decoration: none; margin-left: 10px; font-size: 13px; }
+.privlk:hover { opacity: 1; }
+@media print { .privlk { display: none !important; } }
