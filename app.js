@@ -1027,7 +1027,7 @@
       else if (isNum(f.top10) && f.top10 >= 50) w.push(f.n + ": cartera concentrada (diez mayores posiciones: " + nf(f.top10, 0) + "%).");
     });
     if (!w.length) w.push("Con los datos actuales no hay alertas relevantes en ninguno de los fondos.");
-    S.push(dkSlide("Puntos a vigilar", "", '<ul class="dk-w">' + w.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + '</ul><p class="dk-dis">La rentabilidad pasada no garantiza resultados futuros. Los datos proceden de Morningstar y esta información es orientativa, no constituye asesoramiento personalizado.</p>', n++));
+    S.push(dkSlide("Puntos a vigilar", "", '<ul class="dk-w">' + w.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + '</ul>', n++));
     dkPrint(S.join(""));
   }
   function deckFund(f) {
@@ -1047,7 +1047,7 @@
     if (f.worst && isNum(f.worst[0]) && f.worst[0] < 0) w.push("El peor mes del último año supuso un retroceso del " + dkp(Math.abs(f.worst[0])) + ".");
     if (isNum(f.alpha) && f.alpha < 0) w.push("En tres años ha quedado algo por debajo de su referencia.");
     if (!w.length) w.push("Con los datos actuales no hay alertas relevantes.");
-    S.push(dkSlide("Puntos a vigilar y datos prácticos", "", '<ul class="dk-w">' + w.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + '</ul><p class="dk-prac">' + esc(listJoin(d).replace(/^./, function (c) { return c.toUpperCase(); })) + '.</p><p class="dk-dis">La rentabilidad pasada no garantiza resultados futuros. Los datos proceden de Morningstar y esta información es orientativa, no constituye asesoramiento personalizado.</p>', n++));
+    S.push(dkSlide("Puntos a vigilar", "", '<ul class="dk-w">' + w.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + '</ul>', n++));
     dkPrint(S.join(""));
   }
 
