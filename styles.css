@@ -1290,3 +1290,8 @@ h2.sec::before, .homesec h2::before, .sech::before { background: linear-gradient
 #pftable .wbar i { display: block; height: 100%; background: var(--c); border-radius: 3px; }
 #pftable tfoot td { background: var(--soft); font-size: 14.5px; padding-top: 14px; padding-bottom: 14px; border-top: 2px solid #111; }
 #pftable .x { color: #999; } #pftable .x:hover { color: #b42318; }
+
+#pftable .pfn { display: flex; align-items: center; gap: 10px; }
+#pftable .pfl { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 50%; background: #fff; border: 1px solid #e6dfe2; display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 9px; font-weight: 700; color: #777; }
+#pftable .pfl img { width: 18px; height: 18px; object-fit: contain; }
+#pftable .pft { min-width: 0; }
