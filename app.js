@@ -1327,34 +1327,72 @@
     return isFinite(v) ? v : null;
   }
   // Corrige errores típicos del OCR en un ISIN comparándolo con los fondos de la web (hasta 2 caracteres distintos)
-  function nearIsin(x) {
+  function isinCanon(x) { return x.replace(/[OQD]/g, "0").replace(/[IL]/g, "1").replace(/S/g, "5").replace(/B/g, "8").replace(/Z/g, "2"); }
+  function isinDist(x, y) {
+    if (x.length !== y.length || x.slice(0, 2) !== y.slice(0, 2)) return 99;
+    var a = isinCanon(x), b = isinCanon(y), d = 0;
+    for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) d++;
+    return d;
+  }
+  function nearIsin(x, extra) {
     if (byId(x)) return x;
     var best = null, bd = 3, tie = false;
-    FUNDS.forEach(function (f) {
-      if (f.id.length !== x.length || f.id.slice(0, 2) !== x.slice(0, 2)) return;
-      var d = 0; for (var i = 0; i < x.length; i++) if (f.id[i] !== x[i]) d++;
-      if (d < bd) { bd = d; best = f.id; tie = false; } else if (d === bd) tie = true;
+    FUNDS.map(function (f) { return f.id; }).concat(extra || []).forEach(function (id) {
+      var d = isinDist(x, id);
+      if (d < bd) { bd = d; best = id; tie = false; } else if (d === bd && id !== best) tie = true;
     });
     return best && !tie ? best : x;
   }
-  function tableImport(text) {
-    var rows = {}, order = [], miss = [], totAll = 0, n = 0;
-    String(text || "").split(/\r?\n/).forEach(function (ln) {
-      ln = ln.replace(/(\d[.,])\s+(\d)/g, "$1$2");
-      var m = /\b[A-Z]{2}[A-Z0-9]{9}\d\b/.exec(ln);
-      if (!m) return;
-      m = [nearIsin(m[0])].concat([]); m.index = (/\b[A-Z]{2}[A-Z0-9]{9}\d\b/.exec(ln) || { index: 0 }).index; m.len = (/\b[A-Z]{2}[A-Z0-9]{9}\d\b/.exec(ln) || [""])[0].length;
-      var rest = ln.slice(m.index + m.len), nums = (rest.match(/-?\d{1,3}(?:\.\d{3})*(?:,\d+)?|-?\d+(?:,\d+)?/g) || []).map(esNum).filter(function (v) { return v !== null; });
-      if (!nums.length) return;
-      var val = nums[nums.length - 1], nm = ln.slice(0, m.index).replace(/[\s\-–]+$/, "").trim();
+  function tableImport(input) {
+    var texts = Array.isArray(input) ? input : [input], cand = {}, order = [], names = {}, nIsin = {};
+    texts.forEach(function (text) {
+      var occ = {};
+      String(text || "").split(/\r?\n/).forEach(function (raw) {
+        var ln = raw.replace(/\b(EUR|EU|E|€)\b\.?/g, " "), mm = /\b[A-Z]{2}[A-Z0-9]{9}\d\b/.exec(ln);
+        if (!mm) return;
+        var isin = nearIsin(mm[0], order.map(function (k) { return cand[k].isin; })), rest = ln.slice(mm.index + mm[0].length);
+        // Errores típicos del OCR: coma sustituida por espacio o perdida
+        rest = rest.replace(/(\d{1,3}\.\d{3}),?\s+(\d{1,6})(?![\d.,])/g, "$1,$2").replace(/(\d,)\s+(\d{6})(?!\d)/g, "$1$2")
+          .split(/(\s+)/).map(function (t) {
+            if (/^\d{7,}$/.test(t)) return t.slice(0, -6) + "," + t.slice(-6);
+            if (/^\d{1,3}\.\d{3}\d{2}$/.test(t)) return t.slice(0, -2) + "," + t.slice(-2);
+            return t;
+          }).join("");
+        var toks = rest.split(/\s+/).map(function (t) { return t.replace(/[^\d.,\-]/g, ""); }).filter(function (t) { return /\d/.test(t); }), vals = [];
+        toks.forEach(function (t) { var v = esNum(t.replace(/[.,]$/, "")); if (v !== null) vals.push({ v: v, dec: (/,(\d*)$/.exec(t) || [0, ""])[1].length }); });
+        if (!vals.length) return;
+        var a = null, b = null, c = vals[vals.length - 1];
+        if (vals.length >= 3) { a = vals[0]; b = vals[1]; } else if (vals.length === 2) { b = vals[0]; }
+        occ[isin] = (occ[isin] || 0) + 1;
+        var key = isin + "#" + occ[isin];
+        if (!cand[key]) { cand[key] = { isin: isin, list: [] }; order.push(key); names[key] = ln.slice(0, mm.index).replace(/[\s\-–]+$/, "").trim(); }
+        cand[key].list.push({ a: a, b: b, c: c });
+        nIsin[key] = (nIsin[key] || 0) + 1;
+      });
+    });
+    var rows = {}, miss = [], totAll = 0, n = 0, lines = [];
+    function pick(list) {
+      // 1) lectura coherente: participaciones por precio igual al valor
+      var good = list.filter(function (x) { return x.a && x.b && x.c.v > 0 && Math.abs(x.a.v * x.b.v - x.c.v) / (x.a.v * x.b.v) < 0.01; });
+      if (good.length) return good.sort(function (p, q) { return q.c.dec - p.c.dec; })[0].c.v;
+      // 2) participaciones completas (3 o más decimales) por precio, si el valor leído no cuadra
+      var prod = list.filter(function (x) { return x.a && x.b && x.a.dec >= 3 && x.b.dec >= 2; });
+      if (prod.length) return prod[0].a.v * prod[0].b.v;
+      // 3) el valor más repetido entre lecturas (a igualdad, el mayor: los errores recortan cifras)
+      var cnt = {}; list.forEach(function (x) { var k = Math.round(x.c.v); cnt[k] = (cnt[k] || 0) + 1; });
+      var ks = Object.keys(cnt).map(Number).sort(function (p, q) { return cnt[q] - cnt[p] || q - p; });
+      var best = list.filter(function (x) { return Math.round(x.c.v) === ks[0]; })[0];
+      return best ? best.c.v : 0;
+    }
+    order.forEach(function (k) {
+      var val = pick(cand[k].list);
       if (!(val > 0)) return;
       n++; totAll += val;
-      if (!rows[m[0]]) { rows[m[0]] = { isin: m[0], n: nm, v: 0, p: nums.length > 2 ? nums[0] : null }; order.push(m[0]); }
-      rows[m[0]].v += val;
+      rows[k] = { isin: cand[k].isin, n: names[k], v: val };
     });
-    var lines = [];
     order.forEach(function (k) {
-      var r = rows[k], f = byId(k);
+      var r = rows[k]; if (!r) return;
+      var f = byId(r.isin);
       if (f) lines.push({ id: f.id, w: Math.round(r.v / totAll * 10000) / 100, v: r.v });
       else miss.push(r.n + " (" + r.isin + ", " + nf(r.v / totAll * 100, 1) + " %)");
     });
@@ -1381,13 +1419,35 @@
     });
   }
   function imageText(file) {
+    // Varias lecturas con distinto tratamiento de la imagen; después se cruzan (participaciones por precio igual a valor)
+    var PASSES = [[2, 160], [3, 0], [4, 0], [6, 160]];
     return new Promise(function (ok, ko) {
       var img = new Image(), url = URL.createObjectURL(file);
       img.onload = function () {
-        var k = Math.max(1, Math.min(4, 3200 / img.width)), cv = document.createElement("canvas"); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
-        var g = cv.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, cv.width, cv.height); g.filter = "grayscale(1) contrast(1.3)"; g.drawImage(img, 0, 0, cv.width, cv.height);
         URL.revokeObjectURL(url);
-        loadTesseract().then(function (T) { return T.recognize(cv, "eng", { tessedit_pageseg_mode: "6" }); }).then(function (r) { ok(r.data.text); }, ko);
+        var cvs = PASSES.map(function (p) {
+          var k = Math.max(1, Math.min(p[0], 3600 / img.width)), pad = 60, cv = document.createElement("canvas");
+          cv.width = Math.round(img.width * k) + 2 * pad; cv.height = Math.round(img.height * k) + 2 * pad;
+          var g = cv.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, cv.width, cv.height);
+          g.imageSmoothingQuality = "high"; g.drawImage(img, pad, pad, Math.round(img.width * k), Math.round(img.height * k));
+          var d = g.getImageData(0, 0, cv.width, cv.height), px = d.data;
+          for (var i = 0; i < px.length; i += 4) {
+            var y = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+            if (p[1]) y = y > p[1] ? 255 : 0; else y = Math.max(0, Math.min(255, (y - 40) * 1.25));
+            px[i] = px[i + 1] = px[i + 2] = y;
+          }
+          g.putImageData(d, 0, 0); return cv;
+        });
+        loadTesseract().then(function (T) {
+          return Promise.resolve(T.createWorker ? T.createWorker("eng") : null).then(function (w) {
+            if (!w || !w.recognize) { return Promise.all(cvs.map(function (cv) { return T.recognize(cv, "eng").then(function (r) { return r.data.text; }); })); }
+            var out = [], chain = Promise.resolve();
+            return Promise.resolve(w.setParameters ? w.setParameters({ tessedit_pageseg_mode: "6", preserve_interword_spaces: "1" }) : null).then(function () {
+              cvs.forEach(function (cv) { chain = chain.then(function () { return w.recognize(cv); }).then(function (r) { out.push(r.data.text); }); });
+              return chain;
+            }).then(function () { return w.terminate ? w.terminate() : null; }).then(function () { return out; });
+          });
+        }).then(ok, ko);
       };
       img.onerror = function () { URL.revokeObjectURL(url); ko(new Error("imagen")); };
       img.src = url;
