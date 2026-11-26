@@ -463,16 +463,7 @@ td, th { font-variant-numeric: tabular-nums; }
 .agtag { flex: 0 0 auto; min-width: 78px; text-align: center; font-size: .72rem; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #f1e9eb; color: #7a1a2c; }
 .ag-key { background: #c8102e; color: #fff; }
 
-.estag { display: inline-block; font-size: .72rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: #eee; color: #444; white-space: nowrap; }
-.es-alerta { background: #c8102e; color: #fff; } .es-oportunidad { background: #e3f3ea; color: #1d7a45; }
-.es-vigilar { background: #fdf1d9; color: #8a5a00; } .es-normal { background: #eee; color: #555; } .es-sindatos { background: #ddd; color: #666; }
-.es-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; }
-.es-chip { border: 1px solid var(--line, #e3d9dc); background: #fff; border-radius: 999px; padding: 6px 12px; font-size: .85rem; cursor: pointer; }
-.es-chip.on { background: var(--brand); color: #fff; border-color: var(--brand); }
-.es-cat { margin: 22px 0 8px; font-size: .95rem; color: var(--brand); }
-.esdot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 3px; background: #ddd; }
-.esdot.es-alerta { background: #c8102e; } .esdot.es-oportunidad { background: #1d7a45; } .esdot.es-vigilar { background: #e0a100; } .esdot.es-normal { background: #cfcfcf; }
-.estable .eswhy { min-width: 220px; white-space: normal; }
+
 
 /* ===== Tema corporativo estilo Renta 4 ===== */
 :root { --brand: #c8102e; --brand-2: #a50d26; --brand-soft: #fcebee; --dark: #1f1f1f; --soft: #f4f4f4; --line: #e3e3e3; }
@@ -508,7 +499,6 @@ h1 { color: var(--text); }
 .block h3, .gh { color: var(--brand); border-bottom-color: var(--brand); }
 th { background: var(--soft); color: var(--text); text-transform: uppercase; letter-spacing: .03em; font-size: 11.5px; }
 .kpis > * { border-radius: 0; }
-.es-chip { border-radius: 2px; } .es-chip.on { background: var(--brand); border-color: var(--brand); }
 .foot { background: var(--dark); color: #cfcfcf; padding: 18px 20px; margin-top: 40px; border-top: 3px solid var(--brand); }
 @media (max-width: 760px) {
   .site .sbar .in { height: auto; flex-direction: column; align-items: flex-start; gap: 0; padding-top: 8px; }
@@ -866,16 +856,6 @@ td.fund { display: flex; align-items: center; gap: 12px; }
 /* Buscador global, favoritos, gestora */
 .gbtn { display: inline-flex; align-items: center; gap: 7px; margin-left: 8px; padding: 7px 12px; border: 1px solid var(--line-strong); border-radius: 999px; background: #fff; color: var(--body); font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .gbtn:hover { border-color: var(--brand); color: var(--brand); }
-.favn { font-style: normal; background: var(--brand); color: #fff; border-radius: 999px; font-size: 10.5px; padding: 1px 6px; margin-left: 3px; vertical-align: 1px; }
-.star { border: 0; background: none; font-size: 19px; line-height: 1; color: #b9b9b9; cursor: pointer; padding: 2px 4px; flex: 0 0 auto; }
-.star:hover { color: #d9a400; }
-.star[aria-pressed="true"] { color: #e0a800; }
-td.stc, th.stc { width: 34px; padding-right: 0; text-align: center; }
-td.fund > .star { margin-right: -2px; }
-.h1star .star { font-size: 26px; vertical-align: 3px; }
-.favhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 26px 0 10px; }
-.favhead .sec { margin: 0; }
-.favhead small { color: var(--muted); font-weight: 600; font-size: 14px; }
 .gh { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
 .flogo.big { width: 56px; height: 56px; }
 .flogo.big img { width: 36px; height: 36px; }
@@ -1185,7 +1165,6 @@ th { background: #f5f6f7; color: #111; }
 .btn.ghost { background: #fff; color: var(--brand); border-color: var(--brand); }
 .btn.ghost:hover { background: var(--brand-soft); }
 .btn.danger { color: #c8102e; border-color: #c8102e; background: #fff; }
-.es-chip.on { background: #111; border-color: #111; color: #fff; }
 /* Pie */
 .foot { background: #f5f6f7 !important; color: #555 !important; border-top: 1px solid #dcdfe3 !important; padding: 18px 20px; }
 .foot a { color: var(--brand); }
@@ -1248,7 +1227,6 @@ h2.sec::before, .homesec h2::before, .sech::before { background: linear-gradient
 .mvbar i.neg { background: #b42318 !important; }
 .btn { border-radius: 8px; }
 .seg button[aria-pressed="true"], .btn.primary, .chip[aria-pressed="true"], .catchip[aria-pressed="true"] { background: var(--brand) !important; border-color: var(--brand) !important; }
-.es-chip.on { background: var(--brand); border-color: var(--brand); }
 .folder[aria-pressed="true"] { background: var(--brand-soft) !important; border-color: var(--brand) !important; }
 .folder[aria-pressed="true"] .mono { background: var(--brand) !important; }
 .chip, .catchip, .es-chip { border-radius: 99px; } .seg { border-radius: 8px; }
@@ -1362,4 +1340,17 @@ td.etfn small { display: block; color: var(--muted); font-size: 12px; font-weigh
   .etfr th, .etfr td { padding: 10px 6px; font-size: 13px; white-space: nowrap; }
   .etfr th:first-child, .etfr td:first-child { padding-left: 10px; }
   .etfr td.etfn small { display: none; }
+}
+
+/* Estado semanal: sigmas */
+.estable th:not(:first-child), .estable td:not(:first-child) { text-align: right; width: 150px; }
+.estable tr.big td:first-child a { font-weight: 700; }
+.sig { display: inline-block; min-width: 54px; text-align: right; padding: 3px 9px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+.sig.dn { background: #c8102e; color: #fff; font-weight: 700; }
+.sig.up { background: #1d7a45; color: #fff; font-weight: 700; }
+@media (max-width: 600px) {
+  .table-wrap table.estable { min-width: 0; width: 100%; table-layout: fixed; }
+  .table-wrap table.estable th, .table-wrap table.estable td { padding-left: 8px; padding-right: 8px; white-space: normal; min-width: 0; position: static; }
+  .table-wrap table.estable th:not(:first-child), .table-wrap table.estable td:not(:first-child) { width: 78px; }
+  .table-wrap table.estable th button { white-space: normal; text-align: inherit; }
 }

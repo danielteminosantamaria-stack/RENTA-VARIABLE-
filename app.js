@@ -141,7 +141,7 @@
         tile("#/acciones", "bolt", "Explorar", "Stocks", stocks().length + (stocks().length === 1 ? " ficha" : " fichas")),
         tile("#/etf", "grid", "🔒 Privado", "ETF", "seguimiento y caídas"),
         tile("#/amplitud", "trend", "🔒 Privado", "Amplitud de mercado", "NYSE y gráficos"),
-        tile("#/estado", "alert", "Cada lunes", "Estado semanal de fondos", "alertas y oportunidades"),
+        tile("#/estado", "alert", "Cada lunes", "Estado semanal de fondos", "sigma semanal y mensual"),
         tile("#/macro", "chart", "Para el cliente", "Macro", "gráficos y PDF"),
         tile("#/nota", "doc", "Cada día", "Nota diaria", "mercados y macro")
       ]) +
@@ -360,7 +360,7 @@
     body.innerHTML = '<div class="table-wrap"><table><thead><tr>' + th("n", "Fondo") +
       c.map(function (x) { return th(x.k, x.l); }).join("") + "</tr></thead><tbody>" +
       rows.map(function (f) {
-        return '<tr data-id="' + esc(f.id) + '" tabindex="0"><td class="fund">' + (window.FAVS ? window.FAVS.star("f", f.id) : "") + '<span class="flogo" aria-hidden="true">' + logoOrInit(f.g) + '</span><span class="ftxt"><b>' + esc(f.n) +
+        return '<tr data-id="' + esc(f.id) + '" tabindex="0"><td class="fund"><span class="flogo" aria-hidden="true">' + logoOrInit(f.g) + '</span><span class="ftxt"><b>' + esc(f.n) +
           (f.idx ? '<span class="tag">Indexado</span>' : "") + "</b><small>" + esc(f.g) + (f.c ? " · " + esc(f.c) : "") + vlTag(f) +
           "</small></span></td>" + c.map(function (x) { return "<td>" + x.r(f) + "</td>"; }).join("") + "</tr>";
       }).join("") + "</tbody></table></div>";
@@ -527,11 +527,11 @@
     setTitle(f.n);
     var r = f.ret, html = '<div class="fundpg">', TB = { res: "", ris: "", car: "", dat: "" };
     html += '<div class="topbar"><a href="#/' + f.t + '">← ' + esc(CATS[f.t].title) + '</a></div>';
-    html += '<h1 class="h1star">' + esc(f.n) + ' <span class="isin">' + esc(f.id) + "</span>" + (window.FAVS ? " " + window.FAVS.star("f", f.id) : "") + "</h1>";
+    html += '<h1 class="h1star">' + esc(f.n) + ' <span class="isin">' + esc(f.id) + "</span>" + "</h1>";
 
     html += '<p class="sub"><a href="#/gestora/' + encodeURIComponent(f.g) + '">' + esc(f.g) + "</a> · " + esc(f.c) + vlTag(f) + (f.idx ? ' <span class="tag">Indexado</span>' : "") + "</p>";
     var esd = window.ESTADO && window.ESTADO.fondos && window.ESTADO.fondos[f.id];
-    if (esd && esd.e) html += '<p class="sub"><a href="#/estado">Estado semanal</a>: ' + esTag(esd.e) + (esd.p ? " " + esc(esd.p) : "") + "</p>";
+    if (esd) html += '<p class="sub"><a href="#/estado">Estado semanal</a>: sigma semanal ' + sigTag(esd.sw) + " · sigma mensual " + sigTag(esd.sm) + "</p>";
     html += '<div class="row tools2" id="fundtools"></div><div class="kpis">' +
       kpi("Vol. 1 año", pct(f.vol[0], false, 1), true) + kpi("Sharpe 1 año", dec(f.sharpe[0]), true) +
       kpi("Último mes", ret(r.m1)) + kpi("Año", ret(r.ytd)) + kpi("1 año", ret(r.y1)) +
@@ -2778,7 +2778,7 @@
     var s = stockBy(t);
     if (!s) { viewNotFound(); return; }
     setTitle(s.n);
-    var h = '<div class="topbar"><a href="#/acciones">← Stocks</a></div><div class="fhead"><h1>' + stockLogo(s) + esc(s.n) + (window.FAVS ? " " + window.FAVS.star("s", s.t) : "") + '</h1><p class="muted">' + esc(s.t) + (s.g ? " · " + esc(s.g) : "") + (s.px != null ? " · Precio " + dec(s.px) : "") + (s.f ? " · Ficha del " + esc(s.f) : "") + "</p></div>" +
+    var h = '<div class="topbar"><a href="#/acciones">← Stocks</a></div><div class="fhead"><h1>' + stockLogo(s) + esc(s.n) + '</h1><p class="muted">' + esc(s.t) + (s.g ? " · " + esc(s.g) : "") + (s.px != null ? " · Precio " + dec(s.px) : "") + (s.f ? " · Ficha del " + esc(s.f) : "") + "</p></div>" +
       '<div class="kpis kp6">' + STCOLS.map(function (c) { return kpi(c[1], rcell(c[0], s[c[0]])); }).join("") + "</div>" +
       '<div class="grid2" style="margin-top:22px"><section class="block"><h3>Bloque técnico</h3>' +
       ((s.tec && s.tec.length) ? '<dl class="facts">' + s.tec.map(function (r) { return fact(r[0], esc(r[1])); }).join("") + "</dl>" : "") +
@@ -2809,40 +2809,40 @@
     app.innerHTML = h + footer("rv");
   }
 
-  var ES_ORDER = { "ALERTA": 0, "OPORTUNIDAD": 1, "VIGILAR": 2, "NORMAL": 3, "SIN DATOS": 4 };
-  var ESF = { f: "" };
-  function esTag(st) { return '<span class="estag es-' + String(st || "").toLowerCase().replace(/\s+/g, "") + '">' + esc(st || "") + "</span>"; }
+  // Sigmas: movimiento del periodo medido en desviaciones típicas del propio fondo
+  var SIG_MIN = 2.5; // a partir de este valor absoluto se resalta
+  var ESS = { k: "sw", dir: 1 };
+  function sigNum(v) { var n = v == null || v === "" ? NaN : parseFloat(String(v).replace(",", ".")); return isFinite(n) ? n : null; }
+  function sigBig(v) { var n = sigNum(v); return n !== null && Math.abs(n) >= SIG_MIN; }
+  function sigTag(v) {
+    var n = sigNum(v);
+    if (n === null) return '<span class="muted">–</span>';
+    return '<span class="sig' + (sigBig(v) ? (n < 0 ? " dn" : " up") : "") + '">' + (n > 0 ? "+" : "") + nf(n, 1) + "</span>";
+  }
   function viewEstado() {
     setTitle("Estado semanal de fondos");
     var E = window.ESTADO || { fondos: {} };
     var items = FUNDS.filter(function (f) { return f.t === "rv" && E.fondos && E.fondos[f.id]; });
     var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Estado semanal de fondos</h1>' +
-      '<p class="sub">' + (E.fecha ? "Informe del " + esc(E.fecha) + ". " : "") + 'Alertas, oportunidades y fondos a vigilar frente a su propio riesgo y a su categoría. Es una lectura de datos, no una recomendación.</p>';
+      '<p class="sub">' + (E.fecha ? "Datos del " + esc(E.fecha) + ". " : "") + "Resaltados los movimientos de " + nf(SIG_MIN, 1) + " sigmas o más (rojo caída, verde subida).</p>";
     if (!items.length) {
       app.innerHTML = h + '<div class="empty box" style="margin-top:18px;padding:34px 20px">Todavía no hay estado publicado. Se rellenará con el próximo informe semanal (lunes).</div>' + footer("rv");
       return;
     }
-    var cnt = {}; items.forEach(function (f) { var s = E.fondos[f.id].e || "NORMAL"; cnt[s] = (cnt[s] || 0) + 1; });
-    if (E.resumen) h += '<div class="box" style="margin-top:14px;padding:16px 18px"><p style="margin:0">' + esc(E.resumen) + "</p></div>";
-    h += '<div class="es-chips">' + ["", "ALERTA", "OPORTUNIDAD", "VIGILAR", "NORMAL", "SIN DATOS"].map(function (s) {
-      var n = s ? (cnt[s] || 0) : items.length;
-      return '<button type="button" class="es-chip' + (ESF.f === s ? " on" : "") + '" data-es="' + s + '">' + (s || "Todos") + " (" + n + ")</button>";
-    }).join("") + '</div><div id="esbody"></div>';
-    app.innerHTML = h + footer("rv");
-    app.querySelectorAll("[data-es]").forEach(function (b) { b.addEventListener("click", function () { ESF.f = b.getAttribute("data-es"); viewEstado(); }); });
-    var groups = {};
-    items.forEach(function (f) { if (!ESF.f || (E.fondos[f.id].e || "NORMAL") === ESF.f) (groups[f.c] = groups[f.c] || []).push(f); });
-    var out = "";
-    Object.keys(groups).sort().forEach(function (c) {
-      var list = groups[c].sort(function (a, b) { var x = E.fondos[a.id], y = E.fondos[b.id]; return (ES_ORDER[x.e] == null ? 9 : ES_ORDER[x.e]) - (ES_ORDER[y.e] == null ? 9 : ES_ORDER[y.e]) || a.n.localeCompare(b.n); });
-      out += '<h3 class="es-cat">' + esc(c) + '</h3><div class="table-wrap"><table class="estable"><thead><tr><th>Fondo</th><th>Estado</th><th>Cambio</th><th>4 semanas</th><th>Sigmas sem.</th><th>Sigmas mes</th><th>Sharpe 3A</th><th>Sharpe 1A</th><th>Por qué</th></tr></thead><tbody>' +
-        list.map(function (f) {
-          var d = E.fondos[f.id];
-          return '<tr><td><a href="#/fondo/' + encodeURIComponent(f.id) + '">' + esc(f.n) + "</a></td><td>" + esTag(d.e) + "</td><td>" + esc(d.c || "") + "</td><td>" +
-            (d.h || []).map(function (x) { return '<i class="esdot es-' + String(x).toLowerCase().replace(/\s+/g, "") + '" title="' + esc(x) + '"></i>'; }).join("") + "</td><td>" + esc(d.sw == null ? "–" : d.sw) + "</td><td>" + esc(d.sm == null ? "–" : d.sm) + "</td><td>" + esc(d.s3 == null ? "–" : d.s3) + "</td><td>" + esc(d.s1 == null ? "–" : d.s1) + '</td><td class="eswhy">' + esc(d.p || "") + "</td></tr>";
-        }).join("") + "</tbody></table></div>";
+    items.sort(function (a, b) {
+      if (ESS.k === "n") return ESS.dir * a.n.localeCompare(b.n, "es");
+      var x = sigNum(E.fondos[a.id][ESS.k]), y = sigNum(E.fondos[b.id][ESS.k]);
+      if (x === null && y === null) return 0; if (x === null) return 1; if (y === null) return -1;
+      return ESS.dir * (x - y);
     });
-    document.getElementById("esbody").innerHTML = out || '<p class="muted" style="margin-top:16px">Ningún fondo en este estado.</p>';
+    function th(k, l) { var on = ESS.k === k; return '<th scope="col"' + (on ? ' aria-sort="' + (ESS.dir > 0 ? "ascending" : "descending") + '"' : "") + '><button type="button" data-es="' + k + '">' + l + (on ? (ESS.dir > 0 ? " ↑" : " ↓") : "") + "</button></th>"; }
+    h += '<div class="table-wrap" style="margin-top:14px"><table class="estable"><thead><tr>' + th("n", "Fondo") + th("sw", "Sigma semanal") + th("sm", "Sigma mensual") + "</tr></thead><tbody>" +
+      items.map(function (f) {
+        var d = E.fondos[f.id];
+        return "<tr" + (sigBig(d.sw) || sigBig(d.sm) ? ' class="big"' : "") + '><td><a href="#/fondo/' + encodeURIComponent(f.id) + '">' + esc(f.n) + "</a></td><td>" + sigTag(d.sw) + "</td><td>" + sigTag(d.sm) + "</td></tr>";
+      }).join("") + "</tbody></table></div>";
+    app.innerHTML = h + footer("rv");
+    app.querySelectorAll("[data-es]").forEach(function (b) { b.addEventListener("click", function () { var k = b.getAttribute("data-es"); if (ESS.k === k) ESS.dir = -ESS.dir; else { ESS.k = k; ESS.dir = 1; } viewEstado(); }); });
   }
 
   /* ---- Macro ---- */
@@ -3210,8 +3210,7 @@
     if (p[0] === "nota") return viewNota();
     if (p[0] === "macro") return viewMacro();
     if (p[0] === "accion" && p[1]) return viewStock(decodeURIComponent(p[1]));
-    if (p[0] === "favoritos" && window.FAVS) return window.FAVS.view(app, setTitle);
-    if (p[0] === "gestora" && p[1] && window.FAVS) return window.FAVS.gestora(app, setTitle, decodeURIComponent(p[1]));
+    if (p[0] === "gestora" && p[1] && window.BUSCA) return window.BUSCA.gestora(app, setTitle, decodeURIComponent(p[1]));
     if (p[0] === "acceso") return gate("acceso", "Acceso privado", viewAcceso);
     if (p[0] === "amplitud") return viewAmplitud();
     if (p[0] === "etf") return gate("etf", "ETF", viewETF);

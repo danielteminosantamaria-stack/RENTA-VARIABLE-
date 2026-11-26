@@ -1,7 +1,6 @@
-/* Buscador global, favoritos y página de gestora. */
+/* Buscador global y página de gestora. */
 (function () {
   "use strict";
-  var KEY = "cf_favs";
   var FUNDS = (window.DATA && window.DATA.funds) || [];
   function UI() { return window.CFUI || {}; }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
@@ -10,49 +9,6 @@
   function stocks() { return window.STOCKS || []; }
   function fundBy(id) { for (var i = 0; i < FUNDS.length; i++) if (FUNDS[i].id === id) return FUNDS[i]; return null; }
   function stockBy(t) { var S = stocks(); for (var i = 0; i < S.length; i++) if (S[i].t === t) return S[i]; return null; }
-
-  // ---------- favoritos ----------
-  function load() {
-    try { var a = JSON.parse(localStorage.getItem(KEY) || "[]"); return Array.isArray(a) ? a.filter(function (x) { return typeof x === "string"; }) : []; } catch (e) { return []; }
-  }
-  var FAV = load();
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(FAV)); } catch (e) { /* sin almacenamiento */ } }
-  function has(k) { return FAV.indexOf(k) !== -1; }
-  function toggle(k) {
-    var i = FAV.indexOf(k);
-    if (i === -1) FAV.push(k); else FAV.splice(i, 1);
-    save();
-    paint();
-    return i === -1;
-  }
-  function paint() {
-    var els = document.querySelectorAll(".star[data-fav]");
-    for (var i = 0; i < els.length; i++) {
-      var on = has(els[i].getAttribute("data-fav"));
-      els[i].setAttribute("aria-pressed", String(on));
-      els[i].title = on ? "Quitar de favoritos" : "Añadir a favoritos";
-      els[i].setAttribute("aria-label", els[i].title);
-      els[i].textContent = on ? "★" : "☆";
-    }
-    var n = document.getElementById("favn");
-    if (n) { var c = FAV.filter(function (k) { return k.charAt(0) === "f" ? !!fundBy(k.slice(2)) : !!stockBy(k.slice(2)); }).length; n.textContent = c ? String(c) : ""; n.hidden = !c; }
-  }
-  function star(kind, id) {
-    var k = kind + ":" + id, on = has(k), t = on ? "Quitar de favoritos" : "Añadir a favoritos";
-    return '<button type="button" class="star" data-fav="' + esc(k) + '" aria-pressed="' + on + '" title="' + t + '" aria-label="' + t + '">' + (on ? "★" : "☆") + "</button>";
-  }
-  document.addEventListener("click", function (e) {
-    var b = e.target.closest && e.target.closest(".star[data-fav]");
-    if (!b) return;
-    e.stopPropagation(); e.preventDefault();
-    var k = b.getAttribute("data-fav"), was = has(k);
-    toggle(k);
-    if (location.hash.indexOf("#/favoritos") === 0 && was) route();
-  }, true);
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Enter" && e.target.closest && e.target.closest(".star[data-fav]")) e.stopPropagation();
-  }, true);
-  function route() { window.dispatchEvent(new Event("hashchange")); }
 
   // ---------- tabla de fondos reutilizable ----------
   var COLS = [
@@ -81,56 +37,15 @@
       return dir * (x - y);
     });
     function th(k, l) { var on = sk === k; return '<th scope="col"' + (on ? ' aria-sort="' + (dir > 0 ? "ascending" : "descending") + '"' : "") + '><button type="button" data-fs="' + k + '">' + l + (on ? (dir > 0 ? " ↑" : " ↓") : "") + "</button></th>"; }
-    var html = '<div class="table-wrap"><table><thead><tr><th scope="col" class="stc"></th>' + th("n", "Fondo") + COLS.map(function (c) { return th(c[0], c[1]); }).join("") + "</tr></thead><tbody>" +
+    var html = '<div class="table-wrap"><table><thead><tr>' + th("n", "Fondo") + COLS.map(function (c) { return th(c[0], c[1]); }).join("") + "</tr></thead><tbody>" +
       rows.map(function (f) {
-        return '<tr data-id="' + esc(f.id) + '" tabindex="0"><td class="stc">' + star("f", f.id) + '</td><td class="fund"><span class="flogo" aria-hidden="true">' + (u.logo ? u.logo(f.g) : "") + '</span><span class="ftxt"><b>' + esc(f.n) + (f.idx ? '<span class="tag">Indexado</span>' : "") + "</b><small>" + esc(f.g) + (f.c ? " · " + esc(f.c) : "") + (u.vl ? u.vl(f) : "") + "</small></span></td>" +
+        return '<tr data-id="' + esc(f.id) + '" tabindex="0"><td class="fund"><span class="flogo" aria-hidden="true">' + (u.logo ? u.logo(f.g) : "") + '</span><span class="ftxt"><b>' + esc(f.n) + (f.idx ? '<span class="tag">Indexado</span>' : "") + "</b><small>" + esc(f.g) + (f.c ? " · " + esc(f.c) : "") + (u.vl ? u.vl(f) : "") + "</small></span></td>" +
           COLS.map(function (c) { return "<td>" + cellOf(c, f) + "</td>"; }).join("") + "</tr>";
       }).join("") + "</tbody></table></div>";
     return { html: html, bind: function (root) {
       root.querySelectorAll("[data-fs]").forEach(function (b) { b.addEventListener("click", function () { var k = b.getAttribute("data-fs"); if (st.sort === k) st.dir = -dir; else { st.sort = k; st.dir = k === "n" ? 1 : -1; } redraw(); }); });
       root.querySelectorAll("tbody tr").forEach(function (tr) { function go() { location.hash = "#/fondo/" + encodeURIComponent(tr.getAttribute("data-id")); } tr.addEventListener("click", go); tr.addEventListener("keydown", function (e) { if (e.key === "Enter") go(); }); });
     } };
-  }
-
-  // ---------- vista de favoritos ----------
-  var FS = { sort: "n", dir: 1 }, SS = { sort: "n", dir: 1 };
-  function viewFavs(app, setTitle) {
-    var u = UI();
-    setTitle("Favoritos");
-    var fl = [], sl = [];
-    FAV.forEach(function (k) { var id = k.slice(2); if (k.charAt(0) === "f") { var f = fundBy(id); if (f) fl.push(f); } else if (k.charAt(0) === "s") { var s = stockBy(id); if (s) sl.push(s); } });
-    var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Favoritos</h1><p class="sub">Tu lista de fondos y stocks marcados con la estrella. Se guarda solo en este navegador.</p>';
-    if (!fl.length && !sl.length) {
-      app.innerHTML = h + '<div class="empty box" style="margin-top:18px;padding:34px 20px">Todavía no tienes favoritos. Pulsa la estrella ☆ junto a un fondo o un stock, o búscalos con el buscador de arriba.</div>' + (u.footer ? u.footer("rv") : "");
-      return;
-    }
-    h += '<div id="favf"></div><div id="favs"></div>';
-    app.innerHTML = h + (u.footer ? u.footer("rv") : "");
-    function drawF() {
-      var el = document.getElementById("favf");
-      if (!fl.length) { el.innerHTML = ""; return; }
-      var t = fundTable(fl, FS, drawF), ids = fl.slice(0, 6).map(function (f) { return encodeURIComponent(f.id); }).join(",");
-      el.innerHTML = '<div class="favhead"><h2 class="sec">Fondos <small>' + fl.length + "</small></h2>" + (fl.length > 1 ? '<a class="btn ghost sm" href="#/comparar/' + ids + '">Comparar' + (fl.length > 6 ? " los 6 primeros" : "") + "</a>" : "") + "</div>" + t.html;
-      t.bind(el);
-    }
-    function drawS() {
-      var el = document.getElementById("favs");
-      if (!sl.length) { el.innerHTML = ""; return; }
-      var rows = sl.slice().sort(function (a, b) {
-        var k = SS.sort, x = k === "n" ? a.n : a[k], y = k === "n" ? b.n : b[k], nx = x == null || x === "", ny = y == null || y === "";
-        if (nx && ny) return 0; if (nx) return 1; if (ny) return -1;
-        return typeof x === "string" ? SS.dir * x.localeCompare(y, "es") : SS.dir * (x - y);
-      });
-      var cols = [["comp", "Composite"], ["eps", "EPS"], ["rs", "RS"], ["smr", "SMR"], ["ad", "A/D"], ["peg", "PEG"]];
-      function th(k, l) { var on = SS.sort === k; return '<th scope="col"' + (on ? ' aria-sort="' + (SS.dir > 0 ? "ascending" : "descending") + '"' : "") + '><button type="button" data-ss2="' + k + '">' + l + (on ? (SS.dir > 0 ? " ↑" : " ↓") : "") + "</button></th>"; }
-      el.innerHTML = '<div class="favhead"><h2 class="sec">Stocks <small>' + sl.length + '</small></h2></div><div class="table-wrap"><table><thead><tr><th scope="col" class="stc"></th>' + th("n", "Stock") + cols.map(function (c) { return th(c[0], c[1]); }).join("") + "</tr></thead><tbody>" +
-        rows.map(function (s) {
-          return '<tr data-t="' + esc(s.t) + '" tabindex="0"><td class="stc">' + star("s", s.t) + '</td><td class="fund">' + (u.stockLogo ? u.stockLogo(s) : "") + '<span class="ftxt"><b>' + esc(s.t) + "</b><small>" + esc(s.n) + "</small></span></td>" + cols.map(function (c) { return "<td>" + (u.rcell ? u.rcell(c[0], s[c[0]]) : "–") + "</td>"; }).join("") + "</tr>";
-        }).join("") + "</tbody></table></div>";
-      el.querySelectorAll("[data-ss2]").forEach(function (b) { b.addEventListener("click", function () { var k = b.getAttribute("data-ss2"); if (SS.sort === k) SS.dir = -SS.dir; else { SS.sort = k; SS.dir = k === "n" ? 1 : -1; } drawS(); }); });
-      el.querySelectorAll("tbody tr").forEach(function (tr) { function go() { location.hash = "#/accion/" + encodeURIComponent(tr.getAttribute("data-t")); } tr.addEventListener("click", go); tr.addEventListener("keydown", function (e) { if (e.key === "Enter") go(); }); });
-    }
-    drawF(); drawS();
   }
 
   // ---------- página de gestora ----------
@@ -162,7 +77,6 @@
       else if (e.key === "Enter") { e.preventDefault(); var it = items[cur >= 0 ? cur : 0]; if (it) go(it); }
     });
     resEl.addEventListener("click", function (e) {
-      if (e.target.closest(".star")) return;
       var r = e.target.closest("[data-i]"); if (r) go(items[+r.getAttribute("data-i")]);
     });
   }
@@ -214,12 +128,12 @@
     }
     if (r.f.length) {
       h += sec("Fondos", r.f.length);
-      r.f.slice(0, 8).forEach(function (x) { var f = x[1]; items.push({ href: "#/fondo/" + encodeURIComponent(f.id) }); h += '<div class="gr" data-i="' + (items.length - 1) + '"><span class="flogo" aria-hidden="true">' + (u.logo ? u.logo(f.g) : "") + '</span><span class="gt"><b>' + esc(f.n) + "</b><small>" + esc(f.g) + " · " + esc(f.id) + (f.c ? " · " + esc(f.c) : "") + "</small></span>" + star("f", f.id) + "</div>"; });
+      r.f.slice(0, 8).forEach(function (x) { var f = x[1]; items.push({ href: "#/fondo/" + encodeURIComponent(f.id) }); h += '<div class="gr" data-i="' + (items.length - 1) + '"><span class="flogo" aria-hidden="true">' + (u.logo ? u.logo(f.g) : "") + '</span><span class="gt"><b>' + esc(f.n) + "</b><small>" + esc(f.g) + " · " + esc(f.id) + (f.c ? " · " + esc(f.c) : "") + "</small></span>" + "</div>"; });
       if (r.f.length > 8) h += '<p class="gmore">Y ' + (r.f.length - 8) + " fondos más. Afina la búsqueda para verlos.</p>";
     }
     if (r.s.length) {
       h += sec("Stocks", r.s.length);
-      r.s.slice(0, 5).forEach(function (x) { var s = x[1]; items.push({ href: "#/accion/" + encodeURIComponent(s.t) }); h += '<div class="gr" data-i="' + (items.length - 1) + '">' + (u.stockLogo ? u.stockLogo(s) : "") + '<span class="gt"><b>' + esc(s.t) + " · " + esc(s.n) + "</b><small>" + esc(s.g || "Stock") + "</small></span>" + star("s", s.t) + "</div>"; });
+      r.s.slice(0, 5).forEach(function (x) { var s = x[1]; items.push({ href: "#/accion/" + encodeURIComponent(s.t) }); h += '<div class="gr" data-i="' + (items.length - 1) + '">' + (u.stockLogo ? u.stockLogo(s) : "") + '<span class="gt"><b>' + esc(s.t) + " · " + esc(s.n) + "</b><small>" + esc(s.g || "Stock") + "</small></span>" + "</div>"; });
     }
     if (!items.length) h = '<p class="gempty">Sin resultados para «' + esc(q) + "».</p>";
     resEl.innerHTML = h; mark(0);
@@ -231,9 +145,7 @@
     else if (e.key === "Escape" && ov && !ov.hidden) close();
   });
   document.addEventListener("click", function (e) { if (e.target.closest && e.target.closest("#gbtn")) { e.preventDefault(); open(); } });
-  window.addEventListener("hashchange", function () { if (ov && !ov.hidden) close(); setTimeout(paint, 0); });
-  document.addEventListener("DOMContentLoaded", paint);
-  setTimeout(paint, 0);
+  window.addEventListener("hashchange", function () { if (ov && !ov.hidden) close(); });
 
-  window.FAVS = { has: has, toggle: toggle, star: star, paint: paint, view: viewFavs, gestora: viewGestora, open: open, count: function () { return FAV.length; } };
+  window.BUSCA = { gestora: viewGestora, open: open };
 })();

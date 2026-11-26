@@ -262,7 +262,7 @@
     [/estado semanal|novedad|que ha cambiado|alerta/, function (f) {
       var e = window.ESTADO && window.ESTADO.fondos && window.ESTADO.fondos[f.id];
       if (!e) return "No hay estado semanal registrado para este fondo.";
-      return typeof e === "string" ? esc(e) : li(Object.keys(e).filter(function (k) { return typeof e[k] === "string" || typeof e[k] === "number"; }).map(function (k) { return esc(k) + ": " + esc(e[k]); })); }],
+      return "Estado semanal (" + esc(window.ESTADO.fecha || "") + "): sigma semanal <b>" + esc(e.sw == null ? "–" : e.sw) + "</b> y sigma mensual <b>" + esc(e.sm == null ? "–" : e.sm) + "</b>."; }],
     [/ficha|informe|enlace|morningstar|documento|x-?ray|kid/, function (f) {
       var a = []; if (f.ms) a.push('<a href="' + esc(f.ms) + '" target="_blank" rel="noopener">Morningstar</a>'); if (f.ficha) a.push('<a href="' + esc(f.ficha) + '" target="_blank" rel="noopener">Ficha (KID)</a>'); if (f.informe) a.push('<a href="' + esc(f.informe) + '" target="_blank" rel="noopener">Informe periódico</a>'); return a.length ? "Enlaces: " + a.join(" · ") : "No hay enlaces para este fondo."; }]
   ];
@@ -418,8 +418,8 @@
       var vals = typeof n === "string" ? [n] : Object.keys(n).filter(function (k) { return typeof n[k] === "string"; }).map(function (k) { return n[k]; });
       return "<p><b>Nota diaria</b></p>" + vals.slice(0, 4).map(function (v) { return "<p>" + esc(v) + "</p>"; }).join("") + '<p><a href="#/nota">Ver completa →</a></p>';
     }
-    var e = window.ESTADO; if (!e || !e.resumen) return '<p>Todavía no hay estado semanal publicado. <a href="#/estado">Ir a Estado →</a></p>';
-    return "<p><b>Estado semanal</b> (" + esc(e.fecha || "") + ")</p><p>" + esc(e.resumen) + '</p><p><a href="#/estado">Ver completo →</a></p>';
+    var e = window.ESTADO; if (!e || !e.fondos) return '<p>Todavía no hay estado semanal publicado. <a href="#/estado">Ir a Estado →</a></p>';
+    return "<p><b>Estado semanal</b> (" + esc(e.fecha || "") + "): sigma semanal y mensual de cada fondo, con los movimientos importantes resaltados.</p>" + '<p><a href="#/estado">Ver tabla →</a></p>';
   }
   function acciones(t) {
     var S = window.STOCKS || []; if (!S.length) return "No hay fichas de acciones cargadas.";
@@ -446,7 +446,7 @@
     [/amplitud/, "#/amplitud", "Amplitud de mercado (privado)"], [/renta fija|\brf\b/, "#/rf", "Renta fija"], [/renta variable|\brv\b/, "#/rv", "Renta variable"],
     [/stocks|acciones|stock/, "#/acciones", "Stocks"], [/carteras?\b/, "#/carteras", "Carteras"], [/comparador/, "#/comparar", "Comparador"],
     [/construir/, "#/construir", "Construir cartera (privado)"], [/recomendad/, "#/recomendadas", "Recomendadas"], [/estado/, "#/estado", "Estado"],
-    [/nota/, "#/nota", "Nota diaria"], [/agenda/, "#/agenda", "Agenda"], [/gestion/, "#/gestion", "Gestión"], [/favorit/, "#/favoritos", "Favoritos"], [/newsletter|suscrib|boletin/, "#/newsletter", "Newsletter"], [/privacidad/, "#/privacidad", "Política de privacidad"], [/inicio|principal|home/, "#/", "Inicio"]
+    [/nota/, "#/nota", "Nota diaria"], [/agenda/, "#/agenda", "Agenda"], [/gestion/, "#/gestion", "Gestión"], [/newsletter|suscrib|boletin/, "#/newsletter", "Newsletter"], [/privacidad/, "#/privacidad", "Política de privacidad"], [/inicio|principal|home/, "#/", "Inicio"]
   ];
 
   var AYUDA = "<p>Puedo responder con los datos de esta web. Algunos ejemplos:</p><ul>" +
