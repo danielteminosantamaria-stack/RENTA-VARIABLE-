@@ -94,7 +94,6 @@
     pie: '<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>',
     brief: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M3 13h18M11 13v2h2v-2"/>',
     swap: '<path d="M4 8h14l-3-3M20 16H6l3 3"/><path d="M4 12h16" opacity=".35"/>',
-    spark: '<path d="M10 4l1.8 4.7L16.5 10.5l-4.7 1.8L10 17l-1.8-4.7L3.5 10.5l4.7-1.8z"/><path d="M18 3v4M16 5h4M18 16v4M16 18h4"/>',
     xray: '<path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M8 15v-3M12 15V9M16 15v-5"/>',
     scan: '<path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M8 12h8"/>',
     build: '<path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="8"/>', compare: '<path d="M8 3v18M16 3v18"/><path d="M3 8h5M16 16h5"/>',
@@ -137,8 +136,7 @@
       homeSection("Carteras", [
         tile("#/construir", "pie", "🔒 Privado", "Construir cartera", "con el cliente"),
         tile("#/comparar", "swap", "Herramienta", "Comparador de fondos", "hasta " + CMP_MAX + " fondos"),
-        tile("#/carteras", "brief", "Herramienta", "Xray", PF.length + (PF.length === 1 ? " cartera" : " carteras")),
-        tile("#/ia", "spark", "Cada trimestre", "Carteras", "3 perfiles")
+        tile("#/carteras", "brief", "Herramienta", "Xray", PF.length + (PF.length === 1 ? " cartera" : " carteras"))
       ]) +
       homeSection("Mercado y seguimiento", [
         tile("#/acciones", "bolt", "Explorar", "Stocks", stocks().length + (stocks().length === 1 ? " ficha" : " fichas")),
@@ -2258,250 +2256,7 @@
     return h + "</div>";
   }
 
-  // ---------- carteras recomendadas ----------
-  var PROFILES = [
-    { k: "conservador", n: "Conservadora", d: "Predomina la renta fija.", rf: 5, rv: 3, wrf: 70, rfVol: 4, rfNo: /High Yield|Emergente|Alt -|Otros/, rvVol: 16, rvNo: /Sector|Oro|Emergente|Small|Med\/Peq/ },
-    { k: "moderado", n: "Moderada", d: "Mitad renta fija, mitad renta variable.", rf: 4, rv: 4, wrf: 50, rfVol: 6, rfNo: /High Yield|Otros/, rvVol: 20, rvNo: /Sector|Oro/ },
-    { k: "dinamico", n: "Dinámica", d: "Predomina la renta variable.", rf: 2, rv: 6, wrf: 20, rfVol: 6, rfNo: /High Yield|Otros/, rvNo: /Oro|Recursos|Otros|Infraestructura/ }
-  ];
   function rankScore(f) { return (isNum(f.score && f.score[3]) ? f.score[3] : -99) + (f.stars || 0) / 100; }
-  function pickBest(t, n, maxVol, no) {
-    var seen = {}, out = [];
-    ofType(t).filter(function (f) {
-      return !f.idx && isNum(f.score && f.score[3]) && !(no && no.test(f.c)) && !(maxVol && !(isNum(f.vol[0]) && f.vol[0] <= maxVol));
-    })
-      .sort(function (a, b) { return rankScore(b) - rankScore(a); })
-      .forEach(function (f) { if (out.length < n && !seen[f.c]) { seen[f.c] = 1; out.push(f); } });
-    return out;
-  }
-  function buildProfile(pr) {
-    var rf = pickBest("rf", pr.rf, pr.rfVol, pr.rfNo), rv = pickBest("rv", pr.rv, pr.rvVol, pr.rvNo), lines = [], tot = 0;
-    [[rf, pr.wrf], [rv, 100 - pr.wrf]].forEach(function (g) {
-      g[0].forEach(function (f) { var w = Math.round(g[1] / g[0].length * 10) / 10; lines.push({ id: f.id, w: w }); tot += w; });
-    });
-    if (lines.length) lines[lines.length - 1].w = Math.round((lines[lines.length - 1].w + 100 - tot) * 10) / 10;
-    return { id: "rec-" + pr.k, name: "Cartera " + pr.n.toLowerCase(), amount: null, lines: lines };
-  }
-  var REC_KEY = "cf_rec";
-  function loadRec() { try { var v = JSON.parse(localStorage.getItem(REC_KEY) || "{}"); return v && typeof v === "object" && !Array.isArray(v) ? v : {}; } catch (e) { return {}; } }
-
-  // ---------- carteras IA (3 perfiles, rotación trimestral) ----------
-  function viewIA() {
-    setTitle("Carteras");
-    var C = window.CIA;
-    if (!C || !C.perfiles) { app.innerHTML = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Carteras</h1><div class="empty">Todavía no hay carteras congeladas.</div>'; return; }
-    var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Carteras</h1>' +
-      '<p class="sub">Tres carteras de 8 fondos, una por perfil, seleccionadas entre los fondos de la web. Se congelan cada trimestre (vigente: <b>' + esc(C.trimestre.replace("-", " ")) + "</b>, fijada el " + esc(C.fecha) + ") y en cada rotación se muestran las entradas y salidas.</p>" +
-      '<p class="note">Criterio: mejor puntuación Morningstar total (rating como desempate), un fondo por categoría, sin fondos indexados y con tope de volatilidad según el perfil. Propuesta orientativa y automática, no es asesoramiento personalizado. Rentabilidad pasada, no garantiza resultados futuros.</p>';
-    var prevQ = (C.historial || [])[0];
-    PROFILES.forEach(function (pr) {
-      var P = C.perfiles[pr.k]; if (!P) return;
-      var lines = P.lines.filter(function (l) { return byId(l.id); });
-      var y = 0, y1 = 0, rfw = 0, rfy = 0, rvy = 0, vv = 0, vw = 0, fl = 0, sinceW = 0;
-      lines.forEach(function (l) {
-        var f = byId(l.id), yy = isNum(f.ret.ytd) ? f.ret.ytd * l.w / 100 : 0;
-        y += yy; if (isNum(f.ret.y1)) y1 += f.ret.y1 * l.w / 100;
-        if (f.t === "rf") { rfw += l.w; rfy += yy; } else rvy += yy;
-        if (isNum(f.vol[0])) { vv += f.vol[0] * l.w; vw += l.w; }
-        var n0 = P.navs && P.navs[l.id], n1 = navOf(f);
-        if (n0 && n1) { fl += l.w * (n1 / n0 - 1); sinceW += l.w; }
-      });
-      var since = sinceW ? fl / sinceW : null;
-      h += '<section class="rec"><div class="rechead"><div><h2>' + esc(pr.n) + '</h2><p class="muted">' + esc(pr.d) + " " + pr.wrf + "% renta fija, " + (100 - pr.wrf) + "% renta variable.</p></div>" +
-        '<div class="row"><button type="button" class="btn ghost" data-save="' + pr.k + '">Guardar en Carteras</button></div></div>' +
-        '<div class="table-wrap"><table class="tbl"><thead><tr><th>Fondo</th><th>Categoría</th><th class="num">Peso</th><th class="num">Año</th><th class="num">1 año</th><th class="num">Vol. 1 año</th></tr></thead><tbody>' +
-        lines.map(function (l) {
-          var f = byId(l.id);
-          return '<tr><td><a href="#/fondo/' + encodeURIComponent(f.id) + '"><b>' + esc(f.n) + "</b></a><small>" + esc(f.g) + '</small></td><td>' + esc(f.c) + '</td><td class="num">' + nf(l.w, 1) + " %</td><td>" + ret(f.ret.ytd) + "</td><td>" + ret(f.ret.y1) + '</td><td class="num">' + pct(f.vol[0], false, 1) + "</td></tr>";
-        }).join("") + '</tbody><tfoot><tr><td colspan="2"><b>Cartera</b></td><td class="num">100 %</td><td>' + ret(y) + "</td><td>" + ret(y1) + '</td><td class="num">' + (vw ? pct(vv / vw, false, 1) : "–") + "</td></tr></tfoot></table></div>" +
-        '<div class="kpis" style="margin-top:14px">' + kpi("Aporta renta fija (año)", ret(rfy)) + kpi("Aporta renta variable (año)", ret(rvy)) + kpi("Desde la fijación", since === null ? "–" : ret(since * 100)) + "</div>";
-      if (prevQ && prevQ.perfiles && prevQ.perfiles[pr.k]) {
-        var old = prevQ.perfiles[pr.k].lines.map(function (l) { return l.id; }), cur = lines.map(function (l) { return l.id; });
-        var ins = cur.filter(function (i) { return old.indexOf(i) < 0; }), outs = old.filter(function (i) { return cur.indexOf(i) < 0; });
-        function nm(i) { var f = byId(i); return f ? f.n : i; }
-        h += '<p class="note"><b>Rotación frente a ' + esc(prevQ.trimestre.replace("-", " ")) + ":</b> " + (ins.length || outs.length
-          ? "entran " + (ins.length ? esc(ins.map(nm).join("; ")) : "ninguno") + "; salen " + (outs.length ? esc(outs.map(nm).join("; ")) : "ninguno") + "."
-          : "sin cambios de fondos.") + "</p>";
-      } else h += '<p class="note">Primera edición: aún no hay rotación anterior con la que comparar.</p>';
-      h += "</section>";
-    });
-    if ((C.historial || []).length) {
-      h += '<section class="block"><h3>Histórico de trimestres</h3><ul class="chlog">' + C.historial.map(function (q) {
-        return "<li><time>" + esc(q.trimestre.replace("-", " ")) + " · " + esc(q.fecha) + "</time><span>" + PROFILES.map(function (pr) {
-          var P = q.perfiles && q.perfiles[pr.k]; return pr.n + ": " + (P ? P.lines.map(function (l) { var f = byId(l.id); return esc(f ? f.n : l.id); }).join(", ") : "–");
-        }).join(" · ") + "</span></li>";
-      }).join("") + "</ul></section>";
-    }
-    app.innerHTML = h + footer("rv");
-    app.querySelectorAll("[data-save]").forEach(function (b) {
-      b.addEventListener("click", function () {
-        var pr = PROFILES.filter(function (x) { return x.k === b.getAttribute("data-save"); })[0], P = C.perfiles[pr.k];
-        PF.push({ id: uid(), name: "Cartera " + pr.n.toLowerCase() + " " + C.trimestre.replace("-", " "), amount: null, lines: P.lines.map(function (l) { return { id: l.id, w: l.w }; }) });
-        savePf(); location.hash = "#/carteras";
-      });
-    });
-  }
-
-  function viewRecommended() {
-    setTitle("Carteras recomendadas");
-    var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Carteras recomendadas</h1>' +
-      '<p class="sub">Tres carteras de 6 fondos por perfil, construidas con los datos de la web. Criterio: mejor puntuación Morningstar total (rating como desempate), un fondo por categoría, sin fondos indexados y con un tope de volatilidad a 1 año según el perfil (en la conservadora y la moderada, sin fondos sectoriales ni high yield).</p>' +
-      '<p class="note">Puedes cambiar pesos, quitar fondos o añadir otros. Los cambios se guardan en este navegador y la rentabilidad se recalcula frente a la propuesta original. Propuesta orientativa y automática, no es asesoramiento personalizado. Rentabilidad pasada no garantiza resultados futuros.</p>';
-    var built = PROFILES.map(buildProfile), EDIT = loadRec();
-    function saveRec() { try { localStorage.setItem(REC_KEY, JSON.stringify(EDIT)); } catch (e) { /* sin almacenamiento */ } }
-    function cur(i) {
-      var k = PROFILES[i].k, e = EDIT[k];
-      if (e && Array.isArray(e.lines)) {
-        var ls = e.lines.filter(function (l) { return l && typeof l.id === "string" && byId(l.id); }).map(function (l) { var w = parseNum(l.w); return { id: l.id, w: w === null ? 0 : Math.max(0, Math.min(100, w)) }; });
-        return { id: built[i].id, name: built[i].name, amount: e.amount > 0 ? e.amount : null, lines: ls };
-      }
-      return { id: built[i].id, name: built[i].name, amount: null, lines: built[i].lines.map(function (l) { return { id: l.id, w: l.w }; }) };
-    }
-    var CUR = PROFILES.map(function (pr, i) { return cur(i); });
-    PROFILES.forEach(function (pr, i) { ensureStart(i); });
-    function copyL(ls) { return ls.map(function (l) { return { id: l.id, w: l.w }; }); }
-    function navsFor(ids) { var o = {}; ids.forEach(function (id) { var f = byId(id), n = f ? navOf(f) : null; if (isNum(n) && n > 0) o[id] = n; }); return o; }
-    function ent(i) { var k = PROFILES[i].k; return EDIT[k] = EDIT[k] || {}; }
-    function ensureStart(i) {
-      var e = ent(i);
-      if (!e.start || !Array.isArray(e.start.lines0)) { e.start = { t: new Date().toISOString(), lines0: copyL(CUR[i].lines), navs: navsFor(CUR[i].lines.map(function (l) { return l.id; })) }; e.log = []; saveRec(); }
-      if (!Array.isArray(e.log)) e.log = [];
-    }
-    function persist(i) { var e = ent(i); e.lines = CUR[i].lines; e.amount = CUR[i].amount; saveRec(); }
-    function logChange(i, txt, beforeIds) {
-      var e = ent(i), ids = CUR[i].lines.map(function (l) { return l.id; });
-      (beforeIds || []).forEach(function (id) { if (ids.indexOf(id) === -1) ids.push(id); });
-      e.log.push({ t: new Date().toISOString(), txt: txt, lines: copyL(CUR[i].lines), navs: navsFor(ids) });
-      saveRec();
-    }
-    function fname(id) { var f = byId(id); return f ? f.n : id; }
-    function seg(lines, a, b) { var tw = 0, r = 0; lines.forEach(function (l) { var x = a[l.id], y = b[l.id]; if (l.w > 0 && x && y) { tw += l.w; r += l.w * (y / x - 1); } }); return tw ? r / tw : 0; }
-    function chain(points, now) { var acc = 1; points.forEach(function (pt, j) { acc *= 1 + seg(pt.lines, pt.navs, j + 1 < points.length ? points[j + 1].navs : now); }); return (acc - 1) * 100; }
-    function fdt(t) { try { return new Date(t).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" }); } catch (x) { return t; } }
-    function track(i) {
-      var e = ent(i), st = e.start;
-      if (!st) return "";
-      var all = {}; st.lines0.forEach(function (l) { all[l.id] = 1; }); e.log.forEach(function (g) { g.lines.forEach(function (l) { all[l.id] = 1; }); });
-      CUR[i].lines.forEach(function (l) { all[l.id] = 1; });
-      var now = navsFor(Object.keys(all)), pts = [{ lines: st.lines0, navs: st.navs }].concat(e.log.map(function (g) { return { lines: g.lines, navs: g.navs }; }));
-      var withCh = chain(pts, now), without = chain([pts[0]], now), d = withCh - without;
-      var nd = FUNDS.length ? FUNDS[0].nd : "";
-      var h = '<section class="block trk"><h3>Seguimiento desde el ' + esc(fdt(st.t)) + "</h3>" +
-        '<div class="kpis">' + kpi("Con tus cambios", ret(withCh), true) + kpi("Sin cambios", ret(without)) + kpi("Efecto de los cambios", '<span class="num ' + cls(d) + '">' + (d > 0 ? "+" : "") + nf(d, 2) + " pp</span>") + "</div>" +
-        '<p class="note">Rentabilidad acumulada con el valor liquidativo de cada fondo cuando se guardó cada cambio frente al último dato disponible' + (nd ? " (" + esc(nd) + ")" : "") + '. Los datos se actualizan cada semana, así que la cifra se mueve cuando entra un dato nuevo. Se supone que tras cada cambio la cartera queda con los pesos indicados. No incluye comisiones ni impuestos.</p>' +
-        '<h4 class="logh">Registro de cambios</h4>';
-      h += e.log.length ? '<ol class="chlog">' + e.log.slice().reverse().map(function (g) { return "<li><time>" + esc(fdt(g.t)) + "</time><span>" + esc(g.txt) + "</span></li>"; }).join("") + "</ol>" : '<p class="muted">Todavía no has hecho cambios sobre la propuesta.</p>';
-      return h + '<button type="button" class="btn ghost sm" data-rst="' + i + '">Reiniciar seguimiento desde hoy</button></section>';
-    }
-    PROFILES.forEach(function (pr, i) {
-      h += '<section class="rec" id="rec' + i + '"><div class="rechead"><div><h2>' + esc(pr.n) + '</h2><p class="muted">' + esc(pr.d) + " " + pr.wrf + "% renta fija, " + (100 - pr.wrf) + '% renta variable.</p></div>' +
-        '<div class="row"><span class="chg" id="chg' + i + '"></span><button type="button" class="btn ghost" data-reset="' + i + '">Restablecer propuesta</button>' + (unlocked() ? '<button type="button" class="btn ghost" data-mail="' + i + '">Correo</button>' : "") + '<button type="button" class="btn ghost" data-pdf="' + i + '">Descargar PDF</button><button type="button" class="btn" data-copy="' + i + '">Copiar a mis carteras</button></div></div>' +
-        '<div class="search tight">' + icon() + '<input type="search" autocomplete="off" placeholder="Añadir fondo por nombre o ISIN" aria-label="Añadir fondo a ' + esc(pr.n) + '" data-q="' + i + '"></div><div class="results" data-res="' + i + '"></div>' +
-        '<div data-tbl="' + i + '"></div><div data-sum="' + i + '"></div></section>';
-    });
-    app.innerHTML = h + footer("rv");
-    function tbl(i) {
-      var p = CUR[i], el = app.querySelector('[data-tbl="' + i + '"]');
-      if (!p.lines.length) { el.innerHTML = '<div class="table-wrap"><div class="empty">Sin fondos. Añade alguno con el buscador o restablece la propuesta.</div></div>'; sum(i); return; }
-      el.innerHTML = '<div class="table-wrap"><table><thead><tr><th scope="col">Fondo</th><th scope="col">Peso %</th><th scope="col">Año</th><th scope="col">1 año</th><th scope="col">Vol. 1 año</th><th scope="col">Rating</th><th scope="col"><span class="sr">Quitar</span></th></tr></thead><tbody>' +
-        p.lines.map(function (l, j) {
-          var f = byId(l.id);
-          return '<tr><td class="fund"><a href="#/fondo/' + encodeURIComponent(f.id) + '"><b>' + esc(f.n) + "</b></a><small>" + esc(f.g) + " · " + esc(f.c) + vlTag(f) + '</small></td><td><input class="inp w" type="number" min="0" max="100" step="0.5" value="' + (l.w || 0) + '" data-w="' + i + ":" + j + '" aria-label="Peso de ' + esc(f.n) + '"></td><td>' + ret(f.ret.ytd) + "</td><td>" + ret(f.ret.y1) + '</td><td class="num">' + pct(f.vol[0], false, 1) + "</td><td>" + (f.stars ? stars(f.stars) : "–") + '</td><td><button type="button" class="x" data-del="' + i + ":" + j + '" aria-label="Quitar ' + esc(f.n) + '">×</button></td></tr>';
-        }).join("") + '</tbody><tfoot><tr><td><b>Total</b></td><td class="num" data-tw="' + i + '"></td><td colspan="5"></td></tr></tfoot></table></div>';
-      el.querySelectorAll("[data-w]").forEach(function (inp) {
-        inp.addEventListener("input", function () {
-          var a = inp.getAttribute("data-w").split(":"), w = parseNum(inp.value);
-          CUR[+a[0]].lines[+a[1]].w = w === null ? 0 : Math.max(0, Math.min(100, w));
-          persist(+a[0]); sum(+a[0]);
-        });
-        inp.addEventListener("focus", function () { inp.setAttribute("data-prev", String(inp.value)); });
-        inp.addEventListener("change", function () {
-          var a = inp.getAttribute("data-w").split(":"), i = +a[0], l = CUR[i].lines[+a[1]], pv = parseNum(inp.getAttribute("data-prev"));
-          if (pv === null || Math.abs(pv - l.w) < 0.001) return;
-          logChange(i, "Peso de " + fname(l.id) + ": " + nf(pv, 1) + "% a " + nf(l.w, 1) + "%", []);
-          inp.setAttribute("data-prev", String(inp.value)); sum(i);
-        });
-      });
-      el.querySelectorAll("[data-del]").forEach(function (b) {
-        b.addEventListener("click", function () {
-          var a = b.getAttribute("data-del").split(":"), i = +a[0], before = CUR[i].lines.map(function (l) { return l.id; }), rm = CUR[i].lines.splice(+a[1], 1)[0];
-          persist(i); logChange(i, "Quitado " + fname(rm.id) + " (" + nf(rm.w, 1) + "%)", before); tbl(i);
-        });
-      });
-      sum(i);
-    }
-    function same(i) {
-      var a = CUR[i].lines, b = built[i].lines;
-      if (a.length !== b.length) return false;
-      return a.every(function (l, j) { return l.id === b[j].id && Math.abs(l.w - b[j].w) < 0.001; });
-    }
-    function sum(i) {
-      var p = CUR[i], o = built[i], el = app.querySelector('[data-sum="' + i + '"]'), tw = app.querySelector('[data-tw="' + i + '"]');
-      if (tw) tw.textContent = nf(sumW(p), 1) + "%";
-      var ch = !same(i), badge = document.getElementById("chg" + i);
-      badge.textContent = ch ? "Modificada" : "";
-      badge.hidden = !ch;
-      var mets = [["Rentabilidad del año", function (f) { return f.ret.ytd; }, "r"], ["Rentabilidad 1 año", function (f) { return f.ret.y1; }, "r"], ["Volatilidad 1 año", function (f) { return f.vol[0]; }, "v"], ["Sharpe 1 año", function (f) { return f.sharpe[0]; }, "d"]];
-      var cmp = "";
-      if (ch && p.lines.length) {
-        cmp = '<section class="block cmpbox"><h3>Efecto de tus cambios</h3><div class="table-wrap"><table><thead><tr><th scope="col">Métrica (media ponderada)</th><th scope="col">Propuesta original</th><th scope="col">Con tus cambios</th><th scope="col">Diferencia</th></tr></thead><tbody>' +
-          mets.map(function (m) {
-            var a = wAvg(o, m[1]).v, b = wAvg(p, m[1]).v, d = isNum(a) && isNum(b) ? b - a : null;
-            function fm(x) { return m[2] === "r" ? ret(x) : m[2] === "v" ? pct(x, false, 1) : dec(x); }
-            var ds = d === null ? "–" : m[2] === "v" ? '<span class="num">' + (d > 0 ? "+" : "") + nf(d, 1) + ' pp</span>' : m[2] === "d" ? '<span class="num ' + cls(d) + '">' + (d > 0 ? "+" : "") + dec(d) + "</span>" : '<span class="num ' + cls(d) + '">' + (d > 0 ? "+" : "") + nf(d, 2) + ' pp</span>';
-            return "<tr><td>" + m[0] + "</td><td>" + fm(a) + "</td><td>" + fm(b) + "</td><td>" + ds + "</td></tr>";
-          }).join("") + "</tbody></table></div></section>";
-      }
-      el.innerHTML = track(i) + cmp + (p.lines.length ? summary(p) : "");
-      var rb = el.querySelector("[data-rst]");
-      if (rb) rb.addEventListener("click", function () {
-        if (!window.confirm("Se borrará el registro de cambios y el seguimiento empezará hoy con la cartera actual. ¿Continuar?")) return;
-        var e = ent(i); delete e.start; ensureStart(i); sum(i);
-      });
-    }
-    PROFILES.forEach(function (pr, i) { tbl(i); });
-    app.querySelectorAll("[data-reset]").forEach(function (b) {
-      b.addEventListener("click", function () {
-        var i = +b.getAttribute("data-reset");
-        var before = CUR[i].lines.map(function (l) { return l.id; });
-        delete ent(i).lines; saveRec();
-        CUR[i] = { id: built[i].id, name: built[i].name, amount: null, lines: copyL(built[i].lines) };
-        logChange(i, "Restablecida la propuesta original", before);
-        tbl(i);
-      });
-    });
-    app.querySelectorAll("[data-q]").forEach(function (q) {
-      var i = +q.getAttribute("data-q"), res = app.querySelector('[data-res="' + i + '"]');
-      q.addEventListener("input", function () {
-        var v = q.value.trim();
-        if (!v) { res.innerHTML = ""; return; }
-        res.innerHTML = pickList(v, CUR[i].lines.map(function (l) { return l.id; }), function (f) { return '<a href="#" data-add="' + esc(f.id) + '">' + esc(f.n) + "<small>" + esc(f.g) + " · " + esc(f.c) + "</small></a>"; });
-        res.querySelectorAll("[data-add]").forEach(function (a) {
-          a.addEventListener("click", function (e) {
-            e.preventDefault();
-            if (CUR[i].lines.length >= 40) return;
-            var rest = Math.max(0, Math.round((100 - sumW(CUR[i])) * 100) / 100);
-            var before = CUR[i].lines.map(function (l) { return l.id; });
-            CUR[i].lines.push({ id: a.getAttribute("data-add"), w: rest });
-            persist(i); logChange(i, "Añadido " + fname(a.getAttribute("data-add")) + " (" + nf(rest, 1) + "%)", before); q.value = ""; res.innerHTML = ""; tbl(i);
-          });
-        });
-      });
-    });
-    app.querySelectorAll("[data-mail]").forEach(function (b) {
-      b.addEventListener("click", function () { var i = +b.getAttribute("data-mail"); mailModal(pfMail(CUR[i].name, CUR[i].amount || 0, CUR[i].lines, "Perfil: " + PROFILES[i].n.toLowerCase() + ".")); });
-    });
-    app.querySelectorAll("[data-pdf]").forEach(function (b) {
-      b.addEventListener("click", function () { var i = +b.getAttribute("data-pdf"); deckPortfolio(CUR[i].name, PROFILES[i].n, CUR[i].amount || 0, CUR[i].lines); });
-    });
-    app.querySelectorAll("[data-copy]").forEach(function (b) {
-      b.addEventListener("click", function () {
-        var i = +b.getAttribute("data-copy");
-        var c = cleanPf({ name: CUR[i].name + (same(i) ? "" : " (modificada)"), amount: null, lines: CUR[i].lines });
-        PF.push(c); savePf(); location.hash = "#/cartera/" + encodeURIComponent(c.id);
-      });
-    });
-  }
 
   // ---------- categorías ----------
   var cs = { cat: null, sort: "ytd", dir: -1, pick: false };
@@ -3822,8 +3577,6 @@
     if (p[0] === "privacidad" && window.NEWSLETTER) return window.NEWSLETTER.privacy(app, setTitle);
     if (p[0] === "construir") return gate("construir", "Construir cartera", viewBuild);
     if (p[0] === "categorias") { location.replace("#/"); return; }
-    if (p[0] === "recomendadas") { location.hash = "#/ia"; return; }
-    if (p[0] === "ia") return viewIA();
     if (p[0] === "cartera" && p[1]) return viewPortfolio(decodeURIComponent(p[1]));
     return viewNotFound();
   }
