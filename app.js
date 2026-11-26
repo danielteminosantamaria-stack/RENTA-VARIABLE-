@@ -1497,8 +1497,7 @@
       '<label class="amtl"><span class="muted">Importe (€)</span><input class="inp amt" id="pfamt" type="number" min="0" step="1000" value="' + (p.amount || "") + '" placeholder="Opcional"></label></div>' +
       '<div class="search tight">' + icon() + '<input id="pq" type="search" autocomplete="off" placeholder="Añadir fondo por nombre o ISIN" aria-label="Añadir fondo a la cartera"></div><div class="results" id="pres"></div>' +
       '<div id="pftable"></div><div id="pfsum"></div>' +
-      '<div class="row tools2"><a class="btn ghost" id="pfcmp" href="#/comparar">Comparar fondos</a>' +
-      '<button class="btn ghost" type="button" id="pfcsv">Exportar CSV</button>' +
+      '<div class="row tools2">' +
       '<span id="pfpdfslot"></span>' +
       '<button class="btn ghost" type="button" id="pfdup">Duplicar</button>' +
       '<button class="btn ghost danger" type="button" id="pfdel">Eliminar cartera</button></div>';
@@ -1533,7 +1532,7 @@
     }
     function setCmp() {
       var ids = p.lines.slice(0, CMP_MAX).map(function (l) { return l.id; });
-      document.getElementById("pfcmp").setAttribute("href", hashFor(ids));
+      var cm = document.getElementById("pfcmp"); if (cm) cm.setAttribute("href", hashFor(ids));
     }
     function refresh() {
       var tot = sumW(p);
@@ -1576,7 +1575,8 @@
         });
       });
     });
-    document.getElementById("pfcsv").addEventListener("click", function () {
+    var csvb = document.getElementById("pfcsv");
+    if (csvb) csvb.addEventListener("click", function () {
       var rows = [["ISIN", "Fondo", "Gestora", "Peso (%)", "Importe (EUR)"]].concat(p.lines.map(function (l) {
         var f = byId(l.id);
         return [f.id, f.n, f.g, String(l.w).replace(".", ","), p.amount ? String(Math.round(impOf(p, l) * 100) / 100).replace(".", ",") : ""];
