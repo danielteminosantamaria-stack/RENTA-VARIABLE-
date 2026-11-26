@@ -141,6 +141,7 @@
         tile("#/acciones", "bolt", "Explorar", "Stocks", stocks().length + (stocks().length === 1 ? " ficha" : " fichas")),
         tile("#/amplitud", "trend", "🔒 Privado", "Amplitud de mercado", "NYSE y gráficos"),
         tile("#/estado", "alert", "Cada lunes", "Estado semanal de fondos", "alertas y oportunidades"),
+        tile("#/macro", "chart", "Para el cliente", "Macro", "gráficos y PDF"),
         tile("#/nota", "doc", "Cada día", "Nota diaria", "mercados y macro")
       ]) +
       '<h2 class="sec">Movimientos de la semana</h2><div class="movers">' + moversPanel("rf") + moversPanel("rv") + "</div>" +
@@ -811,7 +812,7 @@
     if (f.aum) d.push("patrimonio de " + String(f.aum).replace(/\s*EUR$/, "").replace(".", ",") + " millones de euros");
     if (f.cre) d.push("creado el " + dlong(f.cre));
     L.push(pick(["Si te parece bien, lo comentamos con calma y vemos qué papel podría jugar en tu cartera según tu perfil y tu horizonte de inversión. Quedo a tu disposición para cualquier duda.", "Cuando quieras lo vemos con más detalle y valoramos si encaja con tu perfil y tus objetivos. Quedo a tu disposición.", "Si te interesa, lo repasamos juntos y vemos cómo podría encajar en tu cartera. Cualquier duda, me dices."]));
-    return { subject: "Información del fondo " + f.n, body: mailClean(L.join("\n")), chart: function () { return mcFund(f); } };
+    return { subject: "Información del fondo " + f.n, body: mailClean(L.join("\n")) + MAIL_PIE, chart: function () { return mcFund(f); } };
   }
   function pfMail(name, amount, lines, extra) {
     var L = [], fs = lines.map(function (l) { return { l: l, f: byId(l.id) }; }).filter(function (x) { return x.f; }), tw = 0, rfW = 0, gs = {}, idx = 0;
@@ -850,14 +851,22 @@
     if (Math.abs(tw - 100) > 0.5) P.push("Ten en cuenta que los pesos suman " + nf(tw, 1) + "%.");
     L.push(pick(["A tener en cuenta", "Detalles de la cartera", "Para valorar"]), P.join(" ") + (pq < 0 ? " Es una cartera pensada para el medio y largo plazo, y los movimientos recientes entran dentro de lo esperable." : ""), "");
     L.push(pick(["Si te parece, la repasamos juntos y la ajustamos a tu perfil de riesgo y a tus objetivos. Quedo a tu disposición para cualquier duda.", "Cuando te venga bien la comentamos con calma y la adaptamos a lo que necesites. Quedo a tu disposición.", "Si te encaja, la vemos juntos y afinamos lo que haga falta. Cualquier duda, me dices."]));
-    return { subject: "Propuesta de cartera: " + (name || ""), body: mailClean(L.join("\n")), chart: function () { return mcPf(name, amount, fs.filter(function (x) { return x.l.w > 0; }), tw, rfW); } };
+    return { subject: "Propuesta de cartera: " + (name || ""), body: mailClean(L.join("\n")) + MAIL_PIE, chart: function () { return mcPf(name, amount, fs.filter(function (x) { return x.l.w > 0; }), tw, rfW); } };
   }
   /* ---- Gráficos para los correos ---- */
+  var MC = { br: "#a3173f", bl: "#2a5ca8", ink: "#1c1c26", mut: "#717171", trk: "#ece8ea", pos: "#1f7a4d", neg: "#a3173f", line: "#e3dfe1" };
   function mcCanvas(h) { var c = document.createElement("canvas"); c.width = 1200; c.height = h; var g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, 1200, h); return [c, g]; }
+  function mcRR(g, x, y, w, h, r) { r = Math.min(r, h / 2, w / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
   function mcTitle(g, t, sub) {
-    g.fillStyle = "#c8102e"; g.fillRect(0, 0, 1200, 10);
-    g.fillStyle = "#1a2a4a"; g.font = "bold 38px Arial, sans-serif"; g.textAlign = "left"; g.fillText(t.length > 52 ? t.slice(0, 50) + "…" : t, 50, 74);
-    g.fillStyle = "#6b7480"; g.font = "24px Arial, sans-serif"; g.fillText(sub, 50, 110);
+    g.fillStyle = MC.br; g.fillRect(0, 0, 1200, 14);
+    g.fillStyle = MC.ink; g.font = "bold 40px Arial, sans-serif"; g.textAlign = "left"; g.fillText(t.length > 50 ? t.slice(0, 48) + "…" : t, 50, 78);
+    g.fillStyle = MC.mut; g.font = "24px Arial, sans-serif"; g.fillText(sub, 50, 114);
+    g.fillStyle = MC.line; g.fillRect(50, 138, 1100, 2);
+  }
+  function mcFoot(g, H, txt) {
+    g.fillStyle = MC.line; g.fillRect(50, H - 62, 1100, 2);
+    g.fillStyle = MC.mut; g.font = "19px Arial, sans-serif"; g.textAlign = "left"; g.fillText(txt, 50, H - 28);
+    g.fillStyle = MC.br; g.font = "bold 19px Arial, sans-serif"; g.textAlign = "right"; g.fillText("RENTA 4 BANCA PRIVADA", 1150, H - 28);
   }
   function mcFund(f) {
     var y = mailYear(), items = [];
@@ -865,39 +874,84 @@
     var sub = "Rentabilidad año a año";
     if (items.length < 3) { items = [["1 mes", f.ret.m1], ["3 meses", f.ret.m3], ["6 meses", f.ret.m6], ["En el año", f.ret.ytd], ["1 año", f.ret.y1], ["3 años anual", f.ret.y3]].filter(function (p) { return isNum(p[1]); }); sub = "Rentabilidad por periodos"; }
     items.reverse();
-    var H = 150 + items.length * 62 + 40, cg = mcCanvas(H), c = cg[0], g = cg[1];
-    mcTitle(g, f.n, sub + " · datos a " + dlong(f.nd));
-    var mx = 1; items.forEach(function (p) { mx = Math.max(mx, Math.abs(p[1])); });
-    var x0 = 230, w = 700;
+    var H = 190 + items.length * 64 + 90, cg = mcCanvas(H), c = cg[0], g = cg[1];
+    mcTitle(g, f.n, sub + " · " + f.g);
+    var mn = 0, mx = 1; items.forEach(function (p) { mn = Math.min(mn, p[1]); mx = Math.max(mx, p[1]); });
+    var x0 = 250, w = 640, k = w / (mx - mn), zx = x0 + (-mn) * k;
     items.forEach(function (p, i) {
-      var yy = 150 + i * 62;
-      g.fillStyle = "#1a2a4a"; g.font = "26px Arial, sans-serif"; g.textAlign = "right"; g.fillText(p[0], x0 - 20, yy + 32);
-      g.fillStyle = "#eef0f3"; g.fillRect(x0, yy + 6, w, 34);
-      g.fillStyle = p[1] < 0 ? "#9aa3b2" : "#c8102e"; g.fillRect(x0, yy + 6, Math.max(6, Math.abs(p[1]) / mx * w), 34);
-      g.fillStyle = "#1a2a4a"; g.font = "bold 26px Arial, sans-serif"; g.textAlign = "left"; g.fillText(nf(p[1], 1) + "%", x0 + w + 16, yy + 32);
+      var yy = 170 + i * 64, bw = Math.max(6, Math.abs(p[1]) * k), bx = p[1] < 0 ? zx - bw : zx;
+      g.fillStyle = MC.ink; g.font = "26px Arial, sans-serif"; g.textAlign = "right"; g.fillText(p[0], x0 - 24, yy + 34);
+      g.fillStyle = MC.trk; mcRR(g, x0, yy + 8, w, 34, 17); g.fill();
+      g.fillStyle = p[1] < 0 ? MC.neg : MC.pos; mcRR(g, bx, yy + 8, bw, 34, 17); g.fill();
+      g.fillStyle = p[1] < 0 ? MC.neg : MC.pos; g.font = "bold 28px Arial, sans-serif"; g.textAlign = "left"; g.fillText((p[1] > 0 ? "+" : "") + nf(p[1], 1) + "%", x0 + w + 22, yy + 36);
     });
+    if (mn < 0) { g.fillStyle = MC.ink; g.fillRect(zx - 1, 162, 2, items.length * 64 + 4); }
+    mcFoot(g, H, "Datos de Morningstar a " + dlong(f.nd) + ". La rentabilidad pasada no garantiza resultados futuros.");
     return c.toDataURL("image/png");
   }
   function mcPf(name, amount, fs, tw, rfW) {
-    var H = Math.max(620, 170 + fs.length * 56), cg = mcCanvas(H), c = cg[0], g = cg[1];
-    mcTitle(g, name || "Cartera", "Composición" + (amount > 0 ? " · " + nf(amount, 0) + " €" : ""));
-    var cx = 260, cy = 330, R = 150, rfp = tw ? rfW / tw : 0, a0 = -Math.PI / 2;
-    g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, R, a0, a0 + rfp * 2 * Math.PI); g.closePath(); g.fillStyle = "#1a2a4a"; g.fill();
-    g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, R, a0 + rfp * 2 * Math.PI, a0 + 2 * Math.PI); g.closePath(); g.fillStyle = "#c8102e"; g.fill();
-    g.beginPath(); g.arc(cx, cy, R * 0.58, 0, 2 * Math.PI); g.fillStyle = "#fff"; g.fill();
-    g.fillStyle = "#1a2a4a"; g.textAlign = "center"; g.font = "bold 54px Arial, sans-serif"; g.fillText(String(fs.length), cx, cy + 14); g.font = "20px Arial, sans-serif"; g.fillStyle = "#6b7480"; g.fillText("FONDOS", cx, cy + 44);
+    var H = Math.max(700, 200 + fs.length * 58 + 90), cg = mcCanvas(H), c = cg[0], g = cg[1];
+    mcTitle(g, name || "Cartera", "Composición" + (amount > 0 ? " · " + nf(amount, 0) + " €" : "") + " · " + fs.length + " fondos");
+    var cx = 270, cy = 380, R = 160, rfp = tw ? rfW / tw : 0, a0 = -Math.PI / 2;
+    function arc(a, b, col) { g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, R, a, b); g.closePath(); g.fillStyle = col; g.fill(); }
+    if (rfp > 0) arc(a0, a0 + rfp * 2 * Math.PI, MC.br);
+    if (rfp < 1) arc(a0 + rfp * 2 * Math.PI, a0 + 2 * Math.PI, MC.bl);
+    g.beginPath(); g.arc(cx, cy, R * 0.6, 0, 2 * Math.PI); g.fillStyle = "#fff"; g.fill();
+    g.fillStyle = MC.ink; g.textAlign = "center"; g.font = "bold 58px Arial, sans-serif"; g.fillText(String(fs.length), cx, cy + 14); g.font = "20px Arial, sans-serif"; g.fillStyle = MC.mut; g.fillText("FONDOS", cx, cy + 46);
     g.textAlign = "left"; g.font = "24px Arial, sans-serif";
-    g.fillStyle = "#1a2a4a"; g.fillRect(90, 565, 20, 20); g.fillText("Renta fija " + nf(rfp * 100, 0) + "%", 120, (565) + 18);
-    g.fillStyle = "#c8102e"; g.fillRect(330, 565, 20, 20); g.fillStyle = "#1a2a4a"; g.fillText("Renta variable " + nf(100 - rfp * 100, 0) + "%", 360, (565) + 18);
+    g.fillStyle = MC.br; mcRR(g, 80, 600, 20, 20, 5); g.fill(); g.fillStyle = MC.ink; g.fillText("Renta fija " + nf(rfp * 100, 0) + "%", 112, 618);
+    g.fillStyle = MC.bl; mcRR(g, 80, 640, 20, 20, 5); g.fill(); g.fillStyle = MC.ink; g.fillText("Renta variable " + nf(100 - rfp * 100, 0) + "%", 112, 658);
     var mx = 1; fs.forEach(function (x) { mx = Math.max(mx, x.l.w); });
     fs.slice().sort(function (p, q) { return q.l.w - p.l.w; }).forEach(function (x, i) {
-      var yy = 150 + i * 56, bw = 360, bx = 640, nm = x.f.n.length > 30 ? x.f.n.slice(0, 29) + "…" : x.f.n;
-      g.fillStyle = "#1a2a4a"; g.font = "21px Arial, sans-serif"; g.textAlign = "left"; g.fillText(nm, 520, yy + 4);
-      g.fillStyle = "#eef0f3"; g.fillRect(520, yy + 14, bw + 120, 16);
-      g.fillStyle = x.f.t === "rf" ? "#1a2a4a" : "#c8102e"; g.fillRect(520, yy + 14, Math.max(6, x.l.w / mx * (bw + 120)), 16);
-      g.fillStyle = "#1a2a4a"; g.font = "bold 22px Arial, sans-serif"; g.textAlign = "right"; g.fillText(nf(x.l.w, 1) + "%", 1150, yy + 4);
+      var yy = 176 + i * 58, bx = 540, bw = 470, nm = x.f.n.length > 40 ? x.f.n.slice(0, 39) + "…" : x.f.n;
+      g.fillStyle = MC.ink; g.font = "21px Arial, sans-serif"; g.textAlign = "left"; g.fillText(nm, bx, yy + 14);
+      g.fillStyle = MC.trk; mcRR(g, bx, yy + 24, bw, 14, 7); g.fill();
+      g.fillStyle = x.f.t === "rf" ? MC.br : MC.bl; mcRR(g, bx, yy + 24, Math.max(10, x.l.w / mx * bw), 14, 7); g.fill();
+      g.fillStyle = MC.ink; g.font = "bold 24px Arial, sans-serif"; g.textAlign = "right"; g.fillText(nf(x.l.w, 1) + "%", 1150, yy + 36);
     });
+    mcFoot(g, H, "Datos de Morningstar. Información orientativa, no es asesoramiento personalizado.");
     return c.toDataURL("image/png");
+  }
+  function mcBlock(g, y, title, rows, max, hasPrev) {
+    g.fillStyle = MC.br; g.font = "bold 22px Arial, sans-serif"; g.textAlign = "left"; g.fillText(title.toUpperCase(), 50, y);
+    g.fillStyle = MC.br; g.fillRect(50, y + 10, 1100, 2);
+    var bx = 400, bw = 520, mx = max || 0;
+    if (!max) rows.forEach(function (r) { mx = Math.max(mx, r.v, isNum(r.p) ? r.p : 0); });
+    mx = max || mx * 1.12;
+    rows.forEach(function (r, i) {
+      var cy = y + 52 + i * 52;
+      g.fillStyle = MC.ink; g.font = "24px Arial, sans-serif"; g.textAlign = "left"; g.fillText(r.n, 50, cy + 8);
+      g.fillStyle = MC.trk; mcRR(g, bx, cy - 10, bw, 22, 11); g.fill();
+      g.fillStyle = r.c; mcRR(g, bx, cy - 10, Math.max(8, r.v / mx * bw), 22, 11); g.fill();
+      if (isNum(r.p)) { var px = bx + Math.min(r.p, mx) / mx * bw; g.fillStyle = MC.ink; g.fillRect(px - 1.5, cy - 17, 3, 36); }
+      g.fillStyle = MC.ink; g.font = "bold 26px Arial, sans-serif"; g.fillText(r.t, bx + bw + 24, cy + 9);
+    });
+    return y + 52 + rows.length * 52 + 18;
+  }
+  function mcMacro() {
+    var M = mxData(), H = 1210, cg = mcCanvas(H), c = cg[0], g = cg[1];
+    mcTitle(g, "Entorno macroeconómico", "Inflación, tipos y bonos · datos a " + dlong(M.fecha));
+    var y = 196;
+    y = mcBlock(g, y, "Inflación (variación anual)", mxRows(["ipc_es", "ipc_ez", "ipc_us", "pce_us"], MC.br), 0, true);
+    y = mcBlock(g, y + 10, "Tipos de interés", mxRows(["bce", "fed", "estr", "eur12"], MC.bl), 0, true);
+    y = mcBlock(g, y + 10, "Bonos a 10 años", mxRows(["es10", "bund", "ust10"], MC.br), 0, true);
+    g.fillStyle = MC.mut; g.font = "19px Arial, sans-serif"; g.textAlign = "left"; g.fillText("La marca negra indica el dato anterior.", 50, y + 14);
+    mcFoot(g, H, "Fuentes: " + (M.fuentes || "").slice(0, 70) + ".");
+    return c.toDataURL("image/png");
+  }
+  function mailHtml(text, url) {
+    var ff = "font-family:Arial,Helvetica,sans-serif;color:#1c1c26;", h = '<div style="max-width:640px;' + ff + '"><div style="height:6px;background:#a3173f;border-radius:3px;margin:0 0 18px"></div>', blocks = text.split(/\n\s*\n/), shown = false;
+    blocks.forEach(function (bl, i) {
+      var ls = bl.split("\n").filter(function (x) { return x.trim(); });
+      if (!ls.length) return;
+      var head = ls.length > 1 && ls[0].length <= 42 && !/[.:]$/.test(ls[0]) && !/^[\u2022\u00b7]/.test(ls[0]) && !/^\d+\./.test(ls[0]);
+      var small = /^Como siempre, te recuerdo/.test(ls[0]);
+      var inner = (head ? '<div style="font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#a3173f;margin:0 0 5px">' + esc(ls[0]) + "</div>" : "") +
+        (head ? ls.slice(1) : ls).map(function (x) { return /^[\u2022\u00b7]/.test(x) ? '<div style="padding-left:14px;text-indent:-14px;margin:2px 0">' + esc(x) + "</div>" : esc(x); }).join("<br>");
+      h += '<div style="margin:0 0 16px;font-size:' + (small ? "12px;color:#717171;border-top:1px solid #e3dfe1;padding-top:12px" : "14.5px") + ';line-height:1.55">' + inner + "</div>";
+      if (!shown && url && (i >= 2 || i === blocks.length - 1)) { shown = true; h += '<div style="margin:4px 0 20px"><img src="' + url + '" width="600" alt="Gráfico" style="display:block;max-width:100%;height:auto;border:1px solid #e3dfe1;border-radius:10px"></div>'; }
+    });
+    return h + "</div>";
   }
   function mailModal(m) {
     var ov = document.getElementById("mailov");
@@ -926,14 +980,7 @@
       var im = ov.querySelector("#mimg"), dl = ov.querySelector("#mdl"), cr = ov.querySelector("#mcopyr");
       if (url) { im.src = url; dl.href = url; } else { im.style.display = "none"; }
       cr.addEventListener("click", function () {
-        var blocks = body.value.split(/\n\s*\n/), h = "", tx = body.value;
-        blocks.forEach(function (bl, i) {
-          var ls = bl.split("\n").filter(function (x) { return x.trim(); });
-          if (!ls.length) return;
-          var head = ls.length > 1 && ls[0].length <= 42 && !/[.:]$/.test(ls[0]) && !/^[•·]/.test(ls[0]) && !/^\d+\./.test(ls[0]);
-          h += "<p style=\"margin:0 0 14px;font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#1a2a4a\">" + (head ? "<b>" + esc(ls[0]) + "</b><br>" + ls.slice(1).map(esc).join("<br>") : ls.map(esc).join("<br>")) + "</p>";
-          if (i === 2 && url) h += "<p style=\"margin:0 0 14px\"><img src=\"" + url + "\" width=\"600\" alt=\"Gráfico\"></p>";
-        });
+        var tx = body.value, h = mailHtml(body.value, url);
         function fb() { note.textContent = "Tu navegador no permite copiar con formato. Usa Copiar mensaje y Descargar gráfico, y adjunta la imagen."; }
         if (navigator.clipboard && window.ClipboardItem) {
           navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([h], { type: "text/html" }), "text/plain": new Blob([tx], { type: "text/plain" }) })]).then(function () { note.textContent = "Copiado con el gráfico. Pégalo en tu correo (si no sale la imagen, usa Descargar gráfico y adjúntala)."; }, fb);
@@ -1021,9 +1068,20 @@
     if (!w.length) w.push("Con los datos actuales no hay alertas relevantes.");
     return '<div class="dk-watch"><h4>Puntos a vigilar</h4><ul>' + w.slice(0, 4).map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + "</ul></div>";
   }
-  function dkPrint(html) {
+  function dkLegal(n) {
+    return dkSlide("Aviso legal", "Información importante", '<div class="dk-legal"><p>Este documento tiene carácter meramente informativo y no constituye asesoramiento personalizado, recomendación de inversión ni oferta o solicitud de compra o venta de ningún instrumento financiero.</p>' +
+      "<p>Las rentabilidades pasadas no garantizan resultados futuros. El valor de las inversiones puede subir o bajar y es posible recuperar un importe inferior al invertido.</p>" +
+      "<p>Los datos proceden de Morningstar y de las fuentes que se citan en cada página, pueden contener errores y corresponden a la fecha indicada. Las carteras y los fondos que aparecen son ejemplos de análisis y su idoneidad depende del perfil de riesgo, la situación financiera y los objetivos de cada cliente.</p>" +
+      "<p>Antes de invertir, consulta la documentación legal de cada fondo (folleto y documento de datos fundamentales) y valora con tu asesor si encaja contigo.</p></div>", n);
+  }
+  function dkPrint(html, src) {
     var old = document.getElementById("deck"); if (old) old.remove();
-    var d = document.createElement("div"); d.id = "deck"; d.innerHTML = html; document.body.appendChild(d);
+    var d = document.createElement("div"); d.id = "deck"; d.innerHTML = html + dkLegal(0); document.body.appendChild(d);
+    var ss = d.querySelectorAll(".dk-s"), i, sp;
+    for (i = 0; i < ss.length; i++) {
+      sp = ss[i].querySelectorAll(".dk-ft span");
+      if (sp.length > 1) { sp[1].textContent = (i + 1) + " / " + ss.length; if (src) sp[0].textContent = src; }
+    }
     var st = document.createElement("style"); st.id = "deckpage"; st.textContent = "@media print{@page{size:A4 landscape;margin:0}}"; document.head.appendChild(st);
     document.body.classList.add("pd");
     function done() { document.body.classList.remove("pd"); d.remove(); st.remove(); window.removeEventListener("afterprint", done); }
@@ -1043,17 +1101,17 @@
     var rfp = tw ? rfW / tw * 100 : 0, mxw = 1;
     fs.forEach(function (x) { mxw = Math.max(mxw, x.l.w); });
     var rows = fs.slice().sort(function (p, q) { return q.f.t === p.f.t ? q.l.w - p.l.w : (p.f.t === "rf" ? -1 : 1); }).map(function (x) {
-      return "<tr><td><b>" + esc(x.f.n) + "</b><small>" + esc(x.f.g) + " · " + esc(x.f.c) + '</small></td><td class="w"><div class="dk-pb"><i style="width:' + (x.l.w / mxw * 100) + '%;background:' + (x.f.t === "rf" ? "#1a2a4a" : "#c8102e") + '"></i></div><b>' + nf(x.l.w, 1) + "%</b></td>" + (amount > 0 ? '<td class="r">' + nf(amount * x.l.w / 100, 0) + " €</td>" : "") + '<td class="r">' + dkv(x.f.ret.y1) + "</td></tr>";
+      return "<tr><td><b>" + esc(x.f.n) + "</b><small>" + esc(x.f.g) + " · " + esc(x.f.c) + '</small></td><td class="w"><div class="dk-pb"><i style="width:' + (x.l.w / mxw * 100) + '%;background:' + (x.f.t === "rf" ? "#a3173f" : "#2a5ca8") + '"></i></div><b>' + nf(x.l.w, 1) + "%</b></td>" + (amount > 0 ? '<td class="r">' + nf(amount * x.l.w / 100, 0) + " €</td>" : "") + '<td class="r">' + dkv(x.f.ret.y1) + "</td></tr>";
     }).join("");
     S.push(dkSlide("Composición de la cartera", fs.length + " fondos de gestión activa",
       '<div class="dk-two"><div class="dk-l"><table class="dk-t"><thead><tr><th>Fondo</th><th>Peso</th>' + (amount > 0 ? '<th class="r">Importe</th>' : "") + '<th class="r">1 año</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-      '<div class="dk-r"><div class="dk-dn" style="background:conic-gradient(#1a2a4a 0 ' + rfp + "%,#c8102e " + rfp + '% 100%)"><i><b>' + nf(fs.length, 0) + "</b>fondos</i></div>" +
-      '<div class="dk-lgd"><span><u style="background:#1a2a4a"></u>Renta fija<b>' + nf(rfp, 0) + '%</b></span><span><u style="background:#c8102e"></u>Renta variable<b>' + nf(100 - rfp, 0) + "%</b></span></div></div></div>", n++));
+      '<div class="dk-r"><div class="dk-dn" style="background:conic-gradient(#a3173f 0 ' + rfp + "%,#2a5ca8 " + rfp + '% 100%)"><i><b>' + nf(fs.length, 0) + "</b>fondos</i></div>" +
+      '<div class="dk-lgd"><span><u style="background:#a3173f"></u>Renta fija<b>' + nf(rfp, 0) + '%</b></span><span><u style="background:#2a5ca8"></u>Renta variable<b>' + nf(100 - rfp, 0) + "%</b></span></div></div></div>", n++));
     var mx = 1;
     fs.forEach(function (x) { if (isNum(x.f.ret.y1)) mx = Math.max(mx, Math.abs(x.f.ret.y1)); });
     var bars = fs.map(function (x) {
       var y1 = x.f.ret.y1, v1 = x.f.vol && x.f.vol[0];
-      return '<div class="dk-br"><span>' + esc(x.f.n) + '</span><div><i style="width:' + (isNum(y1) ? Math.max(2, Math.abs(y1) / mx * 100) : 0) + "%;background:" + (isNum(y1) && y1 < 0 ? "#9aa3b2" : "#c8102e") + '"></i></div><b>' + dkp(y1) + "</b><em>vol. " + dkp(v1) + "</em></div>";
+      return '<div class="dk-br"><span>' + esc(x.f.n) + '</span><div><i style="width:' + (isNum(y1) ? Math.max(2, Math.abs(y1) / mx * 100) : 0) + "%;background:" + (isNum(y1) && y1 < 0 ? "#a3173f" : "#1f7a4d") + '"></i></div><b>' + dkp(y1) + "</b><em>vol. " + dkp(v1) + "</em></div>";
     }).join("");
     var extra = []; var big = fs.slice().sort(function (p, q) { return q.l.w - p.l.w; })[0];
     if (big && big.l.w >= 25) extra.push("Mayor posición: " + big.f.n + " (" + nf(big.l.w, 1) + "% de la cartera).");
@@ -1073,7 +1131,7 @@
     yrs.forEach(function (o) { mxv = Math.max(mxv, Math.abs(o.v)); });
     S.push(dkSlide(f.n, f.g + " · " + f.c,
       '<div class="dk-kpis">' + dkKpi("En el año", dkp(r.ytd), r.ytd < 0) + dkKpi("Último año", dkp(r.y1), r.y1 < 0) + dkKpi("3 años anual", dkp(r.y3), r.y3 < 0) + dkKpi("5 años anual", dkp(r.y5), r.y5 < 0) + dkKpi("Volatilidad", dkp(v1)) + dkKpi("Sharpe", isNum(sh) ? nf(sh, 2) : "n.d.") + "</div>" +
-      '<div class="dk-two"><div class="dk-l"><h4 class="dk-h4">Año a año</h4>' + yrs.map(function (o) { return '<div class="dk-br"><span>' + o.y + '</span><div><i style="width:' + Math.max(2, Math.abs(o.v) / mxv * 100) + "%;background:" + (o.v < 0 ? "#9aa3b2" : "#c8102e") + '"></i></div><b>' + dkp(o.v) + "</b></div>"; }).join("") +
+      '<div class="dk-two"><div class="dk-l"><h4 class="dk-h4">Año a año</h4>' + yrs.map(function (o) { return '<div class="dk-br"><span>' + o.y + '</span><div><i style="width:' + Math.max(2, Math.abs(o.v) / mxv * 100) + "%;background:" + (o.v < 0 ? "#a3173f" : "#1f7a4d") + '"></i></div><b>' + dkp(o.v) + "</b></div>"; }).join("") +
       '</div><div class="dk-r"><div class="dk-card dk-one"><h3>Ideas clave</h3>' + dkIdeas(f).map(function (t) { return "<p><i>" + t[0] + "</i>" + esc(t[1]) + "</p>"; }).join("") + "</div>" + dkWatch([f]) + "</div></div>", 2));
     dkPrint(S.join(""));
   }
@@ -2786,6 +2844,110 @@
     document.getElementById("esbody").innerHTML = out || '<p class="muted" style="margin-top:16px">Ningún fondo en este estado.</p>';
   }
 
+  /* ---- Macro ---- */
+  var MX = { br: "#a3173f", bl: "#2a5ca8", ink: "#1c1c26", mut: "#717171", trk: "#ece8ea", up: "#a3173f", dn: "#2a5ca8" };
+  var MXG = [["inf", "Inflación"], ["tip", "Tipos de interés"], ["bon", "Bonos"], ["act", "Actividad"]];
+  function mxData() { return window.MACRO || { vars: [], lecturas: {}, expect: [] }; }
+  function mxV(id) { var a = mxData().vars || []; for (var i = 0; i < a.length; i++) if (a[i].id === id) return a[i]; return null; }
+  function mxNum(x, v) { if (x.vt && v === x.v) return x.vt; var d = x.dec == null ? 1 : x.dec; return nf(v, d) + (x.u === "%" ? "%" : x.u === "pb" ? " pb" : ""); }
+  function mxDelta(x) {
+    if (!isNum(x.p)) return null;
+    var dl = x.v - x.p, d = x.dec == null ? 1 : x.dec;
+    if (Math.abs(dl) < Math.pow(10, -d) / 2) return { s: 0, t: "sin cambios" };
+    return { s: dl > 0 ? 1 : -1, t: (dl > 0 ? "+" : "−") + nf(Math.abs(dl), d) + (x.u === "%" ? " pp" : x.u === "pb" ? " pb" : "") };
+  }
+  function mxArrow(dl) { return !dl ? "" : dl.s > 0 ? "▲" : dl.s < 0 ? "▼" : "="; }
+  function mxBars(rows, o) {
+    o = o || {};
+    var W = 680, bx = 230, bw = 320, rh = 46, H = rows.length * rh + 6, mx = o.max || 0, any = false;
+    rows.forEach(function (r) { mx = Math.max(mx, r.v, isNum(r.p) ? r.p : 0); if (isNum(r.p)) any = true; });
+    mx = (o.max || mx * 1.12) || 1;
+    var s = '<svg class="mxsvg" viewBox="0 0 ' + W + " " + (H + (any ? 22 : 0)) + '" role="img" aria-label="' + esc(o.label || "Gráfico") + '" font-family="Arial, Helvetica, sans-serif">';
+    rows.forEach(function (r, i) {
+      var cy = i * rh + 26, w = Math.max(5, r.v / mx * bw);
+      s += '<text x="0" y="' + (cy + 5) + '" font-size="15" fill="' + MX.ink + '">' + esc(r.n) + "</text>" +
+        '<rect x="' + bx + '" y="' + (cy - 9) + '" width="' + bw + '" height="18" rx="9" fill="' + MX.trk + '"/>' +
+        '<rect x="' + bx + '" y="' + (cy - 9) + '" width="' + w + '" height="18" rx="9" fill="' + (r.c || MX.br) + '"/>';
+      if (isNum(r.p)) { var px = bx + Math.min(r.p, mx) / mx * bw; s += '<line x1="' + px + '" y1="' + (cy - 14) + '" x2="' + px + '" y2="' + (cy + 14) + '" stroke="' + MX.ink + '" stroke-width="2.5" stroke-linecap="round"/>'; }
+      s += '<text x="' + (bx + bw + 16) + '" y="' + (cy + 6) + '" font-size="17" font-weight="700" fill="' + MX.ink + '">' + esc(r.t) + "</text>";
+    });
+    if (any) s += '<line x1="' + bx + '" y1="' + (H + 8) + '" x2="' + bx + '" y2="' + (H + 20) + '" stroke="' + MX.ink + '" stroke-width="2.5" stroke-linecap="round"/><text x="' + (bx + 12) + '" y="' + (H + 19) + '" font-size="12.5" fill="' + MX.mut + '">Marca negra: dato anterior</text>';
+    return s + "</svg>";
+  }
+  function mxRows(ids, color) {
+    return ids.map(function (id) { var x = mxV(id); return x ? { n: x.short || x.n, v: x.v, p: x.p, t: mxNum(x, x.v), c: color } : null; }).filter(Boolean);
+  }
+  function mxSpark(x) {
+    var s = x.ser || []; if (s.length < 3) return "";
+    var mn = Infinity, mxx = -Infinity, w = 92, h = 26;
+    s.forEach(function (p) { mn = Math.min(mn, p[1]); mxx = Math.max(mxx, p[1]); });
+    var pts = s.map(function (p, i) { return (3 + i / (s.length - 1) * (w - 6)).toFixed(1) + "," + (h - 4 - (mxx === mn ? 0.5 : (p[1] - mn) / (mxx - mn)) * (h - 8)).toFixed(1); });
+    var last = pts[pts.length - 1].split(",");
+    return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + " " + h + '"><polyline points="' + pts.join(" ") + '" fill="none" stroke="' + MX.br + '" stroke-width="2" stroke-linejoin="round"/><circle cx="' + last[0] + '" cy="' + last[1] + '" r="3" fill="' + MX.br + '"/></svg>';
+  }
+  function mxTiles(ids) {
+    return '<div class="mxtiles">' + ids.map(function (id) {
+      var x = mxV(id); if (!x) return "";
+      var dl = mxDelta(x);
+      return '<div class="mxtile"><span>' + esc(x.short || x.n) + "</span><b>" + esc(mxNum(x, x.v)) + "</b><em>" + (dl ? '<i class="mxd s' + dl.s + '">' + mxArrow(dl) + " " + esc(dl.t) + "</i>" : "") + " " + esc(x.d) + "</em></div>";
+    }).join("") + "</div>";
+  }
+  function mxExpect() {
+    var e = mxData().expect || []; if (!e.length) return "";
+    return '<h4 class="mxh">Probabilidad que descuenta el mercado</h4>' + mxBars(e.map(function (z) { return { n: z.n, v: z.v, t: z.v + "%", c: MX.bl }; }), { max: 100, label: "Probabilidad de subida de tipos" });
+  }
+  function mxChartFor(g) {
+    if (g === "inf") return mxBars(mxRows(["ipc_es", "ipc_ez", "ipc_us", "pce_us"], MX.br), { label: "Inflación por zona" });
+    if (g === "tip") return mxBars(mxRows(["bce", "fed", "estr", "eur12"], MX.bl), { label: "Tipos de interés" }) + mxExpect();
+    if (g === "bon") return mxBars(mxRows(["es10", "bund", "ust10"], MX.br), { label: "Rentabilidad de los bonos a 10 años" }) + mxTiles(["pr_es", "pend"]);
+    return mxTiles(["pmi_ez", "paro_us"]);
+  }
+  function mxTable() {
+    var vs = mxData().vars || [], sp = vs.some(function (x) { return (x.ser || []).length >= 3; });
+    return '<div class="table-wrap"><table class="mxtbl"><thead><tr><th>Variable</th><th>Dato</th><th>Periodo</th><th>Anterior</th><th>Cambio</th>' + (sp ? "<th>Evolución</th>" : "") + "</tr></thead><tbody>" +
+      MXG.map(function (g) {
+        return '<tr class="mxgr"><td colspan="' + (sp ? 6 : 5) + '">' + g[1] + "</td></tr>" + vs.filter(function (x) { return x.g === g[0]; }).map(function (x) {
+          var dl = mxDelta(x);
+          return "<tr><td>" + esc(x.n) + "</td><td><b>" + esc(mxNum(x, x.v)) + "</b></td><td>" + esc(x.d) + "</td><td>" + (isNum(x.p) ? esc(mxNum(x, x.p)) + ' <small>' + esc(x.pd || "") + "</small>" : "–") + "</td><td>" + (dl ? '<span class="mxd s' + dl.s + '">' + mxArrow(dl) + " " + esc(dl.t) + "</span>" : "–") + "</td>" + (sp ? "<td>" + mxSpark(x) + "</td>" : "") + "</tr>";
+        }).join("");
+      }).join("") + "</tbody></table></div>";
+  }
+  function viewMacro() {
+    setTitle("Macro");
+    var M = mxData(), h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Macro</h1>' +
+      '<p class="sub">El entorno económico en cuatro gráficas: inflación, tipos de interés, bonos y actividad. Datos a ' + esc(M.fecha || "") + ".</p>";
+    if (!(M.vars || []).length) { app.innerHTML = h + '<div class="empty box" style="margin-top:18px;padding:34px 20px">Todavía no hay datos macro publicados.</div>' + footer("rv"); return; }
+    h += '<div class="row tools2" id="mxtools"></div><div class="mxgrid">';
+    MXG.forEach(function (g) {
+      h += '<section class="block mxcard"><h3>' + g[1] + '</h3><p class="mxread">' + esc((M.lecturas || {})[g[0]] || "") + "</p>" + mxChartFor(g[0]) + "</section>";
+    });
+    h += '</div><h2 class="sec">Todas las variables</h2>' + mxTable() +
+      '<p class="note">Fuentes: ' + esc(M.fuentes || "") + ". Información orientativa, no constituye asesoramiento personalizado. Más contexto cada día en la <a href=\"#/nota\">Nota diaria</a>.</p>";
+    app.innerHTML = h + footer("rv");
+    var t = document.getElementById("mxtools");
+    t.appendChild(deckBtn(function () { deckMacro(); }));
+    t.appendChild(mailBtn(function () { return macroMail(); }));
+  }
+  function deckMacro() {
+    var M = mxData(), S = [], n = 2, g = {}, e = mxV("ipc_ez"), b = mxV("bce"), u = mxV("bund");
+    MXG.forEach(function (x) { g[x[0]] = x[1]; });
+    S.push(dkCover("Entorno macroeconómico", "Macro: así está el entorno", "Datos a " + (M.fecha || "") + " · " + dkDate(), [["IPC zona euro", e ? mxNum(e, e.v) : "n.d."], ["Tipo BCE", b ? mxNum(b, b.v) : "n.d."], ["Bund 10 años", u ? mxNum(u, u.v) : "n.d."]]));
+    function rd(k) { return '<div class="dk-read"><h4>Lectura</h4><p>' + esc((M.lecturas || {})[k] || "") + "</p></div>"; }
+    S.push(dkSlide("Inflación", "Variación anual de los precios", '<div class="dk-two"><div class="dk-l">' + mxChartFor("inf") + '</div><div class="dk-r">' + rd("inf") + "</div></div>", n++));
+    S.push(dkSlide("Tipos de interés", "Política monetaria y mercado monetario", '<div class="dk-two"><div class="dk-l">' + mxChartFor("tip") + '</div><div class="dk-r">' + rd("tip") + "</div></div>", n++));
+    S.push(dkSlide("Bonos y actividad", "Rentabilidad de la deuda a 10 años y señales de actividad", '<div class="dk-two"><div class="dk-l">' + mxChartFor("bon") + '</div><div class="dk-r">' + rd("bon") + mxChartFor("act") + rd("act") + "</div></div>", n++));
+    S.push(dkSlide("Resumen de variables", "Dato más reciente frente al anterior", mxTable().replace('class="table-wrap"', 'class="dk-mxw"'), n++));
+    dkPrint(S.join(""), "Fuentes: " + (M.fuentes || ""));
+  }
+  function macroMail() {
+    var M = mxData(), L = ["Hola,", "", pick(["Te comparto una foto del entorno macroeconómico con los últimos datos disponibles.", "Te hago llegar un resumen del entorno macro con los datos más recientes.", "Te envío una visión rápida de cómo está el entorno macroeconómico."]) + " Datos a " + dlong(M.fecha) + ".", ""];
+    MXG.forEach(function (g) { L.push(g[1], (M.lecturas || {})[g[0]] || "", ""); });
+    var k = [];
+    ["ipc_ez", "ipc_es", "ipc_us", "bce", "fed", "bund", "ust10", "pr_es"].forEach(function (id) { var x = mxV(id); if (x) k.push("• " + (x.short || x.n) + ": " + mxNum(x, x.v) + " (" + x.d + ")"); });
+    L.push("Datos clave", k.join("\n"), "", "Si te parece, lo comentamos y vemos cómo afecta a tu cartera según tu perfil y tu horizonte de inversión. Quedo a tu disposición.");
+    return { subject: "Entorno macroeconómico: resumen a " + dlong(M.fecha), body: mailClean(L.join("\n")) + MAIL_PIE_MACRO, chart: function () { return mcMacro(); } };
+  }
+  var MAIL_PIE_MACRO = "\n\nComo siempre, te recuerdo que esta información es orientativa y no constituye asesoramiento personalizado ni una recomendación de inversión. Las rentabilidades pasadas no garantizan resultados futuros.";
   function viewNota() {
     setTitle("Nota diaria");
     var N = window.NOTA || {}, a = N.actual;
@@ -3013,6 +3175,7 @@
     if (p[0] === "agenda") { location.hash = "#/nota"; return; }
     if (p[0] === "estado") return viewEstado();
     if (p[0] === "nota") return viewNota();
+    if (p[0] === "macro") return viewMacro();
     if (p[0] === "accion" && p[1]) return viewStock(decodeURIComponent(p[1]));
     if (p[0] === "favoritos" && window.FAVS) return window.FAVS.view(app, setTitle);
     if (p[0] === "gestora" && p[1] && window.FAVS) return window.FAVS.gestora(app, setTitle, decodeURIComponent(p[1]));
