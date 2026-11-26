@@ -1570,7 +1570,11 @@
     app.innerHTML = h + footer("rv");
 
     var pdfb = deckBtn(function () { var nm = document.getElementById("pfname"), am = document.getElementById("pfamt"); deckPortfolio(nm && nm.value || p.name, "", am && am.value ? +am.value : 0, p.lines); });
-    var mailb = mailBtn(function () { var nm = document.getElementById("pfname"), am = document.getElementById("pfamt"); return pfMail(nm && nm.value || p.name, am && am.value ? +am.value : 0, p.lines); });
+    var mailb = mailBtn(function () {
+      var nm = document.getElementById("pfname"), am = document.getElementById("pfamt"), name = nm && nm.value || p.name;
+      return mailOfChange() ? chMail(name, p) : pfMail(name, am && am.value ? +am.value : 0, p.lines);
+    });
+    function mailOfChange() { return tab === "cmb" && !!p.base && sumW(p) > 0 && pfChanged(pfDiff(p)).length > 0; }
     var slot = document.getElementById("pfpdfslot"); slot.replaceWith(pdfb); if (unlocked()) pdfb.parentNode.insertBefore(mailb, pdfb);
     function save() { savePf(); }
     var tab = "car";
@@ -1579,6 +1583,7 @@
       if (!box) return;
       var n = p.base ? pfChanged(pfDiff(p)).length : 0;
       badge.textContent = n; badge.hidden = !n;
+      mailb.textContent = mailOfChange() ? "Correo del cambio" : "Correo";
       if (tab !== "cmb") return;
       box.innerHTML = p.base ? changesHtml(p) : '<div class="empty box chempty">Esta cartera no tiene guardada su versión original. Vuelve a importar el Excel o fija la cartera actual como punto de partida: a partir de ahí se compararán los cambios.<br><button class="btn" type="button" id="chfix">Fijar la actual como original</button></div>';
       var fix = document.getElementById("chfix");
@@ -1736,6 +1741,11 @@
     return '<span class="chd' + c + '">' + (d > 0 ? "▲ +" : "▼ ") + nf(d, 2) + (unit ? " " + unit : "") + "</span>";
   }
   function costOf(f) { return metric("cost").v(f); }
+  // participaciones aproximadas del importe movido (solo valor liquidativo en euros)
+  function chUnits(d) {
+    var m = /^EUR\s*([\d.,]+)/.exec(String(d.f.nav || "")), v = m ? parseFloat(m[1].replace(/,/g, "")) : 0;
+    return v > 0 && d.de ? Math.abs(d.de) / v : null;
+  }
   function chMetrics() {
     return [
       { n: "Rentabilidad del año", g: function (f) { return f.ret.ytd; }, s: 1, pc: 1 },
@@ -1839,7 +1849,7 @@
     if (isNum(rc.a.v) && isNum(rc.b.v)) {
       var ce = function (key) { return D.reduce(function (s, d) { var c = costOf(d.f); return s + (isNum(c) && isNum(d[key]) ? d[key] * c / 100 : 0); }, 0); };
       var c0 = ce("e0"), c1 = ce("e1");
-      S.push("<b>Coste:</b> el coste medio " + mov(rc, "%") + (c0 || c1 ? " (de unos " + nf(c0, 0) + " € a " + nf(c1, 0) + " € al año)." : "."));
+      S.push("<b>Coste:</b> el coste medio " + mov(rc, "%") + (D.every(function (d) { return d.e0 !== null && d.e1 !== null; }) && (c0 || c1) ? " (de unos " + nf(c0, 0) + " € a " + nf(c1, 0) + " € al año)." : "."));
     }
     h += '<section class="block chsec"><h3>Qué supone el cambio</h3><ul class="chsum"><li>' + S.join("</li><li>") + "</li></ul></section>";
 
@@ -1854,10 +1864,10 @@
     // operaciones
     var rank = { out: 0, down: 1, "in": 2, up: 3, same: 4 };
     function parts_(d) {
-      var m = /^EUR\s*([\d.,]+)/.exec(String(d.f.nav || ""));
-      if (!m || !d.de) return "–";
+      var u = chUnits(d);
+      if (u === null) return "–";
       if (d.k === "out") return "Total";
-      return (d.de > 0 ? "+" : "-") + nf(Math.abs(d.de) / parseFloat(m[1].replace(/,/g, "")), 2);
+      return (d.de > 0 ? "+" : "-") + nf(u, 2);
     }
     h += '<section class="block chsec"><h3>Detalle de las operaciones</h3><div class="table-wrap"><table class="chtable"><thead><tr><th scope="col">Fondo</th><th scope="col">Movimiento</th><th scope="col">Peso antes</th><th scope="col">Peso ahora</th><th scope="col">Importe antes</th><th scope="col">Importe ahora</th><th scope="col">Compra o venta</th><th scope="col">Particip. aprox.</th></tr></thead><tbody>' +
       D.slice().sort(function (x, y) { return rank[x.k] - rank[y.k]; }).map(function (d) {
@@ -1907,6 +1917,141 @@
     h += '<section class="block"><h3>Peso por categoría</h3>' + chPairs(group("c")) + "</section>";
     h += '<section class="block"><h3>Peso por gestora</h3>' + chPairs(group("g")) + "</section>";
     return h + "</div>";
+  }
+
+  // correo sobre el cambio propuesto y sus implicaciones
+  function chMail(name, p) {
+    var D = pfDiff(p), C = pfChanged(D), B = p.base;
+    var a = { lines: B.lines.filter(function (l) { return byId(l.id); }) }, b = { lines: p.lines };
+    var hasE = C.every(function (d) { return d.de !== null; }), amt = p.amount;
+    function dir(d) { return hasE ? d.de : d.dw; }
+    var sold = C.filter(function (d) { return dir(d) < 0; }).sort(function (x, y) { return (y.k === "out") - (x.k === "out") || Math.abs(dir(y)) - Math.abs(dir(x)); }), bought = C.filter(function (d) { return dir(d) > 0; });
+    function p2(v) { return pct(v, false, 2); }
+    function eu(v) { return nf(Math.abs(v), 0) + " €"; }
+    var M = chMetrics().map(function (m) { return { m: m, a: wAvg(a, m.g), b: wAvg(b, m.g) }; });
+    function full(r) { return isNum(r.a.v) && isNum(r.b.v) && r.a.cov > 0.999 && r.b.cov > 0.999; }
+    var USE = [["Rentabilidad del año", "Rentabilidad en el año", "la rentabilidad en el año"], ["Rentabilidad 1 año", "Rentabilidad a 1 año", "la rentabilidad a 1 año"], ["Rentabilidad 3 años (anualizada)", "Rentabilidad anual a 3 años", "la rentabilidad anual a 3 años"], ["Rentabilidad 5 años (anualizada)", "Rentabilidad anual a 5 años", "la rentabilidad anual a 5 años"],
+      ["Volatilidad 1 año", "Volatilidad a 1 año", "la volatilidad"], ["Caída máxima 3 años", "Caída máxima en 3 años", "la caída máxima"], ["Sharpe 1 año", "Sharpe a 1 año", "el Sharpe a 1 año"], ["Sharpe 3 años", "Sharpe a 3 años", "el Sharpe a 3 años"], ["Coste neto anual", "Coste medio anual", "el coste"]];
+    var rows = [], missing = [];
+    USE.forEach(function (u) {
+      var r = M.filter(function (x) { return x.m.n === u[0]; })[0];
+      var dd = u[0] === "Caída máxima 3 años", x = dd ? Math.abs(r.a.v) : r.a.v, z = dd ? Math.abs(r.b.v) : r.b.v;
+      if (full(r)) rows.push({ n: u[1], s: u[2], a: x, b: z, raw: z - x, d: Math.round((z - x) * 100) / 100, sense: dd ? -1 : r.m.s, pc: r.m.pc });
+      else missing.push(u[2]);
+    });
+    function val(r, v) { return r.pc ? p2(v) : nf(v, 2); }
+
+    function fundLine(d) {
+      var f = d.f, t = "• " + f.n + " (" + f.c + "): ", u = chUnits(d), money = "";
+      if (hasE && d.de < 0 && d.k !== "out") money = u !== null ? " (traspaso de unas " + nf(u, 2) + " participaciones, alrededor de " + eu(d.de) + ")" : " (unos " + eu(d.de) + ", las participaciones se confirmarán al ordenar)";
+      else if (hasE && d.de) money = " (unos " + eu(d.de) + ")";
+      if (d.k === "out") t += "salida total, hoy pesa un " + p2(d.w0) + money + ".";
+      else if (d.k === "in") t += "nueva posición con un " + p2(d.w1) + money + ".";
+      else if (d.k === "same") t += "mantiene su peso del " + p2(d.w1) + " y " + (d.de < 0 ? "se reduce" : "aumenta") + " su importe" + money + ".";
+      else t += (d.dw < 0 ? "baja" : "sube") + " del " + p2(d.w0) + " al " + p2(d.w1) + money + ".";
+      var s = [], c = costOf(f);
+      if (isNum(f.ret.y1)) s.push("rentabilidad a 1 año " + p2(f.ret.y1));
+      if (isNum(f.vol && f.vol[0])) s.push("volatilidad " + p2(f.vol[0]));
+      if (isNum(f.sharpe && f.sharpe[0])) s.push("Sharpe " + nf(f.sharpe[0], 2));
+      if (isNum(c)) s.push("coste " + p2(c));
+      return t + (s.length && d.k !== "same" ? "\n   En cifras: " + s.join(", ") + "." : "");
+    }
+
+    var cart = "la cartera \"" + (name || p.name) + "\"" + (amt > 0 ? " (importe de " + nf(amt, 0) + " euros)" : "");
+    var L = ["Hola,", "", pick(["Te escribo para proponerte unos cambios en " + cart, "He revisado " + cart + " y quiero proponerte unos cambios"]) + ". Te detallo qué cambiaría y lo que supone, con datos de Morningstar a " + dlong(META && (META.rv || META.rf)) + ".", ""];
+    if (sold.length) L.push("Lo que se vende", sold.map(fundLine).join("\n"), "");
+    if (bought.length) L.push("Lo que se compra", bought.map(fundLine).join("\n"), "");
+
+    // implicaciones en la composición
+    var I = [];
+    function share(q, t) { return q.lines.reduce(function (s, l) { var f = byId(l.id); return s + (f && f.t === t ? l.w : 0); }, 0); }
+    function rep(t) { var x = share(a, t), y = share(b, t); return Math.abs(y - x) < 0.005 ? "se mantiene en el " + p2(x) : "pasa del " + p2(x) + " al " + p2(y); }
+    I.push("• Reparto: la renta variable " + rep("rv") + " y la renta fija " + rep("rf") + ".");
+    function shifts(key, min) {
+      var o = {};
+      [a, b].forEach(function (q, j) { q.lines.forEach(function (l) { var f = byId(l.id); if (!f) return; (o[f[key]] = o[f[key]] || [0, 0])[j] += l.w; }); });
+      return Object.keys(o).map(function (k) { return [k, o[k][0], o[k][1]]; }).filter(function (x) { return Math.abs(x[2] - x[1]) >= min; })
+        .sort(function (x, y) { return Math.abs(y[2] - y[1]) - Math.abs(x[2] - x[1]); }).slice(0, 4)
+        .map(function (x) { return x[0] + " del " + p2(x[1]) + " al " + p2(x[2]); });
+    }
+    var sc = shifts("c", 0.5), sg = shifts("g", 1);
+    if (sc.length) I.push("• Por categorías: " + listJoin(sc) + ".");
+    if (sg.length) I.push("• Por gestoras: " + listJoin(sg) + ".");
+    var n0 = a.lines.filter(function (l) { return l.w > 0; }).length, n1 = b.lines.filter(function (l) { return l.w > 0; }).length;
+    I.push("• Número de fondos: " + (n0 === n1 ? "se mantiene en " + n1 : "pasa de " + n0 + " a " + n1) + ".");
+    L.push("Cómo cambia la composición", I.join("\n"), "");
+
+    if (rows.length) {
+      L.push("Antes y después", rows.map(function (r) { return "• " + r.n + ": " + (r.d ? "pasa del " + val(r, r.a) + " al " + val(r, r.b) : "se mantiene en el " + val(r, r.b)) + "."; }).join("\n"), "");
+    }
+
+    // años naturales completos con dato en todos los fondos
+    var yrs = YEARS.filter(function (y) { return y < mailYear(); }).map(function (y) {
+      var x = wAvg(a, function (f) { return annOf(f, y); }), z = wAvg(b, function (f) { return annOf(f, y); });
+      return x.cov > 0.999 && z.cov > 0.999 ? { y: y, a: x.v, b: z.v } : null;
+    }).filter(Boolean).sort(function (x, y) { return x.y - y.y; });
+    if (yrs.length) L.push("Año a año", yrs.map(function (r) { return "• " + r.y + ": actual " + p2(r.a) + ", propuesta " + p2(r.b) + "."; }).join("\n"), "");
+
+    // balance: lo que mejora y lo que empeora
+    var up = [], down = [], flat = [];
+    rows.forEach(function (r) {
+      if (!r.sense) return;
+      if (Math.abs(r.d) < 0.05) { flat.push(r.s); return; }
+      var t = r.s + " (" + nf(Math.abs(r.d), 2) + (r.pc ? " puntos " : " ") + (r.d > 0 ? "más" : "menos") + ")";
+      (r.d * r.sense > 0 ? up : down).push(t);
+    });
+    var won = yrs.filter(function (r) { return r.b - r.a > 0.005; }).length, lost = yrs.filter(function (r) { return r.a - r.b > 0.005; }).length;
+    var bal = [];
+    if (up.length) bal.push("Con los datos disponibles mejora " + listJoin(up) + ".");
+    else if (rows.length) bal.push("Con los datos disponibles ninguna de las medidas comparadas mejora de forma apreciable.");
+    if (down.length) bal.push((up.length ? "A cambio, empeora " : "Empeora ") + listJoin(down) + ".");
+    if (flat.length) bal.push("Apenas hay diferencia en " + listJoin(flat) + ".");
+    if (yrs.length) bal.push("Aplicando los pesos a los " + yrs.length + " años completos con datos, la propuesta habría rentado más en " + won + " y menos en " + lost + ".");
+    var r1 = rows.filter(function (r) { return r.n === "Rentabilidad a 1 año"; })[0];
+    if (r1 && r1.d && amt > 0) bal.push("En euros, la diferencia a 1 año equivale a unos " + eu(r1.raw * amt / 100) + (r1.d > 0 ? " más" : " menos") + " sobre el importe de la cartera.");
+    function cost(key) { return D.reduce(function (s, d) { var c = costOf(d.f); return s + (isNum(c) && isNum(d[key]) ? d[key] * c / 100 : 0); }, 0); }
+    var c0 = cost("e0"), c1 = cost("e1");
+    if (D.every(function (d) { return d.e0 !== null && d.e1 !== null; }) && c0 && c1 && Math.abs(c1 - c0) >= 1) bal.push("El coste anual estimado pasa de unos " + eu(c0) + " a unos " + eu(c1) + ".");
+    if (missing.length) bal.push("No comparo " + listJoin(missing) + " porque algún fondo no tiene ese dato.");
+    L.push("Qué supone el cambio", bal.join(" "), "");
+
+    var end = [];
+    var tw = sumW(b);
+    if (Math.abs(tw - 100) >= 0.05) end.push("Los pesos propuestos suman " + p2(tw) + ".");
+    if (hasE) end.push("Los importes y las participaciones son aproximados y se confirmarán con tu posición real antes de ordenar los traspasos.");
+    if (end.length) L.push("A tener en cuenta", end.join(" "), "");
+    L.push(pick(["Si te parece, lo comentamos y, con tu visto bueno, preparo los cambios. Quedo a tu disposición para cualquier duda.", "Cuando te venga bien lo vemos juntos antes de hacer nada. Quedo a tu disposición para cualquier duda."]));
+    return { subject: mailClean("Cambios propuestos en tu cartera: " + (name || p.name || "")), body: mailClean(L.join("\n")) + MAIL_PIE, chart: function () { return mcChanges(name || p.name, rows, C); } };
+  }
+  function mcChanges(name, rows, C) {
+    var H = 190 + 62 + rows.length * 48 + 70 + C.length * 82 + 90, cg = mcCanvas(H), c = cg[0], g = cg[1];
+    mcTitle(g, name || "Cartera", "Cambios propuestos: cartera actual frente a propuesta");
+    function text(t, x, y, col, font, al) { g.fillStyle = col; g.font = font; g.textAlign = al || "left"; g.fillText(t, x, y); }
+    var y = 188, F = "24px Arial, sans-serif", FB = "bold 24px Arial, sans-serif", FH = "bold 20px Arial, sans-serif";
+    text("LA CARTERA", 50, y, MC.br, FH); text("ACTUAL", 720, y, MC.mut, FH, "right"); text("PROPUESTA", 920, y, MC.br, FH, "right"); text("CAMBIO", 1150, y, MC.mut, FH, "right");
+    g.fillStyle = MC.br; g.fillRect(50, y + 12, 1100, 2); y += 56;
+    rows.forEach(function (r) {
+      function v(x) { return r.pc ? pct(x, false, 2) : nf(x, 2); }
+      text(r.n, 50, y, MC.ink, F); text(v(r.a), 720, y, MC.mut, F, "right"); text(v(r.b), 920, y, MC.ink, FB, "right");
+      text(r.d ? (r.d > 0 ? "+" : "") + nf(r.d, 2) : "=", 1150, y, !r.d || !r.sense ? MC.mut : r.d * r.sense > 0 ? MC.pos : MC.neg, FB, "right");
+      g.fillStyle = MC.line; g.fillRect(50, y + 15, 1100, 1); y += 48;
+    });
+    y += 38;
+    text("PESO DE LOS FONDOS QUE CAMBIAN", 50, y, MC.br, FH); text("gris: actual · granate: propuesta", 1150, y, MC.mut, "19px Arial, sans-serif", "right");
+    g.fillStyle = MC.br; g.fillRect(50, y + 12, 1100, 2); y += 48;
+    var mx = 1; C.forEach(function (d) { mx = Math.max(mx, d.w0, d.w1); });
+    C.slice().sort(function (p, q) { return q.dw - p.dw; }).forEach(function (d) {
+      var nm = d.f.n.length > 42 ? d.f.n.slice(0, 41) + "…" : d.f.n;
+      text(nm, 50, y + 16, MC.ink, "22px Arial, sans-serif");
+      [[d.w0, "#b4b7c0", MC.mut, 0], [d.w1, MC.br, MC.ink, 30]].forEach(function (z) {
+        g.fillStyle = MC.trk; mcRR(g, 580, y - 4 + z[3], 450, 20, 10); g.fill();
+        if (z[0] > 0) { g.fillStyle = z[1]; mcRR(g, 580, y - 4 + z[3], Math.max(8, z[0] / mx * 450), 20, 10); g.fill(); }
+        text(nf(z[0], 2) + "%", 1150, y + 14 + z[3], z[2], "bold 21px Arial, sans-serif", "right");
+      });
+      y += 82;
+    });
+    mcFoot(g, H, "Datos de Morningstar. La rentabilidad pasada no garantiza resultados futuros.");
+    return c.toDataURL("image/png");
   }
 
   function summary(p) {
