@@ -130,7 +130,7 @@
         tile("#/construir", "build", "🔒 Privado", "Construir cartera", "con el cliente"),
         tile("#/comparar", "compare", "Herramienta", "Comparador de fondos", "hasta " + CMP_MAX + " fondos"),
         tile("#/carteras", "folder", "Herramienta", "Carteras", PF.length + (PF.length === 1 ? " cartera" : " carteras")),
-        tile("#/recomendadas", "star", "Herramienta", "Carteras recomendadas", "3 perfiles")
+        tile("#/ia", "star", "Cada trimestre", "Carteras IA", "3 perfiles")
       ]) +
       homeSection("Mercado y seguimiento", [
         tile("#/acciones", "bolt", "Explorar", "Stocks", stocks().length + (stocks().length === 1 ? " ficha" : " fichas")),
@@ -1697,6 +1697,64 @@
   }
   var REC_KEY = "cf_rec";
   function loadRec() { try { var v = JSON.parse(localStorage.getItem(REC_KEY) || "{}"); return v && typeof v === "object" && !Array.isArray(v) ? v : {}; } catch (e) { return {}; } }
+
+  // ---------- carteras IA (3 perfiles, rotación trimestral) ----------
+  function viewIA() {
+    setTitle("Carteras IA");
+    var C = window.CIA;
+    if (!C || !C.perfiles) { app.innerHTML = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Carteras IA</h1><div class="empty">Todavía no hay carteras congeladas.</div>'; return; }
+    var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Carteras IA</h1>' +
+      '<p class="sub">Tres carteras de 6 fondos, una por perfil, seleccionadas automáticamente entre los fondos de la web. Se congelan cada trimestre (vigente: <b>' + esc(C.trimestre.replace("-", " ")) + "</b>, fijada el " + esc(C.fecha) + ") y en cada rotación se muestran las entradas y salidas.</p>" +
+      '<p class="note">Criterio: mejor puntuación Morningstar total (rating como desempate), un fondo por categoría, sin fondos indexados y con tope de volatilidad según el perfil. Propuesta orientativa y automática, no es asesoramiento personalizado. Rentabilidad pasada, no garantiza resultados futuros.</p>';
+    var prevQ = (C.historial || [])[0];
+    PROFILES.forEach(function (pr) {
+      var P = C.perfiles[pr.k]; if (!P) return;
+      var lines = P.lines.filter(function (l) { return byId(l.id); });
+      var y = 0, y1 = 0, rfw = 0, rfy = 0, rvy = 0, vv = 0, vw = 0, fl = 0, sinceW = 0;
+      lines.forEach(function (l) {
+        var f = byId(l.id), yy = isNum(f.ret.ytd) ? f.ret.ytd * l.w / 100 : 0;
+        y += yy; if (isNum(f.ret.y1)) y1 += f.ret.y1 * l.w / 100;
+        if (f.t === "rf") { rfw += l.w; rfy += yy; } else rvy += yy;
+        if (isNum(f.vol[0])) { vv += f.vol[0] * l.w; vw += l.w; }
+        var n0 = P.navs && P.navs[l.id], n1 = navOf(f);
+        if (n0 && n1) { fl += l.w * (n1 / n0 - 1); sinceW += l.w; }
+      });
+      var since = sinceW ? fl / sinceW : null;
+      h += '<section class="rec"><div class="rechead"><div><h2>' + esc(pr.n) + '</h2><p class="muted">' + esc(pr.d) + " " + pr.wrf + "% renta fija, " + (100 - pr.wrf) + "% renta variable.</p></div>" +
+        '<div class="row"><button type="button" class="btn ghost" data-save="' + pr.k + '">Guardar en Carteras</button></div></div>' +
+        '<div class="table-wrap"><table class="tbl"><thead><tr><th>Fondo</th><th>Categoría</th><th class="num">Peso</th><th class="num">Año</th><th class="num">1 año</th><th class="num">Vol. 1 año</th></tr></thead><tbody>' +
+        lines.map(function (l) {
+          var f = byId(l.id);
+          return '<tr><td><a href="#/fondo/' + encodeURIComponent(f.id) + '"><b>' + esc(f.n) + "</b></a><small>" + esc(f.g) + '</small></td><td>' + esc(f.c) + '</td><td class="num">' + nf(l.w, 1) + " %</td><td>" + ret(f.ret.ytd) + "</td><td>" + ret(f.ret.y1) + '</td><td class="num">' + pct(f.vol[0], false, 1) + "</td></tr>";
+        }).join("") + '</tbody><tfoot><tr><td colspan="2"><b>Cartera</b></td><td class="num">100 %</td><td>' + ret(y) + "</td><td>" + ret(y1) + '</td><td class="num">' + (vw ? pct(vv / vw, false, 1) : "–") + "</td></tr></tfoot></table></div>" +
+        '<div class="kpis" style="margin-top:14px">' + kpi("Aporta renta fija (año)", ret(rfy)) + kpi("Aporta renta variable (año)", ret(rvy)) + kpi("Desde la fijación", since === null ? "–" : ret(since * 100)) + "</div>";
+      if (prevQ && prevQ.perfiles && prevQ.perfiles[pr.k]) {
+        var old = prevQ.perfiles[pr.k].lines.map(function (l) { return l.id; }), cur = lines.map(function (l) { return l.id; });
+        var ins = cur.filter(function (i) { return old.indexOf(i) < 0; }), outs = old.filter(function (i) { return cur.indexOf(i) < 0; });
+        function nm(i) { var f = byId(i); return f ? f.n : i; }
+        h += '<p class="note"><b>Rotación frente a ' + esc(prevQ.trimestre.replace("-", " ")) + ":</b> " + (ins.length || outs.length
+          ? "entran " + (ins.length ? esc(ins.map(nm).join("; ")) : "ninguno") + "; salen " + (outs.length ? esc(outs.map(nm).join("; ")) : "ninguno") + "."
+          : "sin cambios de fondos.") + "</p>";
+      } else h += '<p class="note">Primera edición: aún no hay rotación anterior con la que comparar.</p>';
+      h += "</section>";
+    });
+    if ((C.historial || []).length) {
+      h += '<section class="block"><h3>Histórico de trimestres</h3><ul class="chlog">' + C.historial.map(function (q) {
+        return "<li><time>" + esc(q.trimestre.replace("-", " ")) + " · " + esc(q.fecha) + "</time><span>" + PROFILES.map(function (pr) {
+          var P = q.perfiles && q.perfiles[pr.k]; return pr.n + ": " + (P ? P.lines.map(function (l) { var f = byId(l.id); return esc(f ? f.n : l.id); }).join(", ") : "–");
+        }).join(" · ") + "</span></li>";
+      }).join("") + "</ul></section>";
+    }
+    app.innerHTML = h + footer("rv");
+    app.querySelectorAll("[data-save]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var pr = PROFILES.filter(function (x) { return x.k === b.getAttribute("data-save"); })[0], P = C.perfiles[pr.k];
+        PF.push({ id: uid(), name: "Cartera IA " + pr.n.toLowerCase() + " " + C.trimestre.replace("-", " "), amount: null, lines: P.lines.map(function (l) { return { id: l.id, w: l.w }; }) });
+        savePf(); location.hash = "#/carteras";
+      });
+    });
+  }
+
   function viewRecommended() {
     setTitle("Carteras recomendadas");
     var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Carteras recomendadas</h1>' +
@@ -2953,7 +3011,8 @@
     if (p[0] === "privacidad" && window.NEWSLETTER) return window.NEWSLETTER.privacy(app, setTitle);
     if (p[0] === "construir") return gate("construir", "Construir cartera", viewBuild);
     if (p[0] === "categorias") { location.replace("#/"); return; }
-    if (p[0] === "recomendadas") return viewRecommended();
+    if (p[0] === "recomendadas") { location.hash = "#/ia"; return; }
+    if (p[0] === "ia") return viewIA();
     if (p[0] === "cartera" && p[1]) return viewPortfolio(decodeURIComponent(p[1]));
     return viewNotFound();
   }
