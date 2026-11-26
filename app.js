@@ -538,9 +538,13 @@
       var years = [], base = 2025;
       f.ann.forEach(function (v, i) { years.push([i === 0 ? "2026 (" + String(META.annDate || "").slice(0, 5) + ")" : String(base - (i - 1)), v]); });
       var mx = Math.max.apply(null, years.map(function (y) { return isNum(y[1]) ? Math.abs(y[1]) : 0; })) || 1;
-      TB.res += '<section class="block"><h3>Rentabilidad por año</h3><div class="bars">' + years.filter(function (y) { return isNum(y[1]); }).map(function (y) {
-        return bar(y[0], y[1], mx, y[1] < 0 ? "neg" : "pos", '<span class="' + cls(y[1]) + '">' + pct(y[1], true, 1) + "</span>");
-      }).join("") + "</div></section>";
+      var yv = years.filter(function (y) { return isNum(y[1]); }).reverse(), CW = 560, CH = 290, cb = 190, cmax = Math.max.apply(null, yv.map(function (y) { return Math.abs(y[1]); })) || 1, cneg = yv.some(function (y) { return y[1] < 0; }), base = cneg ? 150 : 215, ph = cneg ? 115 : 185, cwd = (CW - 20) / yv.length;
+      TB.res += '<section class="block"><h3>Rentabilidad por año</h3><svg viewBox="0 0 ' + CW + " " + (CH + 10) + '" width="100%" role="img" aria-label="Rentabilidad por año"><line x1="10" x2="' + (CW - 10) + '" y1="' + base + '" y2="' + base + '" stroke="#bbb"/>' + yv.map(function (y, k) {
+        var h = Math.max(2, Math.abs(y[1]) / cmax * ph), x = 10 + k * cwd + cwd * 0.18, w = cwd * 0.64, up = y[1] >= 0;
+        return '<rect x="' + x.toFixed(1) + '" y="' + (up ? base - h : base).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="3" fill="' + (up ? "#1e7a4a" : "#b3261e") + '"/>' +
+          '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (up ? base - h - 6 : base + h + 14).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#222">' + nf(y[1], 1) + "%</text>" +
+          '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (CH - 2) + '" text-anchor="middle" font-size="11" fill="#666">' + esc(String(y[0]).replace(/ \(.*$/, "*")) + "</text>";
+      }).join("") + '</svg><p class="note">* Año en curso hasta ' + esc(String(META.annDate || "").slice(0, 5)) + ".</p></section>";
     }
 
     // Evolución de 10.000 € (a partir de las rentabilidades anuales)
@@ -573,11 +577,9 @@
     if (mix.some(isNum)) {
       var tot = mix.reduce(function (a, v) { return a + (isNum(v) && v > 0 ? v : 0); }, 0) || 1;
       var odd = mix.some(function (v) { return isNum(v) && v < 0; }) || Math.abs(mix.reduce(function (a, v) { return a + (isNum(v) ? v : 0); }, 0) - 100) > 2;
-      TB.car += '<section class="block"><h3>Asignación de activos</h3><div class="stack" role="img" aria-label="Composición">' + mix.map(function (v, i) {
-        return isNum(v) && v > 0 ? '<i style="width:' + (v / tot * 100).toFixed(2) + "%;background:" + colors[i] + '"></i>' : "";
-      }).join("") + '</div><div class="keys">' + mix.map(function (v, i) {
+      TB.car += '<section class="block"><h3>Asignación de activos</h3><div class="donutw"><div class="donut" role="img" aria-label="Composición" style="background:conic-gradient(' + (function () { var acc = 0; return mix.map(function (v, i) { if (!(isNum(v) && v > 0)) return null; var a0 = acc; acc += v / tot * 100; return colors[i] + " " + a0.toFixed(2) + "% " + acc.toFixed(2) + "%"; }).filter(Boolean).join(","); })() + ')"><i>' + (isNum(mix[0]) ? nf(mix[0], 0) + "%" : "") + '<small>' + (mix[0] >= mix[1] ? "Acciones" : "Bonos") + '</small></i></div><div class="keys">' + mix.map(function (v, i) {
         return isNum(v) && Math.abs(v) >= 0.05 ? '<span style="--c:' + colors[i] + '">' + labels[i] + " <b>" + pct(v, false, 1) + "</b></span>" : "";
-      }).join("") + "</div>" +
+      }).join("") + "</div></div>" +
         (odd ? '<p class="note">Posiciones netas: pueden incluir derivados y apalancamiento, por lo que no suman 100%.</p>' : "") +
         "<dl class=\"facts\" style=\"margin-top:14px\">" +
         (isNum(f.top10) ? fact("Peso de las 10 mayores posiciones", pct(f.top10, false, 1)) : "") +
