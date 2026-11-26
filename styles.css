@@ -1112,3 +1112,10 @@ body:has(.fundpg), html:has(.fundpg) { background: #fff; }
   .site nav { flex-wrap: wrap; }
   .site nav .menu { position: static; box-shadow: none; border: 0; }
 }
+
+/* Icono de la gestora a relleno completo del punto; el aro queda por fuera */
+.chart-card .dot .dbg { fill: #fff; stroke: none; }
+.chart-card .dot .dring { fill: none; stroke: #9a9a9a; stroke-width: 1.6; pointer-events: none; }
+.chart-card .dot.ef .dring { stroke: var(--brand); stroke-width: 2.8; }
+.chart-card .dot:hover .dring, .chart-card .dot:focus .dring { stroke: #111; stroke-width: 2.6; }
+.chart-card .dot .dini { font-size: 9px; }
