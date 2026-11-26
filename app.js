@@ -1326,12 +1326,25 @@
     var v = parseFloat(raw);
     return isFinite(v) ? v : null;
   }
+  // Corrige errores típicos del OCR en un ISIN comparándolo con los fondos de la web (hasta 2 caracteres distintos)
+  function nearIsin(x) {
+    if (byId(x)) return x;
+    var best = null, bd = 3, tie = false;
+    FUNDS.forEach(function (f) {
+      if (f.id.length !== x.length || f.id.slice(0, 2) !== x.slice(0, 2)) return;
+      var d = 0; for (var i = 0; i < x.length; i++) if (f.id[i] !== x[i]) d++;
+      if (d < bd) { bd = d; best = f.id; tie = false; } else if (d === bd) tie = true;
+    });
+    return best && !tie ? best : x;
+  }
   function tableImport(text) {
     var rows = {}, order = [], miss = [], totAll = 0, n = 0;
     String(text || "").split(/\r?\n/).forEach(function (ln) {
+      ln = ln.replace(/(\d[.,])\s+(\d)/g, "$1$2");
       var m = /\b[A-Z]{2}[A-Z0-9]{9}\d\b/.exec(ln);
       if (!m) return;
-      var rest = ln.slice(m.index + m[0].length), nums = (rest.match(/-?\d{1,3}(?:\.\d{3})*(?:,\d+)?|-?\d+(?:,\d+)?/g) || []).map(esNum).filter(function (v) { return v !== null; });
+      m = [nearIsin(m[0])].concat([]); m.index = (/\b[A-Z]{2}[A-Z0-9]{9}\d\b/.exec(ln) || { index: 0 }).index; m.len = (/\b[A-Z]{2}[A-Z0-9]{9}\d\b/.exec(ln) || [""])[0].length;
+      var rest = ln.slice(m.index + m.len), nums = (rest.match(/-?\d{1,3}(?:\.\d{3})*(?:,\d+)?|-?\d+(?:,\d+)?/g) || []).map(esNum).filter(function (v) { return v !== null; });
       if (!nums.length) return;
       var val = nums[nums.length - 1], nm = ln.slice(0, m.index).replace(/[\s\-–]+$/, "").trim();
       if (!(val > 0)) return;
@@ -1359,6 +1372,28 @@
     return true;
   }
 
+  function loadTesseract() {
+    if (window.Tesseract) return Promise.resolve(window.Tesseract);
+    return new Promise(function (ok, ko) {
+      var sc = document.createElement("script");
+      sc.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+      sc.onload = function () { ok(window.Tesseract); }; sc.onerror = ko; document.head.appendChild(sc);
+    });
+  }
+  function imageText(file) {
+    return new Promise(function (ok, ko) {
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function () {
+        var k = Math.max(1, Math.min(4, 3200 / img.width)), cv = document.createElement("canvas"); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+        var g = cv.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, cv.width, cv.height); g.filter = "grayscale(1) contrast(1.3)"; g.drawImage(img, 0, 0, cv.width, cv.height);
+        URL.revokeObjectURL(url);
+        loadTesseract().then(function (T) { return T.recognize(cv, "eng", { tessedit_pageseg_mode: "6" }); }).then(function (r) { ok(r.data.text); }, ko);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); ko(new Error("imagen")); };
+      img.src = url;
+    });
+  }
+
   function importPdf(file) {
     return pdfLines(file).then(function (L) {
       return xrayImport(L) || legacyImport(L);
@@ -1379,14 +1414,9 @@
       '<input class="inp grow" id="npn" placeholder="Nombre (por ejemplo, Cartera moderada)" maxlength="80" required aria-label="Nombre de la cartera">' +
       '<input class="inp amt" id="npa" type="number" min="0" step="1000" placeholder="Importe (€), opcional" aria-label="Importe en euros">' +
       '<button class="btn" type="submit">Crear cartera</button></div></form>';
-    h += '<form class="newpf" id="pfpaste" style="margin-top:14px"><p class="label">Pegar posiciones de un cliente</p>' +
-      '<p class="note" style="margin:0 0 8px">Pega la tabla con una posición por línea: nombre y ISIN, participaciones, precio y valor (por ejemplo, copiada de Excel). Los pesos se calculan con el valor de cada posición.</p>' +
-      '<textarea class="inp" id="pst" rows="6" style="width:100%" placeholder="RENTA 4 RENTA FIJA, FI CLASE R - ES0176954008   2.417,192816   12,419645 EUR   30.020,68" aria-label="Posiciones"></textarea>' +
-      '<div class="row" style="margin-top:8px"><input class="inp grow" id="psn" placeholder="Nombre de la cartera (por ejemplo, Cliente A)" maxlength="80" aria-label="Nombre de la cartera pegada">' +
-      '<button class="btn" type="submit">Crear cartera desde posiciones</button>' +
-      '<label class="btn ghost" for="pscsv">Importar CSV o TXT</label><input id="pscsv" type="file" accept=".csv,.txt,.tsv,text/plain,text/csv" hidden></div></form>';
     h += '<div class="row tools2"><button class="btn ghost" type="button" id="pfexp"' + (PF.length ? "" : " disabled") + '>Exportar todas</button>' +
-      '<label class="btn ghost" for="pfimp">Importar (JSON)</label><input id="pfimp" type="file" accept="application/json,.json" hidden>' +
+      '<label class="btn ghost" for="pfimg">Importar imagen (PNG)</label><input id="pfimg" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" hidden>' +
+            '<label class="btn ghost" for="pfimp">Importar (JSON)</label><input id="pfimp" type="file" accept="application/json,.json" hidden>' +
       '<label class="btn ghost" for="pfpdf">Importar PDF de Morningstar</label><input id="pfpdf" type="file" accept="application/pdf,.pdf" hidden></div><p class="note" id="pfmsg"></p>';
     app.innerHTML = h + footer("rv");
 
@@ -1398,16 +1428,14 @@
       PF.push(p); savePf();
       location.hash = "#/cartera/" + encodeURIComponent(p.id);
     });
-    document.getElementById("pfpaste").addEventListener("submit", function (e) {
-      e.preventDefault();
-      addTablePf(tableImport(document.getElementById("pst").value), document.getElementById("psn").value.trim(), document.getElementById("pfmsg"));
-    });
-    document.getElementById("pscsv").addEventListener("change", function (e) {
+    document.getElementById("pfimg").addEventListener("change", function (e) {
       var file = e.target.files && e.target.files[0], msg = document.getElementById("pfmsg");
       if (!file) return;
-      var rd = new FileReader();
-      rd.onload = function () { addTablePf(tableImport(String(rd.result)), document.getElementById("psn").value.trim() || file.name.replace(/\.[^.]+$/, ""), msg); };
-      rd.readAsText(file);
+      msg.textContent = "Leyendo la imagen (puede tardar unos segundos)…";
+      imageText(file).then(function (txt) {
+        var nm = file.name.replace(/\.[^.]+$/, "").slice(0, 80) || "Cartera importada";
+        if (addTablePf(tableImport(txt), nm, msg)) document.getElementById("pfmsg").textContent += " Revisa los pesos: la lectura de una imagen puede fallar en alguna cifra.";
+      }).catch(function () { msg.textContent = "No se ha podido leer la imagen. Comprueba que se vea nítida y que tienes conexión (la lectura usa la librería tesseract.js)."; });
     });
     document.getElementById("pfexp").addEventListener("click", function () {
       download("carteras-cuaderno-de-fondos.json", JSON.stringify({ version: 1, carteras: PF }, null, 1), "application/json");
