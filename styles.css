@@ -526,7 +526,7 @@ h2.sec::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .mv { background: #fff; border: 1px solid var(--line); border-top: 4px solid var(--brand); border-radius: 6px; padding: 16px 18px 10px; box-shadow: 0 1px 4px rgba(0, 0, 0, .05); }
 .mv h3 { margin: 0; font-family: var(--heading); font-size: 17px; color: var(--text); border: 0; text-transform: none; letter-spacing: 0; }
 .mv .label { margin: 2px 0 10px; font-size: 12px; color: var(--muted); }
-.mvrow { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 5px 0; font-size: 12.5px; }
+.mvrow { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 5px 0; font-size: 12.5px; }
 .mvrow:hover .mvn { color: var(--brand); }
 .mvn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mvbar { height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
@@ -949,10 +949,6 @@ body.gopen { overflow: hidden; }
   .dk-br b { text-align: right; }
   .dk-br em { font-style: normal; color: #8d8589; font-size: 11px; }
   .dk-two .dk-br { grid-template-columns: 50mm 1fr 15mm 20mm; }
-  .dk-watch { background: #fdf3f5; border-left: 4px solid #a3173f; border-radius: 6px; padding: 10px 14px; }
-  .dk-watch h4 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #a3173f; }
-  .dk-watch ul { margin: 0; padding-left: 16px; font-size: 12.5px; line-height: 1.5; }
-  .dk-watch li { margin-bottom: 4px; }
   .dk-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7mm; margin-bottom: 7mm; }
   .dk-grid.dk-g2 { grid-template-columns: repeat(2, 1fr); }
   .dk-card { border: 1px solid #e3e6ea; border-top: 4px solid #a3173f; border-radius: 8px; padding: 12px 14px; background: #fff; }
@@ -1553,15 +1549,12 @@ td.mst .muted { opacity: .35; }
 .selchip .flogo img { width: 16px; height: 16px; }
 .cmpres .list a { display: flex; justify-content: flex-start; align-items: center; gap: 10px; }
 .cmpres .list a > div { min-width: 0; }
-#deck .dk-cmp th .flogo { display: grid; margin: 0 0 5px auto; width: 34px; height: 34px; }
 #deck .dk-ch { display: flex; align-items: flex-start; gap: 10px; }
 #deck .dk-ch > div { min-width: 0; }
 #deck .dk-ch .flogo { width: 36px; height: 36px; }
 #deck .dk-cmp { table-layout: fixed; width: 100%; min-width: 0; }
 #deck .dk-cmp th { white-space: normal; vertical-align: bottom; overflow-wrap: break-word; }
-#deck .dk-cmp th:first-child { width: 170px; }
-#deck .dk-cmp.dk-many th { padding-top: 4px; padding-bottom: 6px; }
-#deck .dk-cmp.dk-many td { padding: 5px 8px; font-size: 12px; line-height: 1.35; }
+#deck .dk-cmp th:first-child { width: 140px; }
 .cf { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12.5px; color: var(--muted); background: #fff; border: 1px solid #d9d4dc; border-radius: 99px; padding: 5px 12px; cursor: pointer; }
 .cf::before { content: "+"; font-weight: 800; width: 10px; text-align: center; }
 .cf:hover { border-color: var(--brand); }
@@ -1689,3 +1682,44 @@ td.mst .muted { opacity: .35; }
 
 .cmpc .cst .muted { opacity: .35; font-size: inherit; }
 @media (min-width: 761px) { .cmpc { display: grid; grid-row: span 5; grid-template-rows: subgrid; row-gap: 0; align-content: start; } .cmpc-i { align-self: start; } .cmpc-b { align-content: flex-start; } .cmpc-big { align-self: end; } }
+
+/* Informe: comparativa en una sola página */
+#deck .dk-one-page .dk-top { padding: 5mm 18mm 4mm; }
+#deck .dk-one-page .dk-top h2 { font-size: 22px; }
+#deck .dk-one-page .dk-top p { margin-top: 2px; font-size: 11.5px; }
+#deck .dk-one-page .dk-body { padding-top: 3mm; }
+#deck .dk-cmp th { padding: 3px 8px 5px; }
+#deck .dk-cmp th > div { display: flex; align-items: center; justify-content: flex-end; gap: 7px; text-align: right; }
+#deck .dk-cmp th > div > span { min-width: 0; line-height: 1.25; font-size: 10px; }
+#deck .dk-cmp th small { font-size: 9px; }
+#deck .dk-cmp th .flogo { width: 28px; height: 28px; font-size: 9px; }
+#deck .dk-cmp th .flogo img { width: 18px; height: 18px; }
+#deck .dk-cmp td { padding: var(--pad, 6px) 8px !important; font-size: var(--fz, 12px); line-height: 1.25; }
+#deck .dk-cv .dk-cvt p { white-space: pre-line; line-height: 1.6; }
+#deck .dk-cmp td.r { white-space: normal; overflow-wrap: break-word; }
+#deck .dk-cmp tbody tr:nth-child(even) td { background: #faf7f8; }
+
+/* Iconos de gestora en los movimientos de la semana y el top del año */
+.mvn { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.mvn em, .tln em { font-style: normal; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mvn .flogo, .tln .flogo { width: 26px; height: 26px; font-size: 9px; }
+.mvn .flogo img, .tln .flogo img { width: 17px; height: 17px; }
+.list a .tln { display: flex; align-items: center; gap: 10px; }
+.tops .list a { align-items: center; }
+@media (max-width: 760px) { .mvn { gap: 6px; } .mvn .flogo { width: 22px; height: 22px; } .mvn .flogo img { width: 14px; height: 14px; } }
+@media print { .mvn .flogo, .tln .flogo { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+
+/* Informe de cartera: composición en una página y rentabilidad a todo el ancho */
+#deck .dk-comp .dk-l { flex: 2.3; }
+#deck .dk-comp td b { line-height: 1.25; }
+#deck .dk-c1 .dk-comp td, #deck .dk-c2 .dk-comp td, #deck .dk-c3 .dk-comp td { line-height: 1.25; }
+#deck .dk-c1 .dk-comp td { padding: 8px 8px !important; font-size: 13px; }
+#deck .dk-c1 .dk-comp td small { font-size: 10.5px; }
+#deck .dk-c2 .dk-comp td { padding: 4px 6px !important; font-size: 11.5px; }
+#deck .dk-c2 .dk-comp td small { font-size: 9.5px; }
+#deck .dk-c3 .dk-comp td { padding: 1px 6px !important; font-size: 10px; line-height: 1.15; }
+#deck .dk-c3 .dk-comp td b { line-height: 1.15; }
+#deck .dk-c3 .dk-comp td small { font-size: 8.5px; }
+#deck .dk-wide .dk-br { grid-template-columns: 105mm 1fr 15mm 22mm; margin-bottom: 7px; line-height: 1.25; }
+
+#deck .dk-wide.dk-tight .dk-br { margin-bottom: 4px; font-size: 11px; line-height: 1.2; }

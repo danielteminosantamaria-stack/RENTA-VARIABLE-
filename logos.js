@@ -29,7 +29,7 @@ window.LOGODOM = {
  "Eleva": "elevacapital.com",
  "Wellington": "wellington.com",
  "Columbia Threadneedle": "columbiathreadneedle.com",
- "Polar Capital": "polarcapital.com",
+ "Polar Capital": "polarcapital.co.uk",
  "Allianz GI": "allianzgi.com",
  "La Financière de l'Echiquier": "lfde.com",
  "Edmond de Rothschild": "edmond-de-rothschild.com",

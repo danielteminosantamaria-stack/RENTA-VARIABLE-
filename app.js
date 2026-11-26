@@ -79,7 +79,7 @@
   function topList(t) {
     return '<div><p class="label">Top 5 en el año · ' + esc(CATS[t].top) + '</p><div class="list">' +
       topFive(t).map(function (f) {
-        return '<a href="#/fondo/' + encodeURIComponent(f.id) + '"><span>' + esc(f.n) + '</span>' + ret(f.ret.ytd) + "</a>";
+        return '<a href="#/fondo/' + encodeURIComponent(f.id) + '"><span class="tln">' + fLogo(f.g) + '<em>' + esc(f.n) + '</em></span>' + ret(f.ret.ytd) + "</a>";
       }).join("") + "</div></div>";
   }
   function weekList(t, best) {
@@ -122,7 +122,7 @@
     var mx = Math.max.apply(null, pick.map(function (f) { return Math.abs(f.ret.w1); })) || 1;
     return '<section class="mv"><h3>' + esc(CATS[t].top) + '</h3><p class="label">5 mejores y 5 peores de la semana</p>' + pick.map(function (f) {
       var w = Math.max(2, Math.abs(f.ret.w1) / mx * 100).toFixed(0);
-      return '<a class="mvrow" href="#/fondo/' + encodeURIComponent(f.id) + '"><span class="mvn">' + esc(f.n) + '</span><span class="mvbar"><i class="' + (f.ret.w1 < 0 ? "neg" : "pos") + '" style="width:' + w + '%"></i></span>' + ret(f.ret.w1) + "</a>";
+      return '<a class="mvrow" href="#/fondo/' + encodeURIComponent(f.id) + '" title="' + esc(f.n + " · " + f.g) + '"><span class="mvn">' + fLogo(f.g) + '<em>' + esc(f.n) + '</em></span><span class="mvbar"><i class="' + (f.ret.w1 < 0 ? "neg" : "pos") + '" style="width:' + w + '%"></i></span>' + ret(f.ret.w1) + "</a>";
     }).join("") + "</section>";
   }
   function viewHome() {
@@ -877,7 +877,7 @@
   function mcFoot(g, H, txt) {
     g.fillStyle = MC.line; g.fillRect(50, H - 62, 1100, 2);
     g.fillStyle = MC.mut; g.font = "19px Arial, sans-serif"; g.textAlign = "left"; g.fillText(txt, 50, H - 28);
-    g.fillStyle = MC.br; g.font = "bold 19px Arial, sans-serif"; g.textAlign = "right"; g.fillText("RENTA 4", 1150, H - 28);
+    g.fillStyle = MC.br; g.font = "bold 19px Arial, sans-serif"; g.textAlign = "right"; g.fillText("RENTA 4 BANCO", 1150, H - 28);
   }
   function mcFund(f) {
     var y = mailYear(), items = [];
@@ -1034,11 +1034,11 @@
   function dkDate() { return new Date().toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }); }
   function dkFoot(n) { return '<div class="dk-ft"><span>Datos de Morningstar a ' + esc(META && (META.rv || META.rf) || "") + '</span><span>' + n + "</span></div>"; }
   function dkSlide(title, sub, body, n) {
-    return '<section class="dk-s"><div class="dk-top"><div><h2>' + esc(title) + "</h2>" + (sub ? "<p>" + esc(sub) + "</p>" : "") + '</div><span class="dk-bd">Renta 4</span></div><div class="dk-body">' + body + "</div>" + dkFoot(n) + "</section>";
+    return '<section class="dk-s"><div class="dk-top"><div><h2>' + esc(title) + "</h2>" + (sub ? "<p>" + esc(sub) + "</p>" : "") + '</div><span class="dk-bd">Renta 4 Banco</span></div><div class="dk-body">' + body + "</div>" + dkFoot(n) + "</section>";
   }
   function dkCover(kicker, title, sub, stats) {
     return '<section class="dk-s dk-cv"><div class="dk-sh1"></div><div class="dk-sh2"></div><div class="dk-cvt"><div class="dk-k">' + esc(kicker) + "</div><h1>" + esc(title) + "</h1><p>" + esc(sub) + "</p></div>" +
-      (stats && stats.length ? '<div class="dk-cst">' + stats.map(function (s) { return "<div><b>" + esc(s[1]) + "</b><span>" + esc(s[0]) + "</span></div>"; }).join("") + "</div>" : "") + '<div class="dk-lg">Renta 4</div></section>';
+      (stats && stats.length ? '<div class="dk-cst">' + stats.map(function (s) { return "<div><b>" + esc(s[1]) + "</b><span>" + esc(s[0]) + "</span></div>"; }).join("") + "</div>" : "") + '<div class="dk-lg">Renta 4 Banco</div></section>';
   }
   function dkKpi(l, v, neg) { return '<div class="dk-kpi"><span>' + esc(l) + '</span><b class="' + (neg ? "ng" : "") + '">' + esc(v) + "</b></div>"; }
   function dkIdeas(f) {
@@ -1065,19 +1065,7 @@
     return out;
   }
   function dkCard(f, chip, logo) {
-    return '<div class="dk-card">' + (logo ? '<div class="dk-ch">' + fLogo(f.g, true) + "<div>" : "") + "<h3>" + esc(f.n) + '</h3><small>' + esc(f.g) + (chip ? ' <u>' + esc(chip) + "</u>" : "") + "</small>" + (logo ? "</div></div>" : "") + dkIdeas(f).map(function (t) { return "<p><i>" + t[0] + "</i>" + esc(t[1]) + "</p>"; }).join("") + "</div>";
-  }
-  function dkWatch(fs, extra) {
-    var w = [];
-    fs.forEach(function (f) {
-      var v1 = f.vol && f.vol[0];
-      if (isNum(f.ret.y1) && f.ret.y1 < 0) w.push(f.n + ": ha cedido un " + dkp(Math.abs(f.ret.y1)) + " en el último año; lo valoramos a medio plazo.");
-      else if (isNum(v1) && v1 >= 15) w.push(f.n + ": volatilidad elevada (" + dkp(v1) + ").");
-      else if (isNum(f.top10) && f.top10 >= 50) w.push(f.n + ": cartera concentrada (" + nf(f.top10, 0) + "% en diez posiciones).");
-    });
-    (extra || []).forEach(function (t) { w.push(t); });
-    if (!w.length) w.push("Con los datos actuales no hay alertas relevantes.");
-    return '<div class="dk-watch"><h4>Puntos a vigilar</h4><ul>' + w.slice(0, 4).map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + "</ul></div>";
+    return '<div class="dk-card">' + (logo ? '<div class="dk-ch">' + fLogo(f.g, true) + "<div>" : "") + "<h3>" + esc(f.n) + '</h3><small>' + esc(f.g) + " · ISIN " + esc(f.id) + (chip ? ' <u>' + esc(chip) + "</u>" : "") + "</small>" + (logo ? "</div></div>" : "") + dkIdeas(f).map(function (t) { return "<p><i>" + t[0] + "</i>" + esc(t[1]) + "</p>"; }).join("") + "</div>";
   }
   function dkLegal(n) {
     return dkSlide("Aviso legal", "Información importante", '<div class="dk-legal"><p>Este documento tiene carácter meramente informativo y no constituye asesoramiento personalizado, recomendación de inversión ni oferta o solicitud de compra o venta de ningún instrumento financiero.</p>' +
@@ -1117,24 +1105,23 @@
     var rfp = tw ? rfW / tw * 100 : 0, mxw = 1;
     fs.forEach(function (x) { mxw = Math.max(mxw, x.l.w); });
     var rows = fs.slice().sort(function (p, q) { return q.f.t === p.f.t ? q.l.w - p.l.w : (p.f.t === "rf" ? -1 : 1); }).map(function (x) {
-      return "<tr><td><b>" + esc(x.f.n) + "</b><small>" + esc(x.f.g) + " · " + esc(x.f.c) + '</small></td><td class="w"><div class="dk-pb"><i style="width:' + (x.l.w / mxw * 100) + '%;background:' + (x.f.t === "rf" ? "#a3173f" : "#2a5ca8") + '"></i></div><b>' + nf(x.l.w, 1) + "%</b></td>" + (amount > 0 ? '<td class="r">' + nf(amount * x.l.w / 100, 0) + " €</td>" : "") + '<td class="r">' + dkv(x.f.ret.y1) + "</td></tr>";
+      return "<tr><td><b>" + esc(x.f.n) + "</b><small>ISIN " + esc(x.f.id) + " · " + esc(x.f.g) + " · " + esc(x.f.c) + '</small></td><td class="w"><div class="dk-pb"><i style="width:' + (x.l.w / mxw * 100) + '%;background:' + (x.f.t === "rf" ? "#a3173f" : "#2a5ca8") + '"></i></div><b>' + nf(x.l.w, 1) + "%</b></td>" + (amount > 0 ? '<td class="r">' + nf(amount * x.l.w / 100, 0) + " €</td>" : "") + '<td class="r">' + dkv(x.f.ret.y1) + "</td></tr>";
     }).join("");
     S.push(dkSlide("Composición de la cartera", fs.length + " fondos de gestión activa",
-      '<div class="dk-two"><div class="dk-l"><table class="dk-t"><thead><tr><th>Fondo</th><th>Peso</th>' + (amount > 0 ? '<th class="r">Importe</th>' : "") + '<th class="r">1 año</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<div class="dk-two dk-comp"><div class="dk-l"><table class="dk-t"><thead><tr><th>Fondo</th><th>Peso</th>' + (amount > 0 ? '<th class="r">Importe</th>' : "") + '<th class="r">1 año</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
       '<div class="dk-r"><div class="dk-dn" style="background:conic-gradient(#a3173f 0 ' + rfp + "%,#2a5ca8 " + rfp + '% 100%)"><i><b>' + nf(fs.length, 0) + "</b>fondos</i></div>" +
-      '<div class="dk-lgd"><span><u style="background:#a3173f"></u>Renta fija<b>' + nf(rfp, 0) + '%</b></span><span><u style="background:#2a5ca8"></u>Renta variable<b>' + nf(100 - rfp, 0) + "%</b></span></div></div></div>", n++));
+      '<div class="dk-lgd"><span><u style="background:#a3173f"></u>Renta fija<b>' + nf(rfp, 0) + '%</b></span><span><u style="background:#2a5ca8"></u>Renta variable<b>' + nf(100 - rfp, 0) + "%</b></span></div></div></div>", n++)
+      // con muchos fondos se compactan las filas para que la composición entre en una página
+      .replace('class="dk-s"', 'class="dk-s' + (fs.length > 15 ? " dk-one-page dk-c3" : fs.length > 10 ? " dk-one-page dk-c2" : fs.length > 6 ? " dk-one-page dk-c1" : "") + '"'));
     var mx = 1;
     fs.forEach(function (x) { if (isNum(x.f.ret.y1)) mx = Math.max(mx, Math.abs(x.f.ret.y1)); });
     var bars = fs.map(function (x) {
       var y1 = x.f.ret.y1, v1 = x.f.vol && x.f.vol[0];
       return '<div class="dk-br"><span>' + esc(x.f.n) + '</span><div><i style="width:' + (isNum(y1) ? Math.max(2, Math.abs(y1) / mx * 100) : 0) + "%;background:" + (isNum(y1) && y1 < 0 ? "#a3173f" : "#1f7a4d") + '"></i></div><b>' + dkp(y1) + "</b><em>vol. " + dkp(v1) + "</em></div>";
     }).join("");
-    var extra = []; var big = fs.slice().sort(function (p, q) { return q.l.w - p.l.w; })[0];
-    if (big && big.l.w >= 25) extra.push("Mayor posición: " + big.f.n + " (" + nf(big.l.w, 1) + "% de la cartera).");
-    if (Math.abs(tw - 100) > 0.5) extra.push("Los pesos suman " + nf(tw, 1) + "%.");
     S.push(dkSlide("Rentabilidad y riesgo", "Medias ponderadas por el peso de cada fondo",
       '<div class="dk-kpis" style="grid-template-columns:repeat(5,1fr)">' + dkKpi("En el año", dkp(a), a < 0) + dkKpi("Último año", dkp(b), b < 0) + dkKpi("3 años anual", dkp(c3), c3 < 0) + dkKpi("Volatilidad", dkp(v)) + dkKpi("Sharpe", isNum(sh) ? nf(sh, 2) : "n.d.") + "</div>" +
-      '<div class="dk-two"><div class="dk-l"><h4 class="dk-h4">Rentabilidad a un año por fondo</h4>' + bars + '</div><div class="dk-r">' + dkWatch(fs.map(function (x) { return x.f; }), extra) + "</div></div>", n++));
+      '<h4 class="dk-h4">Rentabilidad a un año por fondo</h4><div class="dk-wide' + (fs.length > 15 ? " dk-tight" : "") + '">' + bars + "</div>", n++));
     for (var i = 0; i < fs.length; i += 6) {
       S.push(dkSlide("Ideas clave por fondo", "", '<div class="dk-grid">' + fs.slice(i, i + 6).map(function (x) { return dkCard(x.f, nf(x.l.w, 1) + "%"); }).join("") + "</div>", n++));
     }
@@ -1142,18 +1129,18 @@
   }
   function deckFund(f) {
     var r = f.ret, y = mailYear(), v1 = f.vol && f.vol[0], sh = f.sharpe && f.sharpe[0], S = [];
-    S.push(dkCover("Ficha de fondo", f.n, f.g + " · " + f.c + " · " + dkDate(), [["3 años anual", dkp(r.y3)], ["Volatilidad", dkp(v1)], ["Sharpe", isNum(sh) ? nf(sh, 2) : "n.d."]]));
+    S.push(dkCover("Ficha de fondo", f.n, "ISIN " + f.id + " · " + f.g + " · " + f.c + " · " + dkDate(), [["3 años anual", dkp(r.y3)], ["Volatilidad", dkp(v1)], ["Sharpe", isNum(sh) ? nf(sh, 2) : "n.d."]]));
     var yrs = (f.ann || []).map(function (v, i) { return { y: i === 0 ? "Año actual" : String(y - i), v: v }; }).filter(function (o, i) { return i <= 5 && isNum(o.v); }), mxv = 1;
     yrs.forEach(function (o) { mxv = Math.max(mxv, Math.abs(o.v)); });
-    S.push(dkSlide(f.n, f.g + " · " + f.c,
+    S.push(dkSlide(f.n, "ISIN " + f.id + " · " + f.g + " · " + f.c,
       '<div class="dk-kpis">' + dkKpi("En el año", dkp(r.ytd), r.ytd < 0) + dkKpi("Último año", dkp(r.y1), r.y1 < 0) + dkKpi("3 años anual", dkp(r.y3), r.y3 < 0) + dkKpi("5 años anual", dkp(r.y5), r.y5 < 0) + dkKpi("Volatilidad", dkp(v1)) + dkKpi("Sharpe", isNum(sh) ? nf(sh, 2) : "n.d.") + "</div>" +
       '<div class="dk-two"><div class="dk-l"><h4 class="dk-h4">Año a año</h4>' + yrs.map(function (o) { return '<div class="dk-br"><span>' + o.y + '</span><div><i style="width:' + Math.max(2, Math.abs(o.v) / mxv * 100) + "%;background:" + (o.v < 0 ? "#a3173f" : "#1f7a4d") + '"></i></div><b>' + dkp(o.v) + "</b></div>"; }).join("") +
-      '</div><div class="dk-r"><div class="dk-card dk-one"><h3>Ideas clave</h3>' + dkIdeas(f).map(function (t) { return "<p><i>" + t[0] + "</i>" + esc(t[1]) + "</p>"; }).join("") + "</div>" + dkWatch([f]) + "</div></div>", 2));
+      '</div><div class="dk-r"><div class="dk-card dk-one"><h3>Ideas clave</h3>' + dkIdeas(f).map(function (t) { return "<p><i>" + t[0] + "</i>" + esc(t[1]) + "</p>"; }).join("") + "</div></div></div>", 2));
     dkPrint(S.join(""));
   }
   function deckCompare(fs) {
     var S = [], n = 2;
-    S.push(dkCover("Comparativa de fondos", fs.length + " fondos", fs.map(function (f) { return f.n; }).join(" · ")));
+    S.push(dkCover("Comparativa de fondos", fs.length + " fondos", fs.map(function (f) { return f.n + " (" + f.id + ")"; }).join("\n")));
     var rows = [["Categoría", function (f) { return esc(f.c); }],
       ["En el año", function (f) { return dkv(f.ret.ytd); }], ["1 año", function (f) { return dkv(f.ret.y1); }], ["3 años anual", function (f) { return dkv(f.ret.y3); }], ["5 años anual", function (f) { return dkv(f.ret.y5); }],
       ["Volatilidad", function (f) { return dkp(f.vol && f.vol[0]); }], ["Sharpe", function (f) { return f.sharpe && isNum(f.sharpe[0]) ? nf(f.sharpe[0], 2) : "n.d."; }],
@@ -1161,9 +1148,8 @@
       ["Morningstar", function (f) { return f.stars ? f.stars + " estrellas" : "n.d."; }]];
     var avail = [];
     cmpSections(fs).forEach(function (x) { x[1].forEach(function (it) { if (x[0] !== CMP_VIS_T) avail.push(it); }); });
-    var per = 9;
     if (avail.some(function (it) { return !cmpOn(it.k); })) { // campos elegidos a mano
-      per = 12; rows = [];
+      rows = [];
       avail.filter(function (it) { return cmpOn(it.k); }).forEach(function (it) {
         if (it.k === "info") rows.push(["Categoría", function (f) { return esc(f.c); }], ["Morningstar", function (f) { return f.stars ? f.stars + " estrellas" : "n.d."; }]);
         else rows.push([esc(it.l), function (f) {
@@ -1173,13 +1159,14 @@
         }]);
       });
     }
-    var pages = Math.ceil(rows.length / per);
-    for (var p = 0; p < pages; p++) {
-      S.push(dkSlide("Comparativa" + (pages > 1 ? " (" + (p + 1) + " de " + pages + ")" : ""), "Datos de Morningstar a " + (META && (META.rv || META.rf) || ""),
-        '<table class="dk-t dk-cmp' + (per > 9 ? " dk-many" : "") + '"><thead><tr><th></th>' + fs.map(function (f) { return '<th class="r">' + fLogo(f.g, true) + esc(f.n) + "<small>" + esc(f.g) + "</small></th>"; }).join("") + "</tr></thead><tbody>" +
-        rows.slice(p * per, (p + 1) * per).map(function (r) { return "<tr><td><b>" + r[0] + "</b></td>" + fs.map(function (f) { return '<td class="r">' + r[1](f) + "</td>"; }).join("") + "</tr>"; }).join("") + "</tbody></table>", n++));
-    }
-    S.push(dkSlide("Ideas clave y puntos a vigilar", "", '<div class="dk-grid dk-g' + Math.min(fs.length, 3) + '">' + fs.map(function (f) { return dkCard(f, "", true); }).join("") + "</div>" + dkWatch(fs), n++));
+    // todas las filas en una sola página: la altura de fila se ajusta al número de campos
+    var rh = Math.max(14, Math.min(34, Math.floor(550 / Math.max(1, rows.length))));
+    var fz = rh >= 28 ? 13 : rh >= 23 ? 12 : rh >= 19 ? 11 : rh >= 17 ? 10 : 9;
+    var pad = Math.max(0, Math.floor((rh - 1 - fz * 1.25) / 2 * 10) / 10);
+    S.push(dkSlide("Comparativa", "Datos de Morningstar a " + (META && (META.rv || META.rf) || ""),
+      '<table class="dk-t dk-cmp" style="--fz:' + fz + "px;--pad:" + pad + 'px"><thead><tr><th></th>' + fs.map(function (f) { return '<th><div>' + fLogo(f.g, true) + "<span>" + esc(f.n) + "<small>" + esc(f.g) + "</small><small>ISIN " + esc(f.id) + "</small></span></div></th>"; }).join("") + "</tr></thead><tbody>" +
+      rows.map(function (r) { return "<tr><td><b>" + r[0] + "</b></td>" + fs.map(function (f) { return '<td class="r">' + r[1](f) + "</td>"; }).join("") + "</tr>"; }).join("") + "</tbody></table>", n++).replace('class="dk-s"', 'class="dk-s dk-one-page"'));
+    S.push(dkSlide("Ideas clave por fondo", "", '<div class="dk-grid dk-g' + Math.min(fs.length, 3) + '">' + fs.map(function (f) { return dkCard(f, "", true); }).join("") + "</div>", n++));
     dkPrint(S.join(""));
   }
 
