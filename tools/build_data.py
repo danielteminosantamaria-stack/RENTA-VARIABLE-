@@ -185,13 +185,21 @@ def fund(row, kind):
     return f
 
 
+# Fondos que Daniel ha decidido sacar de la web (Fondos Selección 50): se descartan aunque sigan en las hojas.
+EXCLUIDOS = {
+    "LU2482630675",  # M&G Total Return Credit Investment P EUR Acc
+    "IE00BDT57Y96",  # PIMCO GIS Low Duration Income E Hedged
+    "LU0599946893",  # DWS Concept Kaldemorgen EUR LC
+}
+
+
 def load(path, kind):
     rows = list(csv.reader(open(path, encoding="utf-8")))
     out = []
     for r in rows[2:]:
         if r and r[0].strip() and len(r) >= 118:
             f = fund(r, kind)
-            if f:
+            if f and f.get("id") not in EXCLUIDOS:
                 out.append(f)
     return out
 
