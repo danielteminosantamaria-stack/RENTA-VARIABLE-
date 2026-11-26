@@ -1332,6 +1332,47 @@
     })();
   }
 
+  // Importar posiciones pegadas desde una tabla (Nombre - ISIN, participaciones, precio, valor)
+  function esNum(t) {
+    var raw = t.replace(/\s/g, "");
+    if (/,/.test(raw)) raw = raw.replace(/\./g, "").replace(",", ".");
+    else if (/^-?\d{1,3}(\.\d{3})+$/.test(raw)) raw = raw.replace(/\./g, "");
+    var v = parseFloat(raw);
+    return isFinite(v) ? v : null;
+  }
+  function tableImport(text) {
+    var rows = {}, order = [], miss = [], totAll = 0, n = 0;
+    String(text || "").split(/\r?\n/).forEach(function (ln) {
+      var m = /\b[A-Z]{2}[A-Z0-9]{9}\d\b/.exec(ln);
+      if (!m) return;
+      var rest = ln.slice(m.index + m[0].length), nums = (rest.match(/-?\d{1,3}(?:\.\d{3})*(?:,\d+)?|-?\d+(?:,\d+)?/g) || []).map(esNum).filter(function (v) { return v !== null; });
+      if (!nums.length) return;
+      var val = nums[nums.length - 1], nm = ln.slice(0, m.index).replace(/[\s\-–]+$/, "").trim();
+      if (!(val > 0)) return;
+      n++; totAll += val;
+      if (!rows[m[0]]) { rows[m[0]] = { isin: m[0], n: nm, v: 0, p: nums.length > 2 ? nums[0] : null }; order.push(m[0]); }
+      rows[m[0]].v += val;
+    });
+    var lines = [];
+    order.forEach(function (k) {
+      var r = rows[k], f = byId(k);
+      if (f) lines.push({ id: f.id, w: Math.round(r.v / totAll * 10000) / 100, v: r.v });
+      else miss.push(r.n + " (" + r.isin + ", " + nf(r.v / totAll * 100, 1) + " %)");
+    });
+    return { lines: lines, amount: totAll > 0 ? Math.round(totAll * 100) / 100 : null, miss: miss, total: n };
+  }
+  function addTablePf(r, name, msg) {
+    if (!r.total) { msg.textContent = "No he encontrado posiciones. Cada línea necesita el ISIN y, después, participaciones, precio y valor."; return false; }
+    if (!r.lines.length) { msg.textContent = "Ningún fondo de la tabla está en la web." + (r.miss.length ? " Sin reconocer: " + r.miss.slice(0, 8).join("; ") + "." : ""); return false; }
+    var p = { id: uid(), name: (name || "Cartera importada").slice(0, 80), amount: r.amount, lines: r.lines.map(function (l) { return { id: l.id, w: l.w }; }) };
+    PF.push(p); savePf(); viewPortfolios();
+    var m = document.getElementById("pfmsg"), sum = p.lines.reduce(function (a, l) { return a + l.w; }, 0);
+    m.textContent = "Cartera «" + p.name + "» creada con " + p.lines.length + (p.lines.length === 1 ? " fondo" : " fondos") + " de " + r.total + " posiciones, valor total " + nf(r.amount, 2) + " €. Pesos: " +
+      p.lines.map(function (l) { return byId(l.id).n + " " + fmtPct(l.w); }).join("; ") + " (suman " + fmtPct(sum) + ")." +
+      (r.miss.length ? " No están en la web y no se han importado: " + r.miss.join("; ") + "." : "");
+    return true;
+  }
+
   function importPdf(file) {
     return pdfLines(file).then(function (L) {
       return xrayImport(L) || legacyImport(L);
@@ -1352,6 +1393,12 @@
       '<input class="inp grow" id="npn" placeholder="Nombre (por ejemplo, Cartera moderada)" maxlength="80" required aria-label="Nombre de la cartera">' +
       '<input class="inp amt" id="npa" type="number" min="0" step="1000" placeholder="Importe (€), opcional" aria-label="Importe en euros">' +
       '<button class="btn" type="submit">Crear cartera</button></div></form>';
+    h += '<form class="newpf" id="pfpaste" style="margin-top:14px"><p class="label">Pegar posiciones de un cliente</p>' +
+      '<p class="note" style="margin:0 0 8px">Pega la tabla con una posición por línea: nombre y ISIN, participaciones, precio y valor (por ejemplo, copiada de Excel). Los pesos se calculan con el valor de cada posición.</p>' +
+      '<textarea class="inp" id="pst" rows="6" style="width:100%" placeholder="RENTA 4 RENTA FIJA, FI CLASE R - ES0176954008   2.417,192816   12,419645 EUR   30.020,68" aria-label="Posiciones"></textarea>' +
+      '<div class="row" style="margin-top:8px"><input class="inp grow" id="psn" placeholder="Nombre de la cartera (por ejemplo, Cliente A)" maxlength="80" aria-label="Nombre de la cartera pegada">' +
+      '<button class="btn" type="submit">Crear cartera desde posiciones</button>' +
+      '<label class="btn ghost" for="pscsv">Importar CSV o TXT</label><input id="pscsv" type="file" accept=".csv,.txt,.tsv,text/plain,text/csv" hidden></div></form>';
     h += '<div class="row tools2"><button class="btn ghost" type="button" id="pfexp"' + (PF.length ? "" : " disabled") + '>Exportar todas</button>' +
       '<label class="btn ghost" for="pfimp">Importar (JSON)</label><input id="pfimp" type="file" accept="application/json,.json" hidden>' +
       '<label class="btn ghost" for="pfpdf">Importar PDF de Morningstar</label><input id="pfpdf" type="file" accept="application/pdf,.pdf" hidden></div><p class="note" id="pfmsg"></p>';
@@ -1364,6 +1411,17 @@
       var a = parseNum(document.getElementById("npa").value), p = { id: uid(), name: name, amount: a !== null && a > 0 ? a : null, lines: [] };
       PF.push(p); savePf();
       location.hash = "#/cartera/" + encodeURIComponent(p.id);
+    });
+    document.getElementById("pfpaste").addEventListener("submit", function (e) {
+      e.preventDefault();
+      addTablePf(tableImport(document.getElementById("pst").value), document.getElementById("psn").value.trim(), document.getElementById("pfmsg"));
+    });
+    document.getElementById("pscsv").addEventListener("change", function (e) {
+      var file = e.target.files && e.target.files[0], msg = document.getElementById("pfmsg");
+      if (!file) return;
+      var rd = new FileReader();
+      rd.onload = function () { addTablePf(tableImport(String(rd.result)), document.getElementById("psn").value.trim() || file.name.replace(/\.[^.]+$/, ""), msg); };
+      rd.readAsText(file);
     });
     document.getElementById("pfexp").addEventListener("click", function () {
       download("carteras-cuaderno-de-fondos.json", JSON.stringify({ version: 1, carteras: PF }, null, 1), "application/json");
