@@ -135,7 +135,7 @@
         tile("#/construir", "pie", "🔒 Privado", "Construir cartera", "con el cliente"),
         tile("#/comparar", "swap", "Herramienta", "Comparador de fondos", "hasta " + CMP_MAX + " fondos"),
         tile("#/carteras", "brief", "Herramienta", "Xray", PF.length + (PF.length === 1 ? " cartera" : " carteras")),
-        tile("#/ia", "spark", "Cada trimestre", "Carteras IA", "3 perfiles")
+        tile("#/ia", "spark", "Cada trimestre", "Carteras", "3 perfiles")
       ]) +
       homeSection("Mercado y seguimiento", [
         tile("#/acciones", "bolt", "Explorar", "Stocks", stocks().length + (stocks().length === 1 ? " ficha" : " fichas")),
@@ -1683,9 +1683,9 @@
 
   // ---------- carteras recomendadas ----------
   var PROFILES = [
-    { k: "conservador", n: "Conservadora", d: "Predomina la renta fija.", rf: 4, rv: 2, wrf: 70, rfVol: 4, rfNo: /High Yield|Emergente|Alt -|Otros/, rvVol: 16, rvNo: /Sector|Oro|Emergente|Small|Med\/Peq/ },
-    { k: "moderado", n: "Moderada", d: "Mitad renta fija, mitad renta variable.", rf: 3, rv: 3, wrf: 50, rfVol: 6, rfNo: /High Yield|Otros/, rvVol: 20, rvNo: /Sector|Oro/ },
-    { k: "dinamico", n: "Dinámica", d: "Predomina la renta variable.", rf: 1, rv: 5, wrf: 20, rfVol: 6, rfNo: /High Yield|Otros/, rvNo: /Oro|Recursos|Otros|Infraestructura/ }
+    { k: "conservador", n: "Conservadora", d: "Predomina la renta fija.", rf: 5, rv: 3, wrf: 70, rfVol: 4, rfNo: /High Yield|Emergente|Alt -|Otros/, rvVol: 16, rvNo: /Sector|Oro|Emergente|Small|Med\/Peq/ },
+    { k: "moderado", n: "Moderada", d: "Mitad renta fija, mitad renta variable.", rf: 4, rv: 4, wrf: 50, rfVol: 6, rfNo: /High Yield|Otros/, rvVol: 20, rvNo: /Sector|Oro/ },
+    { k: "dinamico", n: "Dinámica", d: "Predomina la renta variable.", rf: 2, rv: 6, wrf: 20, rfVol: 6, rfNo: /High Yield|Otros/, rvNo: /Oro|Recursos|Otros|Infraestructura/ }
   ];
   function rankScore(f) { return (isNum(f.score && f.score[3]) ? f.score[3] : -99) + (f.stars || 0) / 100; }
   function pickBest(t, n, maxVol, no) {
@@ -1710,11 +1710,11 @@
 
   // ---------- carteras IA (3 perfiles, rotación trimestral) ----------
   function viewIA() {
-    setTitle("Carteras IA");
+    setTitle("Carteras");
     var C = window.CIA;
-    if (!C || !C.perfiles) { app.innerHTML = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Carteras IA</h1><div class="empty">Todavía no hay carteras congeladas.</div>'; return; }
-    var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Carteras IA</h1>' +
-      '<p class="sub">Tres carteras de 6 fondos, una por perfil, seleccionadas automáticamente entre los fondos de la web. Se congelan cada trimestre (vigente: <b>' + esc(C.trimestre.replace("-", " ")) + "</b>, fijada el " + esc(C.fecha) + ") y en cada rotación se muestran las entradas y salidas.</p>" +
+    if (!C || !C.perfiles) { app.innerHTML = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Carteras</h1><div class="empty">Todavía no hay carteras congeladas.</div>'; return; }
+    var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Carteras</h1>' +
+      '<p class="sub">Tres carteras de 8 fondos, una por perfil, seleccionadas entre los fondos de la web. Se congelan cada trimestre (vigente: <b>' + esc(C.trimestre.replace("-", " ")) + "</b>, fijada el " + esc(C.fecha) + ") y en cada rotación se muestran las entradas y salidas.</p>" +
       '<p class="note">Criterio: mejor puntuación Morningstar total (rating como desempate), un fondo por categoría, sin fondos indexados y con tope de volatilidad según el perfil. Propuesta orientativa y automática, no es asesoramiento personalizado. Rentabilidad pasada, no garantiza resultados futuros.</p>';
     var prevQ = (C.historial || [])[0];
     PROFILES.forEach(function (pr) {
@@ -1759,7 +1759,7 @@
     app.querySelectorAll("[data-save]").forEach(function (b) {
       b.addEventListener("click", function () {
         var pr = PROFILES.filter(function (x) { return x.k === b.getAttribute("data-save"); })[0], P = C.perfiles[pr.k];
-        PF.push({ id: uid(), name: "Cartera IA " + pr.n.toLowerCase() + " " + C.trimestre.replace("-", " "), amount: null, lines: P.lines.map(function (l) { return { id: l.id, w: l.w }; }) });
+        PF.push({ id: uid(), name: "Cartera " + pr.n.toLowerCase() + " " + C.trimestre.replace("-", " "), amount: null, lines: P.lines.map(function (l) { return { id: l.id, w: l.w }; }) });
         savePf(); location.hash = "#/carteras";
       });
     });
