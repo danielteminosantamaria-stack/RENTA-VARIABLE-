@@ -52,6 +52,9 @@
     var L = window.LOGOS || {}, D = window.LOGODOM || {}, src = L[g] ? "logos/" + L[g] : D[g] ? "https://www.google.com/s2/favicons?sz=128&domain=" + encodeURIComponent(D[g]) : null;
     return src ? '<img src="' + esc(src) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.textContent=\'' + esc(initials(g)) + '\'">' : esc(initials(g));
   }
+  function fLogo(g, now) { // icono de la gestora; now = cargar ya (PDF)
+    return '<span class="flogo">' + (now ? logoOrInit(g).replace(' loading="lazy"', "") : logoOrInit(g)) + "</span>";
+  }
   function vlTag(f) { var d = String(f.nd || ""); return d ? ' · <span class="vl" title="Fecha del valor liquidativo: ' + esc(d) + '">VL ' + esc(d.slice(0, 5)) + "</span>" : ""; }
   function icon() {
     return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
@@ -1063,8 +1066,8 @@
     if (c.length) out.push(["Riesgo", listJoin(c)]);
     return out;
   }
-  function dkCard(f, chip) {
-    return '<div class="dk-card"><h3>' + esc(f.n) + '</h3><small>' + esc(f.g) + (chip ? ' <u>' + esc(chip) + "</u>" : "") + "</small>" + dkIdeas(f).map(function (t) { return "<p><i>" + t[0] + "</i>" + esc(t[1]) + "</p>"; }).join("") + "</div>";
+  function dkCard(f, chip, logo) {
+    return '<div class="dk-card">' + (logo ? '<div class="dk-ch">' + fLogo(f.g, true) + "<div>" : "") + "<h3>" + esc(f.n) + '</h3><small>' + esc(f.g) + (chip ? ' <u>' + esc(chip) + "</u>" : "") + "</small>" + (logo ? "</div></div>" : "") + dkIdeas(f).map(function (t) { return "<p><i>" + t[0] + "</i>" + esc(t[1]) + "</p>"; }).join("") + "</div>";
   }
   function dkWatch(fs, extra) {
     var w = [];
@@ -1096,7 +1099,12 @@
     document.body.classList.add("pd");
     function done() { document.body.classList.remove("pd"); d.remove(); st.remove(); window.removeEventListener("afterprint", done); }
     window.addEventListener("afterprint", done);
-    setTimeout(function () { window.print(); }, 150);
+    // se espera a los iconos (como mucho 3 segundos) antes de abrir la impresión
+    var pend = [].slice.call(d.querySelectorAll("img")).filter(function (im) { return !im.complete; }), left = pend.length, sent = false;
+    function go() { if (!sent && d.parentNode) { sent = true; window.print(); } }
+    function one() { if (--left === 0) setTimeout(go, 150); }
+    pend.forEach(function (im) { im.addEventListener("load", one); im.addEventListener("error", one); });
+    setTimeout(go, left ? 3000 : 150);
   }
   function deckBtn(fn) {
     var b = document.createElement("button"); b.type = "button"; b.className = "btn ghost"; b.textContent = "Descargar PDF";
@@ -1153,10 +1161,27 @@
       ["Volatilidad", function (f) { return dkp(f.vol && f.vol[0]); }], ["Sharpe", function (f) { return f.sharpe && isNum(f.sharpe[0]) ? nf(f.sharpe[0], 2) : "n.d."; }],
       ["Caída máxima", function (f) { return dkp(f.dd && isNum(f.dd[4]) ? Math.abs(f.dd[4]) : null); }],
       ["Morningstar", function (f) { return f.stars ? f.stars + " estrellas" : "n.d."; }]];
-    S.push(dkSlide("Comparativa", "Datos de Morningstar a " + (META && (META.rv || META.rf) || ""),
-      '<table class="dk-t dk-cmp"><thead><tr><th></th>' + fs.map(function (f) { return '<th class="r">' + esc(f.n) + "<small>" + esc(f.g) + "</small></th>"; }).join("") + "</tr></thead><tbody>" +
-      rows.map(function (r) { return "<tr><td><b>" + r[0] + "</b></td>" + fs.map(function (f) { return '<td class="r">' + r[1](f) + "</td>"; }).join("") + "</tr>"; }).join("") + "</tbody></table>", n++));
-    S.push(dkSlide("Ideas clave y puntos a vigilar", "", '<div class="dk-grid dk-g' + Math.min(fs.length, 3) + '">' + fs.map(function (f) { return dkCard(f); }).join("") + "</div>" + dkWatch(fs), n++));
+    var avail = [];
+    cmpSections(fs).forEach(function (x) { x[1].forEach(function (it) { if (it.k !== "chart") avail.push(it); }); });
+    var per = 9;
+    if (avail.some(function (it) { return !cmpOn(it.k); })) { // campos elegidos a mano
+      per = 12; rows = [];
+      avail.filter(function (it) { return cmpOn(it.k); }).forEach(function (it) {
+        if (it.k === "info") rows.push(["Categoría", function (f) { return esc(f.c); }], ["Morningstar", function (f) { return f.stars ? f.stars + " estrellas" : "n.d."; }]);
+        else rows.push([esc(it.l), function (f) {
+          var v = it.m.v(f);
+          if (it.k === "pos3" || it.k === "pos5") return isNum(v) ? Math.round(v) + "% positivos, " + (100 - Math.round(v)) + "% negativos" : "n.d.";
+          return (it.m.txt ? v : isNum(v)) ? cell(f, it.m) : "n.d.";
+        }]);
+      });
+    }
+    var pages = Math.ceil(rows.length / per);
+    for (var p = 0; p < pages; p++) {
+      S.push(dkSlide("Comparativa" + (pages > 1 ? " (" + (p + 1) + " de " + pages + ")" : ""), "Datos de Morningstar a " + (META && (META.rv || META.rf) || ""),
+        '<table class="dk-t dk-cmp' + (per > 9 ? " dk-many" : "") + '"><thead><tr><th></th>' + fs.map(function (f) { return '<th class="r">' + fLogo(f.g, true) + esc(f.n) + "<small>" + esc(f.g) + "</small></th>"; }).join("") + "</tr></thead><tbody>" +
+        rows.slice(p * per, (p + 1) * per).map(function (r) { return "<tr><td><b>" + r[0] + "</b></td>" + fs.map(function (f) { return '<td class="r">' + r[1](f) + "</td>"; }).join("") + "</tr>"; }).join("") + "</tbody></table>", n++));
+    }
+    S.push(dkSlide("Ideas clave y puntos a vigilar", "", '<div class="dk-grid dk-g' + Math.min(fs.length, 3) + '">' + fs.map(function (f) { return dkCard(f, "", true); }).join("") + "</div>" + dkWatch(fs), n++));
     dkPrint(S.join(""));
   }
 
@@ -1169,17 +1194,18 @@
       '<p class="sub">Elige entre 2 y ' + CMP_MAX + ' fondos para ver sus métricas una al lado de otra. En cada fila se marca el mejor valor.</p>';
     if (fs.length < 2) h += '<div class="sel">' + fs.map(function (f, i) {
       var rest = ids.filter(function (x) { return x !== f.id; });
-      return '<a class="selchip" href="' + hashFor(rest) + '" style="--c:' + CMP_COLORS[i] + '" title="Quitar de la comparación">' + esc(f.n) + " <b>×</b></a>";
+      return '<a class="selchip" href="' + hashFor(rest) + '" style="--c:' + CMP_COLORS[i] + '" title="Quitar de la comparación">' + fLogo(f.g) + esc(f.n) + " <b>×</b></a>";
     }).join("") + "</div>";
     if (ids.length < CMP_MAX) {
       h += '<div class="search tight">' + icon() + '<input id="cq" type="search" autocomplete="off" placeholder="Añadir fondo por nombre o ISIN" aria-label="Añadir fondo"></div><div class="results cmpres" id="cres"></div>';
     }
-    h += fs.length >= 2 ? cmpTable(fs) + cmpChart(fs) : '<p class="muted" style="margin-top:20px">Añade al menos 2 fondos para compararlos.</p>';
+    h += fs.length >= 2 ? cmpPicker(fs) + '<div id="cmpbody">' + cmpBody(fs) + "</div>" : '<p class="muted" style="margin-top:20px">Añade al menos 2 fondos para compararlos.</p>';
     app.innerHTML = h + footer("rv");
+    if (fs.length >= 2) cmpWire(fs);
     if (fs.length >= 2) { var cb = deckBtn(function () { deckCompare(fs); }); var tb = document.createElement("div"); tb.className = "row tools2"; tb.appendChild(cb); app.appendChild(tb); }
     var cq = document.getElementById("cq");
     if (cq) {
-      var mk = function (f) { return '<a href="' + hashFor(ids.concat(f.id)) + '">' + esc(f.n) + "<small>" + esc(f.g) + " · " + esc(f.c) + "</small></a>"; };
+      var mk = function (f) { return '<a href="' + hashFor(ids.concat(f.id)) + '">' + fLogo(f.g) + "<div>" + esc(f.n) + "<small>" + esc(f.g) + " · " + esc(f.c) + "</small></div></a>"; };
       var sug = function () {
         var res = document.getElementById("cres");
         if (!res || !fs.length) return;
@@ -1197,6 +1223,55 @@
     }
   }
 
+  /* ---- campos elegidos en el comparador (se recuerdan en este navegador) ---- */
+  var CMP_STORE = "cf_cmp_off";
+  var cmpOff = (function () { try { var v = JSON.parse(localStorage.getItem(CMP_STORE) || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; } })();
+  function cmpOn(k) { return cmpOff.indexOf(k) === -1; }
+  function cmpSections(fs) {
+    function shown(m) { return fs.some(function (f) { var v = m.v(f); return m.txt ? !!v : isNum(v); }); }
+    function item(m) { return { k: m.k, m: m, l: m.k === "pos3" ? "Meses 3 años" : m.k === "pos5" ? "Meses 5 años" : m.l }; }
+    var secs = [["General", [{ k: "info", l: "Categoría y rating" }]]];
+    GROUPS.forEach(function (g) {
+      secs.push([g, METRICS.filter(function (m) { return m.g === g && CMP_HIDE.indexOf(m.k) === -1 && CMP_MONTH.indexOf(m.k) === -1 && shown(m); }).map(item)]);
+      if (g === "Riesgo") secs.push(["Comportamiento mensual", CMP_MONTH.map(metric).filter(shown).map(item)]);
+    });
+    if (cmpChart(fs)) secs.push(["Gráfico", [{ k: "chart", l: "Rentabilidad por año" }]]);
+    return secs.filter(function (x) { return x[1].length; });
+  }
+  function cmpPicker(fs) {
+    return '<details class="cmpf" id="cmpf"><summary><span>Elegir campos</span><b id="cmpfn"></b></summary><div class="cmpf-body">' +
+      '<div class="cmpf-bar"><span>Pulsa un campo para mostrarlo u ocultarlo, o el título de un bloque para cambiarlo entero. El PDF usa la misma selección.</span><button type="button" class="btn ghost sm" data-all="1">Marcar todos</button><button type="button" class="btn ghost sm" data-all="0">Quitar todos</button></div>' +
+      cmpSections(fs).map(function (sec, i) {
+        return '<div class="cmpf-sec"><button type="button" class="cmpf-h" data-sec="' + i + '">' + sec[0] + '</button><div class="cmpf-list">' +
+          sec[1].map(function (it) { return '<button type="button" class="cf" data-k="' + it.k + '">' + esc(it.l) + "</button>"; }).join("") + "</div></div>";
+      }).join("") + "</div></details>";
+  }
+  function cmpWire(fs) {
+    var box = document.getElementById("cmpf"), secs = cmpSections(fs), all = [];
+    if (!box) return;
+    secs.forEach(function (sec) { sec[1].forEach(function (it) { all.push(it.k); }); });
+    function paint() {
+      [].forEach.call(box.querySelectorAll(".cf"), function (b) { b.setAttribute("aria-pressed", cmpOn(b.getAttribute("data-k")) ? "true" : "false"); });
+      document.getElementById("cmpfn").textContent = all.filter(cmpOn).length + " de " + all.length;
+    }
+    function set(keys, on) {
+      cmpOff = cmpOff.filter(function (k) { return keys.indexOf(k) === -1; });
+      if (!on) cmpOff = cmpOff.concat(keys);
+      try { localStorage.setItem(CMP_STORE, JSON.stringify(cmpOff)); } catch (e) { /* sin almacenamiento */ }
+      paint();
+      document.getElementById("cmpbody").innerHTML = cmpBody(fs);
+    }
+    box.addEventListener("click", function (e) {
+      var b = e.target.closest ? e.target.closest("button") : null;
+      if (!b) return;
+      if (b.hasAttribute("data-k")) { var k = b.getAttribute("data-k"); set([k], !cmpOn(k)); }
+      else if (b.hasAttribute("data-sec")) { var ks = secs[+b.getAttribute("data-sec")][1].map(function (it) { return it.k; }); set(ks, !ks.every(cmpOn)); }
+      else if (b.hasAttribute("data-all")) set(all, b.getAttribute("data-all") === "1");
+    });
+    paint();
+  }
+  function cmpBody(fs) { return cmpTable(fs) + (cmpOn("chart") ? cmpChart(fs) : ""); }
+
   function cmpTable(fs) {
     var n = fs.length, ids = fs.map(function (f) { return f.id; });
     var head = '<tr><th scope="col" class="lb"><span class="cmpkey"><i></i>Mejor de la fila</span></th>' + fs.map(function (f, i) {
@@ -1204,15 +1279,11 @@
       return '<th scope="col" class="ch" style="--c:' + CMP_COLORS[i] + '"><a class="cq" href="' + hashFor(rest) + '" title="Quitar de la comparación" aria-label="Quitar ' + esc(f.n) + '">×</a>' +
         '<div class="cmph"><span class="flogo">' + logoOrInit(f.g) + '</span><div><a class="cn" href="#/fondo/' + encodeURIComponent(f.id) + '">' + esc(f.n) + "</a><small>" + esc(f.g) + "</small></div></div></th>";
     }).join("") + "</tr>";
-    var rows = '<tr class="info"><td class="lb">Categoría y rating Morningstar</td>' + fs.map(function (f) {
+    var rows = !cmpOn("info") ? "" : '<tr class="info"><td class="lb">Categoría y rating Morningstar</td>' + fs.map(function (f) {
       return '<td><span class="cat">' + esc(f.c) + '</span><span class="cst">' + (f.stars ? stars(f.stars) : '<span class="muted">Sin rating</span>') + "</span></td>";
     }).join("") + "</tr>";
-    function shown(m) { return fs.some(function (f) { var v = m.v(f); return m.txt ? !!v : isNum(v); }); }
-    var secs = [];
-    GROUPS.forEach(function (g) {
-      secs.push([g, METRICS.filter(function (m) { return m.g === g && CMP_HIDE.indexOf(m.k) === -1 && CMP_MONTH.indexOf(m.k) === -1 && shown(m); })]);
-      if (g === "Riesgo") secs.push(["Comportamiento mensual", CMP_MONTH.map(metric).filter(shown)]);
-    });
+    var secs = cmpSections(fs).filter(function (x) { return x[0] !== "General" && x[0] !== "Gráfico"; })
+      .map(function (x) { return [x[0], x[1].filter(function (it) { return cmpOn(it.k); }).map(function (it) { return it.m; })]; });
     secs.forEach(function (sec) {
       if (!sec[1].length) return;
       rows += '<tr class="grp"><th colspan="' + (n + 1) + '" scope="colgroup"><span>' + sec[0] + "</span></th></tr>";
@@ -1237,6 +1308,7 @@
         }).join("") + "</tr>";
       });
     });
+    if (!rows) rows = '<tr class="info"><td colspan="' + (n + 1) + '">No hay campos seleccionados. Marca alguno en Elegir campos.</td></tr>';
     return '<div class="cmpx" style="--n:' + n + '"><table><colgroup><col class="lbc">' + fs.map(function () { return "<col>"; }).join("") + "</colgroup><thead>" + head + "</thead><tbody>" + rows + "</tbody></table></div>";
   }
 
@@ -1263,7 +1335,7 @@
       g += '<text x="' + (L + gi * gw + gw / 2) + '" y="' + (H - 12) + '" text-anchor="middle" fill="#717171" font-size="11">' + esc(yearLabel(y)) + "</text>";
     });
     return '<div class="chart-card" style="margin-top:22px"><p class="label">Rentabilidad por año</p><svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Rentabilidad por año de los fondos comparados">' + g + "</svg>" +
-      '<div class="legend">' + fs.map(function (f, i) { return '<span><i style="background:' + CMP_COLORS[i] + '"></i>' + esc(f.n) + "</span>"; }).join("") + "</div></div>";
+      '<div class="legend cmplg">' + fs.map(function (f, i) { return '<span><i style="background:' + CMP_COLORS[i] + '"></i>' + fLogo(f.g) + esc(f.n) + "</span>"; }).join("") + "</div></div>";
   }
 
   // ---------- carteras (se guardan solo en este navegador) ----------

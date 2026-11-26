@@ -32,5 +32,6 @@ window.LOGODOM = {
  "Polar Capital": "polarcapital.com",
  "Allianz GI": "allianzgi.com",
  "La Financière de l'Echiquier": "lfde.com",
- "Edmond de Rothschild": "edmond-de-rothschild.com"
+ "Edmond de Rothschild": "edmond-de-rothschild.com",
+ "Goehring & Rozencwajg": "gorozen.com"
 };
