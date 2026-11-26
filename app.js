@@ -248,7 +248,7 @@
   }
   function sorted(t, list) {
     var s = state[t], c = cols(t).filter(function (x) { return x.k === s.sort; })[0];
-    var get = s.sort === "n" ? function (f) { return f.n; } : c ? c.v : function (f) { return f.n; };
+    var get = s.sort === "st" ? function (f) { return f.stars || null; } : s.sort === "n" ? function (f) { return f.n; } : c ? c.v : function (f) { return f.n; };
     return list.slice().sort(function (a, b) {
       var x = get(a), y = get(b);
       var nx = x == null || x === "" || (typeof x === "number" && !isNum(x));
@@ -325,7 +325,7 @@
       b.addEventListener("click", function () {
         var k = b.getAttribute("data-col"), i = s.cols.indexOf(k);
         if (i !== -1) { if (s.cols.length > 1) s.cols.splice(i, 1); } else s.cols.push(k);
-        if (s.sort !== "n" && s.cols.indexOf(s.sort) === -1) { s.sort = "n"; s.dir = 1; }
+        if (s.sort !== "n" && s.sort !== "st" && s.cols.indexOf(s.sort) === -1) { s.sort = "n"; s.dir = 1; }
         saveCols(t); renderPicker(t); renderBody(t);
       });
     });
@@ -356,12 +356,14 @@
       return '<th scope="col"' + (on ? ' aria-sort="' + (s.dir > 0 ? "ascending" : "descending") + '"' : "") + '><button type="button" data-sort="' + k + '">' +
         l + (on ? (s.dir > 0 ? " ↑" : " ↓") : "") + "</button></th>";
     }
-    body.innerHTML = '<div class="table-wrap"><table><thead><tr>' + th("n", "Fondo") +
+    body.innerHTML = '<div class="table-wrap"><table><thead><tr>' + th("n", "Fondo") + th("st", "Morningstar") +
       c.map(function (x) { return th(x.k, x.l); }).join("") + "</tr></thead><tbody>" +
       rows.map(function (f) {
         return '<tr data-id="' + esc(f.id) + '" tabindex="0"><td class="fund"><span class="flogo" aria-hidden="true">' + logoOrInit(f.g) + '</span><span class="ftxt"><b>' + esc(f.n) +
           (f.idx ? '<span class="tag">Indexado</span>' : "") + "</b><small>" + esc(f.g) + (f.c ? " · " + esc(f.c) : "") + vlTag(f) +
-          "</small></span></td>" + c.map(function (x) { return "<td>" + x.r(f) + "</td>"; }).join("") + "</tr>";
+          "</small></span></td>" +
+          '<td class="mst">' + (f.stars ? '<span role="img" aria-label="' + f.stars + ' de 5 estrellas">' + stars(f.stars) + "</span>" : '<span class="muted">–</span>') + "</td>" +
+          c.map(function (x) { return "<td>" + x.r(f) + "</td>"; }).join("") + "</tr>";
       }).join("") + "</tbody></table></div>";
     body.querySelectorAll("[data-sort]").forEach(function (b) {
       b.addEventListener("click", function () {
