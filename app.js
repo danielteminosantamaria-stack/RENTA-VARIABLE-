@@ -2481,6 +2481,33 @@
     });
     return lines;
   }
+  // composición final de la cartera construida: cada fondo con su peso, importe y datos
+  function bldFinal(lines, amount) {
+    var q = { lines: lines }, amt = amount > 0 ? amount : 0, tw = lines.reduce(function (a, l) { return a + l.w; }, 0), cols = amt ? 10 : 8;
+    function money0(v) { return nf(v, 0) + " €"; }
+    function wcell(w) { return '<td class="num bfw"><b>' + nf(w, 1) + '%</b><i><u style="width:' + Math.min(100, w) + '%"></u></i></td>'; }
+    var body = ["Renta fija", "Otros", "Renta variable"].map(function (g) {
+      var rows = lines.map(function (l) { var f = byId(l.id); return { l: l, f: f, k: bucketOf(f) }; })
+        .filter(function (x) { return BUCKETS.some(function (b) { return b.k === x.k && b.g === g; }); })
+        .sort(function (a, b) { return b.l.w - a.l.w; });
+      if (!rows.length) return "";
+      var gw = rows.reduce(function (a, x) { return a + x.l.w; }, 0);
+      return '<tr class="bfg"><td>' + (g === "Otros" ? "Alternativos y mixtos" : g) + "</td>" + wcell(gw) + (amt ? '<td class="num"><b>' + money0(amt * gw / 100) + "</b></td><td></td>" : "") + '<td colspan="' + (cols - (amt ? 4 : 2)) + '"></td></tr>' +
+        rows.map(function (x) {
+          var f = x.f, de = amt * x.l.w / 100, u = amt ? chUnits({ f: f, de: de }) : null;
+          return '<tr><td class="fund"><span class="ftxt"><b><a href="#/fondo/' + encodeURIComponent(f.id) + '">' + esc(f.n) + "</a></b><small>" + esc(bname(x.k)) + " · " + esc(f.g) + " · " + esc(f.id) + "</small></span></td>" + wcell(x.l.w) +
+            (amt ? '<td class="num">' + money0(de) + '</td><td class="num">' + (u ? nf(u, 2) : "–") + "</td>" : "") +
+            '<td class="mst">' + (f.stars ? stars(f.stars) : '<span class="muted">–</span>') + "</td><td>" + ret(f.ret.ytd) + "</td><td>" + ret(f.ret.y1) + "</td><td>" + ret(f.ret.y3) + '</td><td class="num">' + pct(f.vol[0], false, 1) + '</td><td class="num">' + dec(f.sharpe[0]) + "</td></tr>";
+        }).join("");
+    }).join("");
+    function avg(fn) { return wAvg(q, fn).v; }
+    return '<section class="block" style="margin-top:22px" id="bcomp"><h3>Composición final de la cartera</h3><p class="note" style="margin-top:0">' + lines.length + (lines.length === 1 ? " fondo" : " fondos") + (amt ? " · " + money0(amt) : "") + " · Perfil " + esc(BPROF[bld.profile].n.toLowerCase()) +
+      (Math.abs(tw - 100) < 0.05 ? "" : ' · <b class="neg">Sin terminar: los pesos suman ' + nf(tw, 1) + "%</b>") + '</p><div class="table-wrap"><table class="bft"><thead><tr><th scope="col">Fondo</th><th scope="col">Peso</th>' +
+      (amt ? '<th scope="col">Importe</th><th scope="col">Particip. aprox.</th>' : "") + '<th scope="col">Morningstar</th><th scope="col">Año</th><th scope="col">1 año</th><th scope="col">3 años</th><th scope="col">Vol. 1 a.</th><th scope="col">Sharpe 1 a.</th></tr></thead><tbody>' + body +
+      '</tbody><tfoot><tr><td><b>Total cartera</b></td><td class="num"><b>' + nf(tw, 1) + "%</b></td>" + (amt ? '<td class="num"><b>' + money0(amt * tw / 100) + "</b></td><td></td>" : "") + "<td></td><td>" + ret(avg(function (f) { return f.ret.ytd; })) + "</td><td>" + ret(avg(function (f) { return f.ret.y1; })) + "</td><td>" + ret(avg(function (f) { return f.ret.y3; })) +
+      '</td><td class="num">' + pct(avg(function (f) { return f.vol[0]; }), false, 1) + '</td><td class="num">' + dec(avg(function (f) { return f.sharpe[0]; })) + "</td></tr></tfoot></table></div>" +
+      '<p class="note">La fila total es la media ponderada por peso.' + (amt ? " Participaciones estimadas con el último valor liquidativo publicado en la web (no se calculan si está en otra divisa)." : " Indica el importe arriba para ver los euros y las participaciones de cada fondo.") + "</p></section>";
+  }
   function bandStyle(r) {
     return "background:linear-gradient(to right,#e0e0e0 0," + r[0] + "%,#f0c9b0 " + r[0] + "%," + r[1] + "%,#e0e0e0 " + r[1] + "%,#e0e0e0 100%)";
   }
@@ -2504,7 +2531,7 @@
         '<input type="range" min="0" max="100" step="1" class="rng" data-r="' + b.k + '" aria-label="Peso de ' + esc(b.n) + '">' +
         '<p class="bkm"><span data-hq="' + b.k + '"></span><span class="bst" data-st="' + b.k + '"></span></p><div class="cands" id="c-' + b.k + '"></div></div>';
     });
-    h += '<div id="btotal"></div><div id="bsum"></div><div class="row tools2"><button type="button" class="btn" id="bsave">Guardar en mis carteras</button>' +
+    h += '<div id="btotal"></div><div id="bsum"></div><div id="bfinal"></div><div class="row tools2"><button type="button" class="btn" id="bsave">Guardar en mis carteras</button>' +
       '<button type="button" class="btn ghost" id="bmail">Correo</button><button type="button" class="btn ghost" id="bpdf">Descargar PDF</button><button type="button" class="btn ghost" id="bnorm">Ajustar a 100%</button><button type="button" class="btn ghost" id="breset">Valores del perfil</button></div>';
     app.innerHTML = h + footer("rv") + '<div class="bleft-sp"></div><div id="bleft" role="status" aria-live="polite"></div>';
 
@@ -2560,6 +2587,7 @@
       drawBands();
       drawLeft();
       document.getElementById("bsum").innerHTML = n ? summary({ id: "tmp", name: bld.name, amount: bld.amount, lines: lines }) : "";
+      document.getElementById("bfinal").innerHTML = n ? bldFinal(lines, bld.amount) : "";
     }
     function drawAll() { BUCKETS.forEach(drawBucket); drawTotals(); }
     function setW(k, v) { bld.w[k] = Math.max(0, Math.min(100, isFinite(v) ? Math.round(v) : 0)); drawBucket(BUCKETS.filter(function (b) { return b.k === k; })[0]); drawTotals(); }
