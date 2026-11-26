@@ -197,8 +197,15 @@
     P("vol3", "Vol. 3 años", "Riesgo", function (f) { return f.vol[1]; }, { u: "%", d: 1 }),
     P("vol5", "Vol. 5 años", "Riesgo", function (f) { return f.vol[2]; }, { u: "%", d: 1 }),
     P("ddmax", "Caída máxima", "Riesgo", function (f) { return f.dd[4]; }, { u: "%", d: 1 }),
-    P("worst1", "Peor mes 1 año", "Riesgo", function (f) { return f.worst[0]; }, { u: "%", d: 1 }),
-    P("pos1", "Meses en positivo 1 año", "Riesgo", function (f) { return f.pos[0]; }, { u: "%", d: 0 }),
+    P("worst1", "Peor mes 1 año", "Riesgo", function (f) { return f.worst && f.worst[0]; }, { u: "%", d: 1 }),
+    P("worst3", "Peor mes 3 años", "Riesgo", function (f) { return f.worst && f.worst[1]; }, { u: "%", d: 1 }),
+    P("worst5", "Peor mes 5 años", "Riesgo", function (f) { return f.worst && f.worst[2]; }, { u: "%", d: 1 }),
+    P("pos1", "Meses en positivo 1 año", "Riesgo", function (f) { return f.pos && f.pos[0]; }, { u: "%", d: 0 }),
+    P("neg1", "Meses en negativo 1 año", "Riesgo", function (f) { return f.pos && isNum(f.pos[0]) ? 100 - Math.round(f.pos[0]) : null; }, { u: "%", d: 0 }),
+    P("pos3", "Meses en positivo 3 años", "Riesgo", function (f) { return f.pos && f.pos[1]; }, { u: "%", d: 0 }),
+    P("neg3", "Meses en negativo 3 años", "Riesgo", function (f) { return f.pos && isNum(f.pos[1]) ? 100 - Math.round(f.pos[1]) : null; }, { u: "%", d: 0 }),
+    P("pos5", "Meses en positivo 5 años", "Riesgo", function (f) { return f.pos && f.pos[2]; }, { u: "%", d: 0 }),
+    P("neg5", "Meses en negativo 5 años", "Riesgo", function (f) { return f.pos && isNum(f.pos[2]) ? 100 - Math.round(f.pos[2]) : null; }, { u: "%", d: 0 }),
     P("top10", "Peso top 10", "Otros", function (f) { return f.top10; }, { u: "%", d: 1 })
   ];
   var GROUPS = ["Rentabilidad", "Ratios", "Riesgo", "Distribución", "Cartera", "Otros"];
@@ -663,10 +670,11 @@
 
   // ---------- utilidades comunes de comparador y carteras ----------
   var BETTER = {
-    hi: "tir w1 m1 m3 m6 ytd y1 y3 y5 y10 rmed sh1 sh3 sh5 so1 so3 so5 mar1 mar3 mar5 alpha score ddmax worst1 pos1".split(" "),
-    lo: "vol1 vol3 vol5".split(" ")
+    hi: "tir w1 m1 m3 m6 ytd y1 y3 y5 y10 rmed sh1 sh3 sh5 so1 so3 so5 mar1 mar3 mar5 alpha score ddmax worst1 worst3 worst5 pos1 pos3 pos5".split(" "),
+    lo: "vol1 vol3 vol5 neg1 neg3 neg5".split(" ")
   };
   var CMP_MAX = 4;
+  var CMP_HIDE = "so1 so3 so5 rmed sh5 mar5".split(" "); // métricas que no salen en el comparador
   var CMP_COLORS = ["#851a2e", "#3b3b3b", "#1e7a4a", "#c27c0e"];
   var YEARS = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
 
@@ -1195,11 +1203,10 @@
     function textRow(label, fn) { return "<tr><td>" + label + "</td>" + fs.map(function (f) { return "<td>" + fn(f) + "</td>"; }).join("") + "</tr>"; }
     rows += '<tr class="grp"><td colspan="' + (n + 1) + '">General</td></tr>' +
       textRow("Categoría Morningstar", function (f) { return '<span class="cat">' + esc(f.c) + "</span>"; }) +
-      textRow("Rating Morningstar", function (f) { return f.stars ? stars(f.stars) : '<span class="muted">–</span>'; }) +
-      textRow("Patrimonio de la clase", function (f) { return f.aumc ? money(f.aumc) : "–"; });
+      textRow("Rating Morningstar", function (f) { return f.stars ? stars(f.stars) : '<span class="muted">–</span>'; });
     GROUPS.forEach(function (g) {
       var ms = METRICS.filter(function (m) {
-        return m.g === g && fs.some(function (f) { var v = m.v(f); return m.txt ? !!v : isNum(v); });
+        return m.g === g && CMP_HIDE.indexOf(m.k) === -1 && fs.some(function (f) { var v = m.v(f); return m.txt ? !!v : isNum(v); });
       });
       if (!ms.length) return;
       rows += '<tr class="grp"><td colspan="' + (n + 1) + '">' + g + "</td></tr>";
