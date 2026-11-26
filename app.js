@@ -122,12 +122,11 @@
     setTitle("");
     app.innerHTML =
       heroHtml() + searchHtml() +
-      homeSection("Fondos", [
+      homeSection("Fondos Selección 50", [
         tile("#/rf", "chart", "Fondos de", CATS.rf.card, ofType("rf").length + " fondos"),
         tile("#/rv", "trend", "Fondos de", CATS.rv.card, ofType("rv").length + " fondos")
       ]) +
       homeSection("Herramientas de cartera", [
-        tile("#/gestion", "scan", "Herramienta", "Gestión de carteras", "analizar la del cliente"),
         tile("#/construir", "build", "🔒 Privado", "Construir cartera", "con el cliente"),
         tile("#/comparar", "compare", "Herramienta", "Comparador de fondos", "hasta " + CMP_MAX + " fondos"),
         tile("#/carteras", "folder", "Herramienta", "Carteras", PF.length + (PF.length === 1 ? " cartera" : " carteras")),
