@@ -2490,16 +2490,16 @@
       var rows = lines.map(function (l) { var f = byId(l.id); return { l: l, f: f, k: bucketOf(f) }; })
         .filter(function (x) { return BUCKETS.some(function (b) { return b.k === x.k && b.g === g; }); })
         .sort(function (a, b) { return b.l.w - a.l.w; });
-      return { n: g === "Otros" ? "Alternativos y mixtos" : g, rows: rows, w: rows.reduce(function (a, x) { return a + x.l.w; }, 0) };
+      return { n: g === "Otros" ? "Alternativos y mixtos" : g, c: g === "Renta fija" ? "g-rf" : g === "Otros" ? "g-alt" : "g-rv", rows: rows, w: rows.reduce(function (a, x) { return a + x.l.w; }, 0) };
     }).filter(function (g) { return g.rows.length; });
-    function name(x, extra) { return '<td class="fund"><span class="ftxt"><b><a href="#/fondo/' + encodeURIComponent(x.f.id) + '">' + esc(x.f.n) + "</a></b><small>" + extra + "</small></span></td>"; }
+    function name(x, extra) { return '<td class="fund"><div class="bfn"><span class="flogo" aria-hidden="true">' + logoOrInit(x.f.g) + '</span><span class="ftxt"><b><a href="#/fondo/' + encodeURIComponent(x.f.id) + '">' + esc(x.f.n) + "</a></b><small>" + extra + "</small></span></div></td>"; }
     // 1. pesos e importes
     var cols = amt ? 5 : 3;
     var t1 = groups.map(function (g) {
-      return '<tr class="bfg"><td>' + g.n + "</td>" + wcell(g.w) + (amt ? '<td class="num"><b>' + money0(amt * g.w / 100) + "</b></td><td></td>" : "") + "<td></td></tr>" +
+      return '<tr class="bfg ' + g.c + '"><td>' + g.n + "</td>" + wcell(g.w) + (amt ? '<td class="num"><b>' + money0(amt * g.w / 100) + "</b></td><td></td>" : "") + "<td></td></tr>" +
         g.rows.map(function (x) {
           var de = amt * x.l.w / 100, u = amt ? chUnits({ f: x.f, de: de }) : null;
-          return "<tr>" + name(x, esc(bname(x.k)) + " · " + esc(x.f.g) + " · " + esc(x.f.id)) + wcell(x.l.w) +
+          return '<tr class="' + g.c + '">' + name(x, esc(bname(x.k)) + " · " + esc(x.f.g) + " · " + esc(x.f.id)) + wcell(x.l.w) +
             (amt ? '<td class="num">' + money0(de) + '</td><td class="num">' + (u ? nf(u, 2) : "–") + "</td>" : "") +
             '<td class="mst">' + (x.f.stars ? stars(x.f.stars) : '<span class="muted">–</span>') + "</td></tr>";
         }).join("");
@@ -2521,7 +2521,7 @@
     });
     function cells(fn) { return M.map(function (m, i) { return "<td" + (!i || M[i - 1].g !== m.g ? ' class="bfs"' : "") + ">" + fn(m) + "</td>"; }).join(""); }
     var t2 = groups.map(function (g) {
-      return '<tr class="bfg"><td>' + g.n + '</td><td colspan="' + M.length + '"></td></tr>' +
+      return '<tr class="bfg ' + g.c + '"><td>' + g.n + '</td><td colspan="' + M.length + '"></td></tr>' +
         g.rows.map(function (x) { return "<tr>" + name(x, nf(x.l.w, 1) + "% de la cartera") + cells(function (m) { return val(m, m.v(x.f)); }) + "</tr>"; }).join("");
     }).join("");
     var tot = cells(function (m) {
@@ -2545,6 +2545,7 @@
   function viewBuild() {
     setTitle("Construir cartera");
     if (!bld) bldReset("moderado", false);
+    var GC = { "Renta fija": "g-rf", "Otros": "g-alt", "Renta variable": "g-rv" }, GN = { "Renta fija": "Renta fija", "Otros": "Alternativos y mixtos", "Renta variable": "Renta variable" };
     var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Construir cartera</h1>' +
       '<p class="sub">Elige el perfil, ajusta el porcentaje de cada categoría dentro de su horquilla y selecciona los fondos propuestos. La franja de color de cada barra es la horquilla recomendada para el perfil.</p>' +
       '<div class="bhead"><label class="fld"><span class="muted">Nombre de la cartera</span><input class="inp" id="bname" maxlength="80" placeholder="Por ejemplo, Cartera cliente" value="' + esc(bld.name) + '"></label>' +
@@ -2555,29 +2556,30 @@
       '<div id="bbands"></div>';
     var last = "";
     BUCKETS.forEach(function (b) {
-      if (b.g !== last) { h += '<p class="label bgl">' + b.g + "</p>"; last = b.g; }
-      h += '<div class="bk" id="bk-' + b.k + '"><div class="bkh"><div><b>' + esc(b.n) + "</b>" + (b.d ? "<small>" + esc(b.d) + "</small>" : "") + '</div>' +
+      if (b.g !== last) { h += '<div class="bgh ' + GC[b.g] + '"><h2>' + GN[b.g] + '</h2><b data-gt="' + b.g + '"></b></div>'; last = b.g; }
+      h += '<div class="bk ' + GC[b.g] + '" id="bk-' + b.k + '"><div class="bkh"><div><b>' + esc(b.n) + "</b>" + (b.d ? "<small>" + esc(b.d) + "</small>" : "") + '</div>' +
         '<div class="bkw"><input class="inp w" type="number" min="0" max="100" step="1" data-n="' + b.k + '" aria-label="Porcentaje de ' + esc(b.n) + '"><span>%</span></div></div>' +
         '<input type="range" min="0" max="100" step="1" class="rng" data-r="' + b.k + '" aria-label="Peso de ' + esc(b.n) + '">' +
         '<p class="bkm"><span data-hq="' + b.k + '"></span><span class="bst" data-st="' + b.k + '"></span></p><div class="cands" id="c-' + b.k + '"></div></div>';
     });
-    h += '<div id="btotal"></div><div id="bsum"></div><div id="bfinal"></div><div class="row tools2"><button type="button" class="btn" id="bsave">Guardar en mis carteras</button>' +
+    h += '<div id="bsum"></div><div id="bfinal"></div><div class="row tools2"><button type="button" class="btn" id="bsave">Guardar en mis carteras</button>' +
       '<button type="button" class="btn ghost" id="bmail">Correo</button><button type="button" class="btn ghost" id="bpdf">Descargar PDF</button><button type="button" class="btn ghost" id="bnorm">Ajustar a 100%</button><button type="button" class="btn ghost" id="breset">Valores del perfil</button></div>';
-    app.innerHTML = h + footer("rv") + '<div class="bleft-sp"></div><div id="bleft" role="status" aria-live="polite"></div>';
+    app.innerHTML = '<div class="bpage">' + h + "</div>" + footer("rv") + '<div class="bleft-sp"></div><div id="bleft" role="status" aria-live="polite"></div>';
 
     function total() { return BUCKETS.reduce(function (a, b) { return a + (bld.w[b.k] || 0); }, 0); }
     // aviso fijo con el peso que falta (o sobra) para llegar al 100%
     function drawLeft() {
       var t = total(), d = Math.round((100 - t) * 10) / 10, el = document.getElementById("bleft"), dc = d % 1 ? 1 : 0;
+      var n = bldLines().length, mf = maxFunds(bld.amount), mx = mf && mf.n !== null ? mf.n : null;
       el.className = d > 0 ? "falta" : d < 0 ? "sobra" : "ok";
-      el.innerHTML = "<div><b>" + (d > 0 ? "Falta " + nf(d, dc) + "% para el 100%" : d < 0 ? "Sobra " + nf(-d, dc) + "%: pasa del 100%" : "Cartera completa al 100%") + "</b><span>Asignado " + nf(t, t % 1 ? 1 : 0) + '%</span></div><i><u style="width:' + Math.min(100, t) + '%"></u></i>';
+      el.innerHTML = "<div><b>" + (d > 0 ? "Falta " + nf(d, dc) + "% para el 100%" : d < 0 ? "Sobra " + nf(-d, dc) + "%: pasa del 100%" : "Cartera completa al 100%") + "</b><span>Asignado " + nf(t, t % 1 ? 1 : 0) + "% · " + n + (n === 1 ? " fondo" : " fondos") + (mx !== null ? (n > mx ? ' <em class="bmx">máximo ' + mx + "</em>" : " (máximo " + mx + ")") : "") + '</span></div><i><u style="width:' + Math.min(100, t) + '%"></u></i>';
     }
     function drawBands() {
       var pr = BPROF[bld.profile], rv = RVB.reduce(function (a, k) { return a + (bld.w[k] || 0); }, 0);
       var rf = ["corto", "corp", "hy"].reduce(function (a, k) { return a + (bld.w[k] || 0); }, 0), ot = bld.w.alt || 0;
       var ok = rv >= pr.rv[0] && rv <= pr.rv[1];
-      document.getElementById("bbands").innerHTML = '<div class="bband"><div class="stack"><i style="width:' + rf + '%;background:#3b3b3b"></i><i style="width:' + ot + '%;background:#b9b9b9"></i><i style="width:' + rv + '%;background:#851a2e"></i></div>' +
-        '<div class="keys"><span style="--c:#3b3b3b">Renta fija <b>' + nf(rf, 0) + '%</b></span><span style="--c:#b9b9b9">Alternativos y mixtos <b>' + nf(ot, 0) + '%</b></span><span style="--c:#851a2e">Renta variable <b>' + nf(rv, 0) + "%</b></span></div>" +
+      function tile(c, n, w) { return '<div class="btl ' + c + '"><small>' + n + "</small><b>" + nf(w, 0) + "%</b>" + (bld.amount ? "<span>" + nf(bld.amount * w / 100, 0) + " €</span>" : "") + "</div>"; }
+      document.getElementById("bbands").innerHTML = '<div class="bband"><div class="btls">' + tile("g-rf", "Renta fija", rf) + tile("g-alt", "Alternativos y mixtos", ot) + tile("g-rv", "Renta variable", rv) + '</div><div class="stack"><i class="g-rf" style="width:' + rf + '%"></i><i class="g-alt" style="width:' + ot + '%"></i><i class="g-rv" style="width:' + rv + '%"></i></div>' +
         '<p class="' + (ok ? "okt" : "badt") + '">Renta variable recomendada para el perfil ' + BPROF[bld.profile].n.toLowerCase() + ": " + pr.rv[0] + " a " + pr.rv[1] + "%. " + (ok ? "Dentro de la horquilla." : "Ahora está fuera.") + "</p></div>";
     }
     function drawBucket(b) {
@@ -2589,13 +2591,16 @@
       st.textContent = w === 0 && r[0] > 0 ? "Por debajo, el mínimo es " + r[0] + "%" : inr ? "Dentro" : w < r[0] ? "Por debajo" : "Por encima";
       st.className = "bst " + (inr ? "in" : "out");
       var box = document.getElementById("c-" + b.k);
+      el.classList.toggle("off", !(w > 0));
       if (!(w > 0)) { bld.sel[b.k] = []; box.innerHTML = ""; return; }
       var cs = candidates(b.k);
       bld.sel[b.k] = bld.sel[b.k].filter(function (id) { return cs.some(function (f) { return f.id === id; }); });
       if (!bld.sel[b.k].length && cs.length) bld.sel[b.k] = [cs[0].id];
       box.innerHTML = cs.length ? '<p class="label">Fondos propuestos (ordenados por puntuación Morningstar)</p>' + cs.map(function (f) {
         var on = bld.sel[b.k].indexOf(f.id) !== -1;
-        return '<label class="cand' + (on ? " on" : "") + '"><input type="checkbox" data-f="' + esc(f.id) + '" data-b="' + b.k + '"' + (on ? " checked" : "") + '><span class="ct"><b>' + esc(f.n) + "</b><small>" + esc(f.g) + " · " + esc(f.c) + '</small></span><span class="cm">' + (f.stars ? stars(f.stars) : "") + "<small>Año " + pct(f.ret.ytd, true, 1) + " · 1 a. " + pct(f.ret.y1, true, 1) + " · Vol. " + pct(f.vol[0], false, 1) + "</small></span></label>";
+        function stat(l, v) { return "<span><small>" + l + "</small><b>" + v + "</b></span>"; }
+        return '<label class="cand' + (on ? " on" : "") + '"><input type="checkbox" data-f="' + esc(f.id) + '" data-b="' + b.k + '"' + (on ? " checked" : "") + '><span class="flogo" aria-hidden="true">' + logoOrInit(f.g) + '</span><span class="ct"><b>' + esc(f.n) + "</b><small>" + esc(f.g) + " · " + esc(f.c) + "</small>" + (f.stars ? '<span class="cst" role="img" aria-label="' + f.stars + ' de 5 estrellas">' + stars(f.stars) + "</span>" : "") + '</span><span class="cm">' +
+          stat("Año", ret(f.ret.ytd, 1)) + stat("1 año", ret(f.ret.y1, 1)) + stat("3 años", ret(f.ret.y3, 1)) + stat("Vol. 1 a.", pct(f.vol[0], false, 1)) + "</span></label>";
       }).join("") : '<p class="muted">No hay fondos en esta categoría.</p>';
       box.querySelectorAll("[data-f]").forEach(function (c) {
         c.addEventListener("change", function () {
@@ -2606,15 +2611,12 @@
       });
     }
     function drawTotals() {
-      var t = total(), lines = bldLines(), n = lines.length, mf = maxFunds(bld.amount);
-      var msgs = [];
-      msgs.push([Math.abs(t - 100) < 0.05 ? "ok" : "warn", "Los porcentajes suman " + nf(t, 0) + "%" + (Math.abs(t - 100) < 0.05 ? "." : ", deben sumar 100%.")]);
-      var out = BUCKETS.filter(function (b) { var r = BPROF[bld.profile].r[b.k], w = bld.w[b.k] || 0; return w < r[0] || w > r[1]; }).map(function (b) { return b.n; });
-      msgs.push([out.length ? "warn" : "ok", out.length ? "Fuera de horquilla: " + out.join(", ") + "." : "Todas las categorías están dentro de su horquilla."]);
-      if (mf && mf.n !== null) msgs.push([n <= mf.n ? "ok" : "warn", n + " fondos seleccionados: el máximo para " + nf(bld.amount, 0) + " € es " + mf.n + "."]);
-      else msgs.push(["info", n + " fondos seleccionados. Indica el importe para comprobar el máximo."]);
-      document.getElementById("btotal").innerHTML = '<section class="block" style="margin-top:22px"><h3>Control</h3><ul class="checks">' + msgs.map(function (m) { return '<li class="' + m[0] + '"><i></i><span>' + esc(m[1]) + "</span></li>"; }).join("") + "</ul></section>";
+      var lines = bldLines(), n = lines.length;
       drawBands();
+      Object.keys(GN).forEach(function (g) {
+        var w = BUCKETS.filter(function (b) { return b.g === g; }).reduce(function (a, b) { return a + (bld.w[b.k] || 0); }, 0);
+        app.querySelector('[data-gt="' + g + '"]').textContent = nf(w, 0) + "%" + (bld.amount ? " · " + nf(bld.amount * w / 100, 0) + " €" : "");
+      });
       drawLeft();
       document.getElementById("bsum").innerHTML = n ? summary({ id: "tmp", name: bld.name, amount: bld.amount, lines: lines }) : "";
       document.getElementById("bfinal").innerHTML = n ? bldFinal(lines, bld.amount) : "";
