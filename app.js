@@ -530,9 +530,7 @@
       .filter(function (d) { return safeUrl(f[d[0]]); })
       .map(function (d) { return '<a class="doc" href="' + esc(f[d[0]]) + '" target="_blank" rel="noopener noreferrer">' + d[1] + "<small>" + d[2] + "</small></a>"; });
     docs.push('<a class="doc" href="#/comparar/' + encodeURIComponent(f.id) + '">Comparar<small>Con otros fondos</small></a>');
-    docs.push(PF.length
-      ? '<span class="doc addpf">Añadir a cartera<small><select id="addpf" aria-label="Cartera">' + PF.map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.name) + "</option>"; }).join("") + '</select> <button type="button" id="addpfBtn" class="btn sm">Añadir</button></small></span>'
-      : '<a class="doc" href="#/carteras">Carteras<small>Crear una cartera</small></a>');
+    if (PF.length) docs.push('<span class="doc addpf">Añadir a cartera<small><select id="addpf" aria-label="Cartera">' + PF.map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.name) + "</option>"; }).join("") + '</select> <button type="button" id="addpfBtn" class="btn sm">Añadir</button></small></span>');
     html += '<div class="docs">' + docs.join("") + "</div>";
 
     // Rentabilidad por año
