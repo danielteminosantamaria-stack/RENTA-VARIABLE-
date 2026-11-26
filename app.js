@@ -573,7 +573,7 @@
     }
 
     // Composición
-    var mix = f.mix, labels = ["Acciones", "Bonos", "Efectivo", "Otros"], colors = ["#0b3a6b", "#2f7fc1", "#b9bec6", "#9cc3e6"];
+    var mix = f.mix, labels = ["Acciones", "Bonos", "Efectivo", "Otros"], colors = ["#2a5ca8", "#a3173f", "#bfc3c9", "#f2b705"];
     if (mix.some(isNum)) {
       var tot = mix.reduce(function (a, v) { return a + (isNum(v) && v > 0 ? v : 0); }, 0) || 1;
       var odd = mix.some(function (v) { return isNum(v) && v < 0; }) || Math.abs(mix.reduce(function (a, v) { return a + (isNum(v) ? v : 0); }, 0) - 100) > 2;
@@ -2539,8 +2539,8 @@
     var ms = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"], last = "", xl = "";
     q.h.forEach(function (p, i) { var m = p[0].slice(0, 7); if (m !== last) { last = m; if (i && i < v.length - 2) xl += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10" fill="#777">' + ms[+p[0].slice(5, 7) - 1] + "</text>"; } });
     var svg = '<svg viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" aria-label="Cotización de un año">' + grid +
-      '<path d="' + area + '" fill="#1f6fb5" opacity=".10"/><path d="' + line + '" fill="none" stroke="#1f6fb5" stroke-width="2"/>' + xl +
-      '<circle cx="' + X(v.length - 1).toFixed(1) + '" cy="' + Y(v[v.length - 1]).toFixed(1) + '" r="3.5" fill="#0b3a6b"/></svg>';
+      '<path d="' + area + '" fill="#2a5ca8" opacity=".10"/><path d="' + line + '" fill="none" stroke="#2a5ca8" stroke-width="2"/>' + xl +
+      '<circle cx="' + X(v.length - 1).toFixed(1) + '" cy="' + Y(v[v.length - 1]).toFixed(1) + '" r="3.5" fill="#111"/></svg>';
     var d = q.d, cls = d > 0 ? "pos" : d < 0 ? "neg" : "";
     return '<section class="block" style="margin-top:22px"><h3>Cotización</h3><div class="kpis kp6">' +
       kpi("Último precio", dec(q.px)) + kpi("Variación del día", '<span class="' + cls + '">' + (d > 0 ? "+" : "") + nf(d, 2) + "%</span>") +

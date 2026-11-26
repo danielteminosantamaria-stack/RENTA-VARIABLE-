@@ -1049,17 +1049,18 @@ body.gopen { overflow: hidden; }
 .fundpg .bar .v { font-weight: 700; }
 .fundpg .bars { gap: 12px; }
 
-/* ===== Paleta estándar de fichas de fondo (estilo Morningstar) ===== */
-.fundpg { --brand: #1f6fb5; --brand-2: #0b3a6b; --brand-soft: #e8f1fa; }
-body:has(.fundpg), html:has(.fundpg) { background: #f4f6f8; }
-.fundpg .mstabs { border-bottom-color: #d5dde6; }
-.fundpg .mstabs button:hover { color: #0b3a6b; }
-.fundpg .mstabs button.on { color: #0b3a6b; border-bottom-color: #1f6fb5; }
-.fundpg .block { border-top-color: #0b3a6b; }
-.fundpg .block h3 { color: #0b3a6b !important; }
-.fundpg h1.h1star { color: #0b3a6b; }
-.fundpg .bar .fill { background: linear-gradient(90deg, #0b3a6b, #2f7fc1); }
-.fundpg .bar .track { background: #e6edf4; }
-.fundpg .rtable th { border-bottom-color: #c9d4e0; }
-.fundpg .rtable tbody tr:hover td { background: #f1f6fb; }
-.fundpg .doc:hover { border-color: #1f6fb5; }
+/* ===== Paleta estándar de fichas de fondo (estilo Morningstar: negro, gris y series azul, carmesí, amarillo) ===== */
+.fundpg { --brand: #2a5ca8; --brand-2: #111; --brand-soft: #e9eff8; }
+body:has(.fundpg), html:has(.fundpg) { background: #fff; }
+.fundpg .mstabs { border-bottom-color: #d9d9d9; }
+.fundpg .mstabs button:hover { color: #111; }
+.fundpg .mstabs button.on { color: #111; border-bottom-color: #111; }
+.fundpg .block { border-top-color: #111; }
+.fundpg .block h3 { color: #111 !important; }
+.fundpg h1.h1star { color: #111; }
+.fundpg .bar .fill { background: #2a5ca8; }
+.fundpg .bar .track { background: #eceef1; }
+.fundpg .rtable th { border-bottom-color: #cfcfcf; }
+.fundpg .rtable tbody tr:hover td { background: #f6f6f6; }
+.fundpg .doc:hover { border-color: #111; }
+.fundpg a { color: #2a5ca8; }
