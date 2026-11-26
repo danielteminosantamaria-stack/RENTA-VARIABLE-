@@ -511,16 +511,14 @@
     var f = byId(id);
     if (!f) { viewNotFound(); return; }
     setTitle(f.n);
-    var r = f.ret, html = "";
+    var r = f.ret, html = '<div class="fundpg">', TB = { res: "", ris: "", car: "", dat: "" };
     html += '<div class="topbar"><a href="#/' + f.t + '">← ' + esc(CATS[f.t].title) + '</a></div>';
-    html += '<h1 class="h1star">' + esc(f.n) + (window.FAVS ? " " + window.FAVS.star("f", f.id) : "") + "</h1>";
-    html += '<p class="sub"><a href="#/gestora/' + encodeURIComponent(f.g) + '">' + esc(f.g) + "</a>" + " · " + esc(f.id) + " · " + esc(f.c) + vlTag(f) + (f.idx ? ' <span class="tag">Indexado</span>' : "") + "</p>";
+    html += '<h1 class="h1star">' + esc(f.n) + ' <span class="isin">' + esc(f.id) + "</span>" + (window.FAVS ? " " + window.FAVS.star("f", f.id) : "") + "</h1>";
+    if (f.stars) html += '<p class="msstars">' + stars(f.stars) + ' <span class="muted">Rating Morningstar</span></p>';
+    html += '<p class="sub"><a href="#/gestora/' + encodeURIComponent(f.g) + '">' + esc(f.g) + "</a> · Fondo · EUR · " + esc(f.c) + vlTag(f) + (f.idx ? ' <span class="tag">Indexado</span>' : "") + "</p>";
     var esd = window.ESTADO && window.ESTADO.fondos && window.ESTADO.fondos[f.id];
     if (esd && esd.e) html += '<p class="sub"><a href="#/estado">Estado semanal</a>: ' + esTag(esd.e) + (esd.p ? " " + esc(esd.p) : "") + "</p>";
-    html += '<div class="row tools2" id="fundtools"></div><div class="kpis">' +
-      kpi("Vol. 1 año", pct(f.vol[0], false, 1), true) + kpi("Sharpe 1 año", dec(f.sharpe[0]), true) +
-      kpi("Último mes", ret(r.m1)) + kpi("Año", ret(r.ytd)) + kpi("1 año", ret(r.y1)) +
-      kpi("3 años", ret(r.y3)) + kpi("5 años", ret(r.y5)) + kpi("10 años", ret(r.y10)) + "</div>";
+    html += '<div class="row tools2" id="fundtools"></div>';
     html += '<p class="note">Rentabilidad de la clase en euros. A 3, 5 y 10 años, anualizada. Fuente: Morningstar, valor liquidativo a ' + esc(f.nd) + ". La rentabilidad de la semana cubre los 7 días naturales hasta esa fecha.</p>";
 
     var docs = [["xray", "X-Ray", "Morningstar"], ["ms", "Morningstar", "Ficha online"]]
@@ -532,14 +530,12 @@
       : '<a class="doc" href="#/carteras">Carteras<small>Crear una cartera</small></a>');
     html += '<div class="docs">' + docs.join("") + "</div>";
 
-    html += '<div class="grid2">';
-
     // Rentabilidad por año
     if (f.ann && f.ann.some(isNum)) {
       var years = [], base = 2025;
       f.ann.forEach(function (v, i) { years.push([i === 0 ? "2026 (" + String(META.annDate || "").slice(0, 5) + ")" : String(base - (i - 1)), v]); });
       var mx = Math.max.apply(null, years.map(function (y) { return isNum(y[1]) ? Math.abs(y[1]) : 0; })) || 1;
-      html += '<section class="block"><h3>Rentabilidad por año</h3><div class="bars">' + years.filter(function (y) { return isNum(y[1]); }).map(function (y) {
+      TB.res += '<section class="block"><h3>Rentabilidad por año</h3><div class="bars">' + years.filter(function (y) { return isNum(y[1]); }).map(function (y) {
         return bar(y[0], y[1], mx, y[1] < 0 ? "neg" : "pos", '<span class="' + cls(y[1]) + '">' + pct(y[1], true, 1) + "</span>");
       }).join("") + "</div></section>";
     }
@@ -565,7 +561,7 @@
             '<text x="' + X(i).toFixed(1) + '" y="' + (H - 10) + '" text-anchor="middle" font-size="10" fill="#777">' + p[0] + "</text>" +
             (i ? '<text x="' + X(i).toFixed(1) + '" y="' + (Y(p[1]) - 7).toFixed(1) + '" text-anchor="middle" font-size="10" font-weight="600" fill="#333">' + nf(p[1], 0) + "</text>" : "");
         }).join("") + "</svg>";
-      html += '<section class="block"><h3>Evolución de 10.000 €</h3>' + svg +
+      TB.res += '<section class="block"><h3>Evolución de 10.000 €</h3>' + svg +
         '<p class="note">Calculada encadenando las rentabilidades anuales de la clase (2026 hasta ' + esc(String(META.annDate || "").slice(0, 5)) + '). No incluye la evolución dentro de cada año.</p></section>';
     }
 
@@ -574,7 +570,7 @@
     if (mix.some(isNum)) {
       var tot = mix.reduce(function (a, v) { return a + (isNum(v) && v > 0 ? v : 0); }, 0) || 1;
       var odd = mix.some(function (v) { return isNum(v) && v < 0; }) || Math.abs(mix.reduce(function (a, v) { return a + (isNum(v) ? v : 0); }, 0) - 100) > 2;
-      html += '<section class="block"><h3>Composición de la cartera</h3><div class="stack" role="img" aria-label="Composición">' + mix.map(function (v, i) {
+      TB.car += '<section class="block"><h3>Asignación de activos</h3><div class="stack" role="img" aria-label="Composición">' + mix.map(function (v, i) {
         return isNum(v) && v > 0 ? '<i style="width:' + (v / tot * 100).toFixed(2) + "%;background:" + colors[i] + '"></i>' : "";
       }).join("") + '</div><div class="keys">' + mix.map(function (v, i) {
         return isNum(v) && Math.abs(v) >= 0.05 ? '<span style="--c:' + colors[i] + '">' + labels[i] + " <b>" + pct(v, false, 1) + "</b></span>" : "";
@@ -597,7 +593,7 @@
       ["Caída máxima", [f.dd[0], f.dd[1], f.dd[2]], function (v) { return pct(v, false, 1); }]
     ].filter(function (x) { return x[1].some(isNum); });
     if (rows.length) {
-      html += '<section class="block"><h3>Riesgo</h3><table class="rtable"><thead><tr><th scope="col"></th><th scope="col">1 año</th><th scope="col">3 años</th><th scope="col">5 años</th></tr></thead><tbody>' +
+      TB.ris += '<section class="block"><h3>Riesgo</h3><table class="rtable"><thead><tr><th scope="col"></th><th scope="col">1 año</th><th scope="col">3 años</th><th scope="col">5 años</th></tr></thead><tbody>' +
         rows.map(function (x) { return "<tr><td>" + x[0] + "</td>" + x[1].map(function (v) { return '<td class="num">' + x[2](v) + "</td>"; }).join("") + "</tr>"; }).join("") +
         "</tbody></table><dl class=\"facts\" style=\"margin-top:10px\">" +
         (isNum(f.dd[4]) ? fact("Caída máxima histórica", pct(f.dd[4], false, 1)) : "") +
@@ -610,13 +606,13 @@
 
     // Específico por tipo
     if (f.t === "rf" && (isNum(f.dur) || isNum(f.vto) || f.cal)) {
-      html += '<section class="block"><h3>Cartera de bonos</h3><dl class="facts">' +
+      TB.car += '<section class="block"><h3>Cartera de bonos</h3><dl class="facts">' +
         (isNum(f.dur) ? fact("Duración, años", dec(f.dur, 1)) : "") + (isNum(f.vto) ? fact("Vencimiento medio, años", dec(f.vto, 1)) : "") +
         (f.cal ? fact("Calidad crediticia media", esc(f.cal)) : "") + "</dl></section>";
     }
     if (f.t === "rv" && (f.cap.some(isNum) || f.reg || f.sec || isNum(f.per))) {
       var cl = ["Gigante", "Grande", "Mediana", "Pequeña", "Micro"], capm = Math.max.apply(null, f.cap.map(function (v) { return isNum(v) ? v : 0; })) || 1;
-      html += '<section class="block"><h3>Estilo de la cartera</h3>' + (f.cap.some(isNum) ? '<div class="bars">' + f.cap.map(function (v, i) {
+      TB.car += '<section class="block"><h3>Estilo de la cartera</h3>' + (f.cap.some(isNum) ? '<div class="bars">' + f.cap.map(function (v, i) {
         return isNum(v) ? bar(cl[i], v, capm, "", pct(v, false, 1)) : "";
       }).join("") + "</div>" : "") + '<dl class="facts" style="margin-top:14px">' +
         (isNum(f.per) ? fact("PER", dec(f.per, 1)) : "") + (isNum(f.pcf) ? fact("Precio / flujo de caja", dec(f.pcf, 1)) : "") +
@@ -625,14 +621,12 @@
         (f.sec ? fact("Sector principal", esc(f.sec[0]) + " " + pct(f.sec[1], false, 1)) : "") + "</dl></section>";
     }
 
-    // Evolución reciente
-    html += '<section class="block"><h3>Evolución reciente</h3><dl class="facts">' +
-      [["1 día", r.d1], ["1 semana", r.w1], ["1 mes", r.m1], ["3 meses", r.m3], ["6 meses", r.m6]].map(function (x) {
-        return fact(x[0], ret(x[1]));
-      }).join("") + "</dl></section>";
+    // Rentabilidad acumulada (tabla estilo Morningstar)
+    var TP = [["1 día", r.d1], ["1 semana", r.w1], ["1 mes", r.m1], ["3 meses", r.m3], ["6 meses", r.m6], ["En el año", r.ytd], ["1 año", r.y1], ["3 años", r.y3], ["5 años", r.y5], ["10 años", r.y10]];
+    TB.res = '<section class="block wide"><h3>Rentabilidad acumulada</h3><div class="scrollx"><table class="rtable trail"><thead><tr>' + TP.map(function (x) { return "<th>" + x[0] + "</th>"; }).join("") + "</tr></thead><tbody><tr>" + TP.map(function (x) { return '<td class="num">' + ret(x[1]) + "</td>"; }).join("") + "</tr></tbody></table></div><p class=\"note\">A 3, 5 y 10 años, rentabilidad anualizada.</p></section>" + TB.res;
 
     // Datos generales
-    html += '<section class="block"><h3>Datos generales</h3><dl class="facts">' +
+    TB.dat += '<section class="block"><h3>Datos generales</h3><dl class="facts">' +
       fact("Categoría Morningstar", esc(f.c)) + fact("Gestora", esc(f.g)) +
       (f.stars ? fact("Rating Morningstar", stars(f.stars)) : "") +
       (f.cost ? fact("Coste neto", esc(f.cost)) : "") + (f.cre ? fact("Fecha de creación", esc(f.cre)) : "") +
@@ -641,11 +635,20 @@
       (f.nav ? fact("Valor liquidativo", money2(f.nav) + ' <span class="muted">(' + esc(f.nd) + ")</span>") : "") + "</dl></section>";
 
     var cm = (window.COMMENTS && window.COMMENTS[f.id]) || [];
-    html += '<section class="block" style="margin-top:28px"><h3>Comentarios de la gestora</h3>' + (cm.length
+    TB.dat += '<section class="block"><h3>Comentarios de la gestora</h3>' + (cm.length
       ? cm.map(function (c) { return '<div class="comment"><p class="cm-h"><b>' + esc(c.d || "") + "</b>" + (c.s ? " · " + esc(c.s) : "") + '</p><p class="cm-t">' + esc(c.t || "") + "</p></div>"; }).join("")
       : '<p class="muted">Todavía no hay comentarios de la gestora para este fondo.</p>') + "</section>";
+    var TABS = [["res", "Resumen"], ["ris", "Riesgo"], ["car", "Cartera"], ["dat", "Datos y comentarios"]].filter(function (t) { return TB[t[0]]; });
+    html += '<nav class="mstabs" role="tablist">' + TABS.map(function (t, i) { return '<button type="button" role="tab" data-tab="' + t[0] + '" class="' + (i ? "" : "on") + '">' + t[1] + "</button>"; }).join("") + "</nav>";
+    TABS.forEach(function (t, i) { html += '<div class="mspanel' + (i ? "" : " on") + '" id="tab-' + t[0] + '"><div class="grid2">' + TB[t[0]] + "</div></div>"; });
     html += "</div>" + footer(f.t);
     app.innerHTML = html;
+    Array.prototype.forEach.call(app.querySelectorAll(".mstabs button"), function (bt) {
+      bt.addEventListener("click", function () {
+        Array.prototype.forEach.call(app.querySelectorAll(".mstabs button"), function (x) { x.classList.toggle("on", x === bt); });
+        Array.prototype.forEach.call(app.querySelectorAll(".mspanel"), function (p) { p.classList.toggle("on", p.id === "tab-" + bt.getAttribute("data-tab")); });
+      });
+    });
     var ft = document.getElementById("fundtools");
     if (ft) { if (unlocked()) ft.appendChild(mailBtn(function () { return fundMail(f); })); ft.appendChild(deckBtn(function () { deckFund(f); })); }
     var apb = document.getElementById("addpfBtn");
