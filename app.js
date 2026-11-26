@@ -1162,7 +1162,7 @@
       ["Caída máxima", function (f) { return dkp(f.dd && isNum(f.dd[4]) ? Math.abs(f.dd[4]) : null); }],
       ["Morningstar", function (f) { return f.stars ? f.stars + " estrellas" : "n.d."; }]];
     var avail = [];
-    cmpSections(fs).forEach(function (x) { x[1].forEach(function (it) { if (it.k !== "chart") avail.push(it); }); });
+    cmpSections(fs).forEach(function (x) { x[1].forEach(function (it) { if (x[0] !== CMP_VIS_T) avail.push(it); }); });
     var per = 9;
     if (avail.some(function (it) { return !cmpOn(it.k); })) { // campos elegidos a mano
       per = 12; rows = [];
@@ -1218,13 +1218,22 @@
         if (!v) { sug(); return; }
         res.innerHTML = pickList(v, ids, mk);
       });
-      sug();
-      if (fs.length === 1) try { cq.focus(); } catch (e) { /* sin foco */ }
+      var box = document.getElementById("cres");
+      if (fs.length < 2) { sug(); if (fs.length === 1) try { cq.focus(); } catch (e) { /* sin foco */ } }
+      else {
+        cq.addEventListener("focus", sug);
+        box.addEventListener("mousedown", function (e) { e.preventDefault(); });
+        cq.addEventListener("blur", function (e) { if (!e.relatedTarget || !box.contains(e.relatedTarget)) { box.innerHTML = ""; cq.value = ""; } });
+      }
     }
   }
 
   /* ---- campos elegidos en el comparador (se recuerdan en este navegador) ---- */
-  var CMP_STORE = "cf_cmp_off";
+  var CMP_STORE = "cf_cmp_off", CMP_VIS_T = "Resumen y gráficos", cmpOpen = false, cmpScatY = 3;
+  var CMP_PRE = [["Todo", null],
+    ["Esencial", "info cards scat chart ytd y1 y3 y5 sh3 vol3 ddmax".split(" ")],
+    ["3 y 5 años", "info cards scat chart y3 y5 sh3 mar3 alpha beta r2 vol3 vol5 ddmax worst3 pos3 worst5 pos5".split(" ")],
+    ["Riesgo", "info cards scat sh1 sh3 mar3 beta vol1 vol3 vol5 ddmax worst3 pos3 worst5 pos5".split(" ")]];
   var cmpOff = (function () { try { var v = JSON.parse(localStorage.getItem(CMP_STORE) || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; } })();
   function cmpOn(k) { return cmpOff.indexOf(k) === -1; }
   function cmpSections(fs) {
@@ -1235,42 +1244,117 @@
       secs.push([g, METRICS.filter(function (m) { return m.g === g && CMP_HIDE.indexOf(m.k) === -1 && CMP_MONTH.indexOf(m.k) === -1 && shown(m); }).map(item)]);
       if (g === "Riesgo") secs.push(["Comportamiento mensual", CMP_MONTH.map(metric).filter(shown).map(item)]);
     });
-    if (cmpChart(fs)) secs.push(["Gráfico", [{ k: "chart", l: "Rentabilidad por año" }]]);
+    var vis = [{ k: "cards", l: "Tarjetas resumen" }];
+    if (cmpPts(fs, 3).length || cmpPts(fs, 5).length) vis.push({ k: "scat", l: "Rentabilidad frente a riesgo" });
+    if (cmpChart(fs)) vis.push({ k: "chart", l: "Rentabilidad por año" });
+    secs.push([CMP_VIS_T, vis]);
     return secs.filter(function (x) { return x[1].length; });
   }
   function cmpPicker(fs) {
-    return '<details class="cmpf" id="cmpf"><summary><span>Elegir campos</span><b id="cmpfn"></b></summary><div class="cmpf-body">' +
-      '<div class="cmpf-bar"><span>Pulsa un campo para mostrarlo u ocultarlo, o el título de un bloque para cambiarlo entero. El PDF usa la misma selección.</span><button type="button" class="btn ghost sm" data-all="1">Marcar todos</button><button type="button" class="btn ghost sm" data-all="0">Quitar todos</button></div>' +
+    return '<div class="cmpf" id="cmpf"><div class="cmpf-top"><span class="cmpf-t">Vista</span><div class="cmpf-pre" role="group" aria-label="Vistas rápidas">' +
+      CMP_PRE.map(function (v, i) { return '<button type="button" data-pre="' + i + '">' + v[0] + "</button>"; }).join("") +
+      '</div><button type="button" class="cmpf-more" aria-controls="cmpfb" aria-expanded="' + cmpOpen + '">Elegir campos <b id="cmpfn"></b></button></div>' +
+      '<div class="cmpf-body" id="cmpfb"' + (cmpOpen ? "" : " hidden") + '><div class="cmpf-bar"><span>Pulsa un campo para mostrarlo u ocultarlo, o el título de un bloque para cambiarlo entero. El PDF usa la misma selección.</span><button type="button" class="btn ghost sm" data-all="1">Marcar todos</button><button type="button" class="btn ghost sm" data-all="0">Quitar todos</button></div>' +
       cmpSections(fs).map(function (sec, i) {
         return '<div class="cmpf-sec"><button type="button" class="cmpf-h" data-sec="' + i + '">' + sec[0] + '</button><div class="cmpf-list">' +
           sec[1].map(function (it) { return '<button type="button" class="cf" data-k="' + it.k + '">' + esc(it.l) + "</button>"; }).join("") + "</div></div>";
-      }).join("") + "</div></details>";
+      }).join("") + "</div></div>";
   }
   function cmpWire(fs) {
-    var box = document.getElementById("cmpf"), secs = cmpSections(fs), all = [];
+    var box = document.getElementById("cmpf"), body = document.getElementById("cmpbody"), secs = cmpSections(fs), all = [];
     if (!box) return;
     secs.forEach(function (sec) { sec[1].forEach(function (it) { all.push(it.k); }); });
+    function inPre(i, k) { return !CMP_PRE[i][1] || CMP_PRE[i][1].indexOf(k) !== -1; }
     function paint() {
       [].forEach.call(box.querySelectorAll(".cf"), function (b) { b.setAttribute("aria-pressed", cmpOn(b.getAttribute("data-k")) ? "true" : "false"); });
+      [].forEach.call(box.querySelectorAll("[data-pre]"), function (b) {
+        var i = +b.getAttribute("data-pre");
+        b.setAttribute("aria-pressed", all.every(function (k) { return cmpOn(k) === inPre(i, k); }) ? "true" : "false");
+      });
       document.getElementById("cmpfn").textContent = all.filter(cmpOn).length + " de " + all.length;
     }
-    function set(keys, on) {
-      cmpOff = cmpOff.filter(function (k) { return keys.indexOf(k) === -1; });
-      if (!on) cmpOff = cmpOff.concat(keys);
+    function apply(off) {
+      cmpOff = off;
       try { localStorage.setItem(CMP_STORE, JSON.stringify(cmpOff)); } catch (e) { /* sin almacenamiento */ }
       paint();
-      document.getElementById("cmpbody").innerHTML = cmpBody(fs);
+      body.innerHTML = cmpBody(fs);
+    }
+    function set(keys, on) {
+      var off = cmpOff.filter(function (k) { return keys.indexOf(k) === -1; });
+      apply(on ? off : off.concat(keys));
     }
     box.addEventListener("click", function (e) {
       var b = e.target.closest ? e.target.closest("button") : null;
       if (!b) return;
-      if (b.hasAttribute("data-k")) { var k = b.getAttribute("data-k"); set([k], !cmpOn(k)); }
+      if (b.classList.contains("cmpf-more")) { cmpOpen = !cmpOpen; b.setAttribute("aria-expanded", cmpOpen); document.getElementById("cmpfb").hidden = !cmpOpen; }
+      else if (b.hasAttribute("data-pre")) { var i = +b.getAttribute("data-pre"); apply(cmpOff.filter(function (k) { return all.indexOf(k) === -1; }).concat(all.filter(function (k) { return !inPre(i, k); }))); }
+      else if (b.hasAttribute("data-k")) { var k = b.getAttribute("data-k"); set([k], !cmpOn(k)); }
       else if (b.hasAttribute("data-sec")) { var ks = secs[+b.getAttribute("data-sec")][1].map(function (it) { return it.k; }); set(ks, !ks.every(cmpOn)); }
       else if (b.hasAttribute("data-all")) set(all, b.getAttribute("data-all") === "1");
     });
+    body.addEventListener("click", function (e) {
+      var b = e.target.closest ? e.target.closest("[data-scy]") : null;
+      if (!b) return;
+      cmpScatY = +b.getAttribute("data-scy");
+      body.innerHTML = cmpBody(fs);
+    });
     paint();
   }
-  function cmpBody(fs) { return cmpTable(fs) + (cmpOn("chart") ? cmpChart(fs) : ""); }
+  function cmpBody(fs) {
+    var g = (cmpOn("scat") ? cmpScatter(fs) : "") + (cmpOn("chart") ? cmpChart(fs) : "");
+    return (cmpOn("cards") ? cmpCards(fs) : "") + cmpTable(fs) + (g ? '<div class="cmpgs">' + g + "</div>" : "");
+  }
+  function cmpCards(fs) {
+    var ids = fs.map(function (f) { return f.id; });
+    function top(fn, dir) {
+      var v = fs.map(fn).filter(isNum);
+      return v.length > 1 ? (dir > 0 ? Math.max.apply(null, v) : Math.min.apply(null, v)) : null;
+    }
+    var gy3 = function (f) { return f.ret.y3; }, gv = function (f) { return f.vol && f.vol[1]; }, gd = function (f) { return f.dd && f.dd[4]; };
+    var by = top(gy3, 1), bv = top(gv, -1), bd = top(gd, 1);
+    return '<div class="cmpcards" style="--n:' + fs.length + '">' + fs.map(function (f, i) {
+      var rest = ids.filter(function (x) { return x !== f.id; }), has3 = isNum(f.ret.y3), big = has3 ? f.ret.y3 : f.ret.y1, badges = [];
+      if (by !== null && gy3(f) === by) badges.push("Más rentable a 3 años");
+      if (bv !== null && gv(f) === bv) badges.push("Menor volatilidad");
+      if (bd !== null && gd(f) === bd) badges.push("Menor caída");
+      function stat(l, v, c) { return "<div><dt>" + l + '</dt><dd class="' + (c || "") + '">' + v + "</dd></div>"; }
+      return '<article class="cmpc" style="--c:' + CMP_COLORS[i] + '"><a class="cmpc-x" href="' + hashFor(rest) + '" title="Quitar de la comparación" aria-label="Quitar ' + esc(f.n) + '">×</a>' +
+        '<div class="cmpc-h">' + fLogo(f.g) + '<div><a class="cmpc-n" href="#/fondo/' + encodeURIComponent(f.id) + '">' + esc(f.n) + "</a><small>" + esc(f.g) + "</small></div></div>" +
+        (cmpOn("info") ? '<div class="cmpc-i"><span class="cat">' + esc(f.c) + '</span><span class="cst">' + (f.stars ? stars(f.stars) : '<span class="muted">Sin rating</span>') + "</span></div>" : "") +
+        '<div class="cmpc-big"><b class="' + (isNum(big) ? cls(big) : "") + '">' + pct(big, true, 2) + "</b><span>" + (has3 ? "Rentabilidad anual a 3 años" : "Rentabilidad a 1 año") + "</span></div>" +
+        "<dl>" + stat("5 años anual", pct(f.ret.y5, true, 2), isNum(f.ret.y5) ? cls(f.ret.y5) : "") + stat("Volatilidad 3 años", pct(gv(f), false, 1)) + stat("Caída máxima", pct(gd(f), false, 1)) + "</dl>" +
+        '<div class="cmpc-b">' + badges.map(function (b) { return "<span>" + b + "</span>"; }).join("") + "</div></article>";
+    }).join("") + "</div>";
+  }
+  function cmpPts(fs, y) {
+    var out = [];
+    fs.forEach(function (f, i) {
+      var r = y === 3 ? f.ret.y3 : f.ret.y5, v = f.vol && f.vol[y === 3 ? 1 : 2];
+      if (isNum(r) && isNum(v)) out.push({ f: f, i: i, r: r, v: v });
+    });
+    return out;
+  }
+  function cmpScatter(fs) {
+    var y = cmpScatY;
+    if (!cmpPts(fs, y).length) y = y === 3 ? 5 : 3;
+    var pts = cmpPts(fs, y);
+    if (!pts.length) return "";
+    var rs = pts.map(function (p) { return p.r; }), xhi = Math.max.apply(null, pts.map(function (p) { return p.v; })) * 1.18 || 1;
+    var lo = Math.min(0, Math.min.apply(null, rs) * 1.3), hi = Math.max(1, Math.max.apply(null, rs) * 1.2);
+    function X(v) { return (v / xhi * 100).toFixed(2); }
+    function Y(v) { return ((v - lo) / (hi - lo) * 100).toFixed(2); }
+    var tx = ticks(0, xhi, 5), ty = ticks(lo, hi, 5);
+    var grid = ty.map(function (v) { return '<i class="sgy' + (v === 0 ? " sz" : "") + '" style="bottom:' + Y(v) + '%"><span>' + nf(v, dd(ty)) + "%</span></i>"; }).join("") +
+      tx.map(function (v) { return '<i class="sgx" style="left:' + X(v) + '%"><span>' + nf(v, dd(tx)) + "%</span></i>"; }).join("");
+    var miss = fs.filter(function (f) { return !pts.some(function (p) { return p.f === f; }); });
+    return '<div class="chart-card cmpg"><div class="cmpg-h"><p class="label">Rentabilidad frente a riesgo</p><div class="cmpg-seg">' + [3, 5].map(function (n) {
+      return '<button type="button" data-scy="' + n + '" aria-pressed="' + (n === y) + '"' + (cmpPts(fs, n).length ? "" : " disabled") + ">" + n + " años</button>";
+    }).join("") + '</div></div><p class="scat-ay">↑ Rentabilidad anual</p><div class="scat"><div class="scat-plot">' + grid + pts.map(function (p) {
+      return '<a class="sp" href="#/fondo/' + encodeURIComponent(p.f.id) + '" style="--c:' + CMP_COLORS[p.i] + ";left:" + X(p.v) + "%;bottom:" + Y(p.r) + '%" title="' + esc(p.f.n) + ": rentabilidad " + pct(p.r, true, 2) + ", volatilidad " + pct(p.v, false, 1) + '">' + fLogo(p.f.g) + "</a>";
+    }).join("") + '</div></div><p class="scat-ax">Volatilidad (riesgo) →</p><ul class="scat-l">' + pts.map(function (p) {
+      return '<li style="--c:' + CMP_COLORS[p.i] + '"><i></i><span>' + esc(p.f.n) + '</span><b class="' + cls(p.r) + '">' + pct(p.r, true, 2) + "</b><small>Vol. " + pct(p.v, false, 1) + "</small></li>";
+    }).join("") + "</ul>" + (miss.length ? '<p class="note">Sin datos a ' + y + " años: " + esc(miss.map(function (f) { return f.n; }).join(", ")) + ".</p>" : '<p class="note">Cuanto más arriba y más a la izquierda, más rentabilidad con menos riesgo.</p>') + "</div>";
+  }
 
   function cmpTable(fs) {
     var n = fs.length, ids = fs.map(function (f) { return f.id; });
@@ -1279,20 +1363,21 @@
       return '<th scope="col" class="ch" style="--c:' + CMP_COLORS[i] + '"><a class="cq" href="' + hashFor(rest) + '" title="Quitar de la comparación" aria-label="Quitar ' + esc(f.n) + '">×</a>' +
         '<div class="cmph"><span class="flogo">' + logoOrInit(f.g) + '</span><div><a class="cn" href="#/fondo/' + encodeURIComponent(f.id) + '">' + esc(f.n) + "</a><small>" + esc(f.g) + "</small></div></div></th>";
     }).join("") + "</tr>";
-    var rows = !cmpOn("info") ? "" : '<tr class="info"><td class="lb">Categoría y rating Morningstar</td>' + fs.map(function (f) {
+    var rows = !cmpOn("info") || cmpOn("cards") ? "" : '<tr class="info"><td class="lb">Categoría y rating Morningstar</td>' + fs.map(function (f) {
       return '<td><span class="cat">' + esc(f.c) + '</span><span class="cst">' + (f.stars ? stars(f.stars) : '<span class="muted">Sin rating</span>') + "</span></td>";
     }).join("") + "</tr>";
-    var secs = cmpSections(fs).filter(function (x) { return x[0] !== "General" && x[0] !== "Gráfico"; })
+    var secs = cmpSections(fs).filter(function (x) { return x[0] !== "General" && x[0] !== CMP_VIS_T; })
       .map(function (x) { return [x[0], x[1].filter(function (it) { return cmpOn(it.k); }).map(function (it) { return it.m; })]; });
     secs.forEach(function (sec) {
       if (!sec[1].length) return;
-      rows += '<tr class="grp"><th colspan="' + (n + 1) + '" scope="colgroup"><span>' + sec[0] + "</span></th></tr>";
+      rows += '<tr class="grp"><th colspan="' + (n + 1) + '" scope="colgroup"><span>' + cmpIcon(sec[0]) + sec[0] + "</span></th></tr>";
       sec[1].forEach(function (m) {
         var vals = fs.map(function (f) { return m.v(f); });
         var dir = BETTER.hi.indexOf(m.k) !== -1 ? 1 : BETTER.lo.indexOf(m.k) !== -1 ? -1 : 0;
         var nums = m.txt ? [] : vals.filter(isNum), best = null;
         if (dir && nums.length > 1) best = dir > 0 ? Math.max.apply(null, nums) : Math.min.apply(null, nums);
         var split = m.k === "pos3" || m.k === "pos5";
+        var two = (m.g === "Rentabilidad" || m.g === "Ratios") && nums.some(function (v) { return v < 0; }); // barras a ambos lados del cero
         var max = nums.length && CMP_NOBAR.indexOf(m.k) === -1 ? Math.max.apply(null, nums.map(Math.abs)) : 0;
         var label = split ? "Meses " + (m.k === "pos3" ? "3" : "5") + " años<small>En positivo y en negativo</small>" : esc(m.l);
         rows += '<tr><td class="lb">' + label + "</td>" + fs.map(function (f, i) {
@@ -1302,7 +1387,7 @@
             inner = '<span class="cv msv"><span class="pos"><b>' + p + '%</b> ▲</span><span class="neg">▼ <b>' + (100 - p) + '%</b></span></span><span class="msplit"><u style="width:' + p + '%"></u></span>';
           } else {
             inner = '<span class="cv">' + cell(f, m) + "</span>";
-            if (max > 0) inner += '<span class="cbar">' + (isNum(v) ? '<u class="' + (v < 0 ? "dn" : "") + '" style="width:' + Math.max(2, Math.abs(v) / max * 100).toFixed(1) + '%"></u>' : "") + "</span>";
+            if (max > 0) inner += '<span class="cbar' + (two ? " two" : "") + '">' + (isNum(v) ? '<u class="' + (v < 0 ? "dn" : "") + '" style="width:' + Math.max(2, Math.abs(v) / max * (two ? 50 : 100)).toFixed(1) + '%"></u>' : "") + "</span>";
           }
           return '<td style="--c:' + CMP_COLORS[i] + '"' + (best !== null && v === best ? ' class="best"' : "") + ">" + inner + "</td>";
         }).join("") + "</tr>";
@@ -1312,30 +1397,23 @@
     return '<div class="cmpx" style="--n:' + n + '"><table><colgroup><col class="lbc">' + fs.map(function () { return "<col>"; }).join("") + "</colgroup><thead>" + head + "</thead><tbody>" + rows + "</tbody></table></div>";
   }
 
-  function cmpChart(fs) {
-    var vals = [];
-    YEARS.forEach(function (y) { fs.forEach(function (f) { var v = annOf(f, y); if (v !== null) vals.push(v); }); });
-    if (!vals.length) return "";
-    var W = 820, H = 320, L = 48, R = 12, T = 14, B = 34;
-    var lo = Math.min(0, Math.min.apply(null, vals)) * 1.1, hi = Math.max(0.1, Math.max.apply(null, vals) * 1.1);
-    function Y(v) { return H - B - (v - lo) / (hi - lo) * (H - T - B); }
-    var gw = (W - L - R) / YEARS.length, bw = Math.min(24, gw * 0.8 / fs.length), g = "", t = ticks(lo, hi, 5), d = dd(t);
-    t.forEach(function (v) {
-      g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="' + (v === 0 ? "#bdbdbd" : "#e0e0e0") + '"/>' +
-        '<text x="' + (L - 8) + '" y="' + (Y(v) + 4) + '" text-anchor="end" fill="#717171" font-size="11">' + nf(v, d) + "%</text>";
-    });
-    YEARS.forEach(function (y, gi) {
-      var x0 = L + gi * gw + (gw - bw * fs.length) / 2;
-      fs.forEach(function (f, i) {
-        var v = annOf(f, y);
-        if (v === null) return;
-        var top = Y(Math.max(v, 0)), hgt = Math.max(1, Math.abs(Y(v) - Y(0)));
-        g += '<rect x="' + (x0 + i * bw).toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + (bw - 2).toFixed(1) + '" height="' + hgt.toFixed(1) + '" rx="2" fill="' + CMP_COLORS[i] + '"><title>' + esc(f.n) + " " + yearLabel(y) + ": " + pct(v, true, 1) + "</title></rect>";
-      });
-      g += '<text x="' + (L + gi * gw + gw / 2) + '" y="' + (H - 12) + '" text-anchor="middle" fill="#717171" font-size="11">' + esc(yearLabel(y)) + "</text>";
-    });
-    return '<div class="chart-card" style="margin-top:22px"><p class="label">Rentabilidad por año</p><svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Rentabilidad por año de los fondos comparados">' + g + "</svg>" +
-      '<div class="legend cmplg">' + fs.map(function (f, i) { return '<span><i style="background:' + CMP_COLORS[i] + '"></i>' + fLogo(f.g) + esc(f.n) + "</span>"; }).join("") + "</div></div>";
+  function cmpIcon(t) {
+    var P = { "Rentabilidad": "M3 17l6-6 4 4 8-8M15 7h6v6", "Ratios": "M12 3v18M5 21h14M4 7h16M7 7l-3 7h6zM17 7l-3 7h6z", "Riesgo": "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z", "Comportamiento mensual": "M4 6h16v15H4zM4 10h16M8 3v5M16 3v5", "Cartera": "M12 3l9 5-9 5-9-5zM3 13l9 5 9-5" };
+    return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + (P[t] || "M5 12h.01M12 12h.01M19 12h.01") + '"/></svg>';
+  }
+  function cmpChart(fs) { // rentabilidad año a año, en color según el resultado
+    var ys = YEARS.slice().reverse().filter(function (y) { return fs.some(function (f) { return annOf(f, y) !== null; }); });
+    if (!ys.length) return "";
+    return '<div class="chart-card cmpg"><div class="cmpg-h"><p class="label">Rentabilidad por año</p></div><table class="heat"><thead><tr><th scope="col">Año</th>' + fs.map(function (f, i) {
+      return '<th scope="col" style="--c:' + CMP_COLORS[i] + '" title="' + esc(f.n) + '">' + fLogo(f.g) + "<span>" + esc(f.n) + "</span></th>";
+    }).join("") + "</tr></thead><tbody>" + ys.map(function (y) {
+      var vs = fs.map(function (f) { return annOf(f, y); }), nums = vs.filter(isNum), best = nums.length > 1 ? Math.max.apply(null, nums) : null;
+      return '<tr><th scope="row">' + esc(yearLabel(y)) + "</th>" + vs.map(function (v) {
+        if (v === null) return '<td class="nd">–</td>';
+        var a = (0.1 + Math.min(1, Math.abs(v) / 40) * 0.45).toFixed(2);
+        return '<td class="' + (v === best ? "best" : "") + '" style="background:rgba(' + (v < 0 ? "205,50,70," : "31,140,85,") + a + ')">' + pct(v, true, 1) + "</td>";
+      }).join("") + "</tr>";
+    }).join("") + '</tbody></table><p class="note">Verde: año en positivo. Rojo: año en negativo. Con borde, el mejor de cada año.</p></div>';
   }
 
   // ---------- carteras (se guardan solo en este navegador) ----------
