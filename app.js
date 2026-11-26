@@ -866,7 +866,7 @@
   function mcFoot(g, H, txt) {
     g.fillStyle = MC.line; g.fillRect(50, H - 62, 1100, 2);
     g.fillStyle = MC.mut; g.font = "19px Arial, sans-serif"; g.textAlign = "left"; g.fillText(txt, 50, H - 28);
-    g.fillStyle = MC.br; g.font = "bold 19px Arial, sans-serif"; g.textAlign = "right"; g.fillText("RENTA 4 BANCA PRIVADA", 1150, H - 28);
+    g.fillStyle = MC.br; g.font = "bold 19px Arial, sans-serif"; g.textAlign = "right"; g.fillText("RENTA 4", 1150, H - 28);
   }
   function mcFund(f) {
     var y = mailYear(), items = [];
@@ -1023,11 +1023,11 @@
   function dkDate() { return new Date().toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }); }
   function dkFoot(n) { return '<div class="dk-ft"><span>Datos de Morningstar a ' + esc(META && (META.rv || META.rf) || "") + '</span><span>' + n + "</span></div>"; }
   function dkSlide(title, sub, body, n) {
-    return '<section class="dk-s"><div class="dk-top"><div><h2>' + esc(title) + "</h2>" + (sub ? "<p>" + esc(sub) + "</p>" : "") + '</div><span class="dk-bd">Renta 4 Banca Privada</span></div><div class="dk-body">' + body + "</div>" + dkFoot(n) + "</section>";
+    return '<section class="dk-s"><div class="dk-top"><div><h2>' + esc(title) + "</h2>" + (sub ? "<p>" + esc(sub) + "</p>" : "") + '</div><span class="dk-bd">Renta 4</span></div><div class="dk-body">' + body + "</div>" + dkFoot(n) + "</section>";
   }
   function dkCover(kicker, title, sub, stats) {
     return '<section class="dk-s dk-cv"><div class="dk-sh1"></div><div class="dk-sh2"></div><div class="dk-cvt"><div class="dk-k">' + esc(kicker) + "</div><h1>" + esc(title) + "</h1><p>" + esc(sub) + "</p></div>" +
-      (stats && stats.length ? '<div class="dk-cst">' + stats.map(function (s) { return "<div><b>" + esc(s[1]) + "</b><span>" + esc(s[0]) + "</span></div>"; }).join("") + "</div>" : "") + '<div class="dk-lg">Renta 4 Banca Privada</div></section>';
+      (stats && stats.length ? '<div class="dk-cst">' + stats.map(function (s) { return "<div><b>" + esc(s[1]) + "</b><span>" + esc(s[0]) + "</span></div>"; }).join("") + "</div>" : "") + '<div class="dk-lg">Renta 4</div></section>';
   }
   function dkKpi(l, v, neg) { return '<div class="dk-kpi"><span>' + esc(l) + '</span><b class="' + (neg ? "ng" : "") + '">' + esc(v) + "</b></div>"; }
   function dkIdeas(f) {
