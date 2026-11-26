@@ -1333,3 +1333,33 @@ h2.sec::before, .homesec h2::before, .sech::before { background: linear-gradient
 .mxtbl td small { color: var(--muted); }
 .mxtbl tr.mxgr td { background: #f9f5f6; color: #a3173f; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
 @media print { .mxgrid { display: block; } .mxcard { margin-bottom: 14px; } }
+
+/* ETF */
+.etfkp { margin-top: 16px; }
+.kpi small.etfk { margin: 4px 0 0; }
+td.etfn b { display: block; font-size: 14px; white-space: nowrap; }
+td.etfn small { display: block; color: var(--muted); font-size: 12px; font-weight: 400; }
+.etfsel { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 10px; background: var(--brand-soft); color: var(--brand); vertical-align: 1px; }
+.etfbars { padding: 14px 16px 16px; }
+.etfbars .note { margin: 0 0 10px; }
+.etfkey { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin: 0 4px 0 10px; }
+.etfkey.c { background: #a3263c; margin-left: 0; }
+.etfkey.m { background: #efd3d9; }
+.etfrow { display: grid; grid-template-columns: 52px 1fr 122px; gap: 10px; align-items: center; padding: 6px 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+.etfbar { position: relative; height: 14px; }
+.etfbar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0; }
+.etfbar i.m { background: #efd3d9; }
+.etfbar i.c { background: #a3263c; }
+.etfv { text-align: right; color: var(--muted); white-space: nowrap; }
+.etfv em { font-style: normal; font-weight: 700; color: var(--text); }
+@media (max-width: 640px) {
+  .etfkp { grid-template-columns: repeat(2, 1fr); }
+  .table-wrap.etft td:first-child, .table-wrap.etft th:first-child { min-width: 124px; max-width: 140px; }
+  .etft th, .etft td { padding: 10px 8px; }
+  .etft td.etfn small { font-size: 11px; line-height: 1.25; }
+  .etfr table { min-width: 0; }
+  .table-wrap.etft.etfr td:first-child, .table-wrap.etft.etfr th:first-child { min-width: 0; }
+  .etfr th, .etfr td { padding: 10px 6px; font-size: 13px; white-space: nowrap; }
+  .etfr th:first-child, .etfr td:first-child { padding-left: 10px; }
+  .etfr td.etfn small { display: none; }
+}

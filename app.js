@@ -139,6 +139,7 @@
       ]) +
       homeSection("Mercado y seguimiento", [
         tile("#/acciones", "bolt", "Explorar", "Stocks", stocks().length + (stocks().length === 1 ? " ficha" : " fichas")),
+        tile("#/etf", "grid", "🔒 Privado", "ETF", "seguimiento y caídas"),
         tile("#/amplitud", "trend", "🔒 Privado", "Amplitud de mercado", "NYSE y gráficos"),
         tile("#/estado", "alert", "Cada lunes", "Estado semanal de fondos", "alertas y oportunidades"),
         tile("#/macro", "chart", "Para el cliente", "Macro", "gráficos y PDF"),
@@ -3028,6 +3029,38 @@
     document.getElementById("privout").addEventListener("click", function () { try { localStorage.removeItem(LOCK.key); } catch (e) { /* sin almacenamiento */ } location.hash = "#/"; route(); });
   }
 
+  // ---------- ETF: seguimiento y caídas (privado) ----------
+  function viewETF() {
+    setTitle("ETF");
+    var E = window.ETFS || { list: [] }, head = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>🔒 ETF</h1>' +
+      '<p class="sub">Seguimiento de ETF de renta variable cotizados en EE. UU., solo para clientes profesionales. En dólares y con dividendos. Datos a cierre del ' + esc(E.f || "") + ".</p>";
+    if (!E.list.length) { app.innerHTML = head + '<div class="empty box">No hay datos de ETF publicados todavía.</div>' + footer("rv"); return; }
+    var L = E.list, all = L.concat([E.ref]), sel = L.filter(function (x) { return x.sel; });
+    var worst = L.slice().sort(function (a, b) { return a.cur - b.cur; })[0], best = L.slice().sort(function (a, b) { return b.cur - a.cur; })[0];
+    var w = sel.reduce(function (s, x) { return s + x.sel; }, 0), sy = sel.reduce(function (s, x) { return s + x.sel * x.y1; }, 0) / (w || 1);
+    function p1(v) { return (v > 0 ? "+" : v < 0 ? "−" : "") + nf(Math.abs(v), 1) + "%"; }
+    function cell(v) { return '<td class="' + (v < 0 ? "neg" : "pos") + '">' + p1(v) + "</td>"; }
+    function name(x) { return '<td class="etfn"><b>' + esc(x.t) + (x.sel ? ' <span class="etfsel">' + x.sel + "%</span>" : "") + "</b><small>" + esc(x.n) + "</small></td>"; }
+    function kpi(l, v, s) { return '<div class="kpi"><small>' + esc(l) + "</small><span>" + esc(v) + '</span><small class="etfk">' + esc(s) + "</small></div>"; }
+    var mx = Math.max.apply(null, all.map(function (x) { return -x.mdd; }));
+    var bars = all.slice().sort(function (a, b) { return a.cur - b.cur; }).map(function (x) {
+      return '<div class="etfrow"><b>' + esc(x.t) + '</b><span class="etfbar" aria-hidden="true"><i class="m" style="width:' + (-x.mdd / mx * 100).toFixed(1) + '%"></i><i class="c" style="width:' + (-x.cur / mx * 100).toFixed(1) + '%"></i></span><span class="etfv"><em>' + p1(x.cur) + "</em> / " + p1(x.mdd) + "</span></div>";
+    }).join("");
+    var dd = all.map(function (x) {
+      return "<tr>" + name(x) + cell(x.cur) + cell(x.mdd) + "<td>" + esc(x.per) + "</td><td>" + (x.extra === undefined ? "" : p1(x.extra)) + "</td><td>" + (x.athd ? nf(x.ath, 2) + " $<small>" + esc(x.athd) + "</small>" : "") + "</td><td>" + esc(x.desde) + "</td></tr>";
+    }).join("");
+    var rt = all.map(function (x) { return "<tr>" + name(x) + "<td>" + nf(x.px, 2) + " $</td>" + cell(x.mes) + cell(x.ytd) + cell(x.y1) + "</tr>"; }).join("");
+    app.innerHTML = head +
+      '<div class="kpis etfkp">' + kpi("Mayor caída actual", p1(worst.cur), worst.t) + kpi("Más cerca de máximos", p1(best.cur), best.t) +
+      kpi("Selección EE. UU., 1 año", p1(sy), "ponderada " + sel.map(function (x) { return x.t; }).join(", ")) + kpi("S&P 500, 1 año", p1(E.ref.y1), "SPY, caída actual " + p1(E.ref.cur)) + "</div>" +
+      '<h2 class="sec">Caída actual frente a la máxima histórica</h2><div class="box etfbars"><p class="note"><span class="etfkey c"></span> Caída actual <span class="etfkey m"></span> Máxima caída desde que cotiza</p>' + bars + "</div>" +
+      '<h2 class="sec">Detalle de caídas</h2><div class="table-wrap etft"><table><thead><tr><th>ETF</th><th>Caída actual</th><th>Máxima caída</th><th>Cuándo</th><th title="Caída adicional si desde hoy volviera a su peor nivel relativo">Si repite la peor</th><th>Máximo</th><th>Datos desde</th></tr></thead><tbody>' + dd + "</tbody></table></div>" +
+      '<h2 class="sec">Rentabilidad</h2><div class="table-wrap etft etfr"><table><thead><tr><th>ETF</th><th>Precio</th><th>Mes</th><th>Año</th><th>1 año</th></tr></thead><tbody>' + rt + "</tbody></table></div>" +
+      '<p class="note">El porcentaje junto al nombre es el peso en la selección para aprovechar el crecimiento de EE. UU. «Si repite la peor» es lo que aún caería desde hoy hasta igualar su máxima caída histórica. Caídas calculadas con cierres semanales desde que cotiza cada ETF (S&P 500 con cierres mensuales desde 2007, por lo que no es del todo comparable). CGDV, CGGR, CGXU y AVLV no vivieron la caída de 2020 y ninguno de los diez la de 2008.</p>' +
+      '<p class="note">ETF sin documento de datos fundamentales europeo (KID): solo para clientes profesionales. Tienen riesgo de divisa, no son traspasables y pueden tributar en EE. UU. por herencia a partir de 60.000 $. Fuente: Interactive Brokers. No es una recomendación de inversión.</p>' +
+      footer("rv").replace(/Datos Morningstar a [^<]*/, "Datos Interactive Brokers a " + esc(E.f || ""));
+  }
+
   // ---------- amplitud de mercado (datos cifrados) ----------
   var AMP = { data: null, range: 126 };
   function b64(x) { var b = atob(x), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
@@ -3181,6 +3214,7 @@
     if (p[0] === "gestora" && p[1] && window.FAVS) return window.FAVS.gestora(app, setTitle, decodeURIComponent(p[1]));
     if (p[0] === "acceso") return gate("acceso", "Acceso privado", viewAcceso);
     if (p[0] === "amplitud") return viewAmplitud();
+    if (p[0] === "etf") return gate("etf", "ETF", viewETF);
     if (p[0] === "gestion") return viewGestion();
     if (p[0] === "newsletter" && window.NEWSLETTER) return window.NEWSLETTER.view(app, setTitle);
     if (p[0] === "privacidad" && window.NEWSLETTER) return window.NEWSLETTER.privacy(app, setTitle);
