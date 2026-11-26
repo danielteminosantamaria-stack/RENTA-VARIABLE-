@@ -598,7 +598,8 @@
     if (rows.length) {
       TB.ris += '<section class="block"><h3>Riesgo</h3><table class="rtable"><thead><tr><th scope="col"></th><th scope="col">1 año</th><th scope="col">3 años</th><th scope="col">5 años</th></tr></thead><tbody>' +
         rows.map(function (x) { return "<tr><td>" + x[0] + "</td>" + x[1].map(function (v) { return '<td class="num">' + x[2](v) + "</td>"; }).join("") + "</tr>"; }).join("") +
-        "</tbody></table><dl class=\"facts\" style=\"margin-top:10px\">" +
+        "</tbody></table></section>" +
+        '<section class="block"><h3>Indicadores de riesgo</h3><dl class="facts">' +
         (isNum(f.dd[4]) ? fact("Caída máxima histórica", pct(f.dd[4], false, 1)) : "") +
         (isNum(f.alpha) ? fact("Alpha 3 años", dec(f.alpha)) : "") + (isNum(f.beta) ? fact("Beta 3 años", dec(f.beta)) : "") +
         (isNum(f.r2) ? fact("R² 3 años", dec(f.r2, 1)) : "") +
