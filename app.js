@@ -1605,11 +1605,12 @@
       a.w += l.w; if (isNum(f.ret.ytd)) a.y += f.ret.ytd * l.w / 100; if (isNum(f.ret.y1)) a.y1 += f.ret.y1 * l.w / 100;
     });
     var tw = A.rf.w + A.rv.w, ty = A.rf.y + A.rv.y, t1 = A.rf.y1 + A.rv.y1;
-    function row(n, a) {
-      return "<tr><td><b>" + n + '</b></td><td class="num">' + fmtPct(a.w) + '</td><td class="num">' + ret(a.y) + '</td><td class="num">' + ret(a.y1) + '</td><td class="num">' + (ty ? nf(a.y / ty * 100, 0) + " %" : "–") + "</td></tr>";
+    function card(n, a, col) {
+      var share = ty ? Math.max(0, Math.min(100, a.y / ty * 100)) : 0;
+      return '<div class="apc" style="--c:' + col + '"><div class="apt"><span>' + n + '</span><small>' + fmtPct(a.w) + ' del peso</small></div><div class="apv">' + ret(a.y) + '<small>aporta en el año</small></div>' +
+        '<div class="apbar"><i style="width:' + share.toFixed(1) + '%"></i></div><div class="apf"><span>' + (ty ? nf(share, 0) + " % de la rentabilidad del año" : "–") + "</span><span>1 año: <b>" + ret(a.y1) + "</b></span></div></div>";
     }
-    return '<div class="table-wrap" style="margin-top:18px"><table class="tbl"><thead><tr><th>Aportación por tipo de activo</th><th class="num">Peso</th><th class="num">Aporta en el año</th><th class="num">Aporta en 1 año</th><th class="num">% de la rentabilidad del año</th></tr></thead><tbody>' +
-      row("Renta fija", A.rf) + row("Renta variable", A.rv) + '</tbody><tfoot><tr><td><b>Cartera</b></td><td class="num">' + fmtPct(tw) + '</td><td class="num">' + ret(ty) + '</td><td class="num">' + ret(t1) + '</td><td class="num">' + (ty ? "100 %" : "–") + "</td></tr></tfoot></table></div>";
+    return '<section class="block apw"><h3>Aportación por tipo de activo</h3><div class="aptot">Cartera: <b>' + ret(ty) + "</b> en el año · <b>" + ret(t1) + "</b> en 1 año · peso " + fmtPct(tw) + '</div><div class="apgrid">' + card("Renta fija", A.rf, "#a3173f") + card("Renta variable", A.rv, "#2a5ca8") + "</div></section>";
   }
 
   function summary(p) {
@@ -1617,7 +1618,7 @@
     var y = wAvg(p, function (f) { return f.ret.ytd; }), y1 = wAvg(p, function (f) { return f.ret.y1; }),
       v = wAvg(p, function (f) { return f.vol[0]; }), s = wAvg(p, function (f) { return f.sharpe[0]; });
     var h = '<div class="kpis" style="margin-top:26px">' + kpi("Rentabilidad del año", ret(y.v), true) + kpi("Rentabilidad 1 año", ret(y1.v), true) +
-      kpi("Volatilidad 1 año", pct(v.v, false, 1)) + kpi("Sharpe 1 año", dec(s.v)) + "</div>" + '<div id="aptrfrv">' + aportaRfRv(p) + "</div>";
+      kpi("Volatilidad 1 año", pct(v.v, false, 1)) + kpi("Sharpe 1 año", dec(s.v)) + "</div>" + '<div id="aptrfrv" style="margin-top:18px">' + aportaRfRv(p) + "</div>";
     h += '<p class="note">Medias ponderadas por el peso de cada fondo con los datos de Morningstar. Rentabilidad pasada, no garantiza resultados futuros. La volatilidad no tiene en cuenta las correlaciones entre fondos, así que la de la cartera real suele ser menor.</p>';
 
     // Comprobaciones

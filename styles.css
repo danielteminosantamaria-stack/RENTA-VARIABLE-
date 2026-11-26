@@ -1264,3 +1264,14 @@ h2.sec::before, .homesec h2::before, .sech::before { background: linear-gradient
 .kpi.hi small { color: var(--muted) !important; }
 .kpi.hi span { color: var(--text) !important; }
 .kpi .pos, .kpi.hi .pos { color: #1e7a4a !important; } .kpi .neg, .kpi.hi .neg { color: #b42318 !important; }
+
+/* Aportación por tipo de activo: dos tarjetas con barra de aportación */
+.apw { padding-bottom: 18px; }
+.aptot { font-size: 13.5px; color: var(--muted); margin: -4px 0 14px; } .aptot b { color: var(--text); }
+.apgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.apc { border: 1px solid var(--line); border-left: 5px solid var(--c); border-radius: 8px; padding: 14px 18px; background: #fff; }
+.apt { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; font-size: 15px; } .apt small { font-weight: 500; color: var(--muted); font-size: 12.5px; }
+.apv { font-size: 30px; font-weight: 700; margin: 6px 0 8px; line-height: 1.1; } .apv small { font-size: 12.5px; font-weight: 500; color: var(--muted); margin-left: 8px; }
+.apbar { height: 8px; background: #eef0f3; border-radius: 4px; overflow: hidden; } .apbar i { display: block; height: 100%; background: var(--c); border-radius: 4px; }
+.apf { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); margin-top: 8px; } .apf b { color: var(--text); }
+@media (max-width: 700px) { .apgrid { grid-template-columns: 1fr; } }
