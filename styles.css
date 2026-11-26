@@ -1119,3 +1119,71 @@ body:has(.fundpg), html:has(.fundpg) { background: #fff; }
 .chart-card .dot.ef .dring { stroke: var(--brand); stroke-width: 2.8; }
 .chart-card .dot:hover .dring, .chart-card .dot:focus .dring { stroke: #111; stroke-width: 2.6; }
 .chart-card .dot .dini { font-size: 9px; }
+
+/* ===== Diseño global estilo Morningstar: blanco, negro y gris con azul de acento, sin degradados ni sombras grandes ===== */
+:root { --brand: #2a5ca8; --brand-2: #1d4680; --brand-soft: #e9eff8; --navy: #2a5ca8; --navy-soft: #e9eff8; --teal: #2a5ca8; --teal-soft: #e9eff8; --gold: #2a5ca8; --dark: #111; --soft: #f5f6f7; --line: #dcdfe3; --line-strong: #bfc4ca; --glow: 0 1px 3px rgba(0, 0, 0, .12); --shadow: none; --shadow-hi: 0 1px 4px rgba(0, 0, 0, .12); }
+html, body, main { background: #fff !important; }
+body { color: #222; }
+a:hover { color: var(--brand); }
+/* Cabecera */
+.site, .site .sbar { background: #fff; }
+.site .sbar { border-bottom: 1px solid #d9d9d9; box-shadow: none; }
+.site { box-shadow: 0 1px 0 #d9d9d9; border-bottom: 0; }
+.site .logo b { color: #111; letter-spacing: .01em; }
+.site nav a:hover, .site nav a.on, .site nav summary:hover, .site nav .more[open] summary, .site nav details.on summary { color: var(--brand); border-bottom-color: var(--brand); }
+/* Portada */
+.hero.vis { background: #fff !important; color: #111; border-radius: 0; box-shadow: none; padding: 38px 0 22px; border-bottom: 1px solid #e3e3e3; }
+.hero.vis .deco { display: none; }
+.hero.vis h1, .hero h1 { color: #111; }
+.hero.vis .lead, .hero p { color: #444; }
+.hero.vis .eyebrow { color: #666; }
+h2.sec, .homesec h2 { color: #111; }
+h2.sec::before, .homesec h2::before, .sech::before { background: var(--brand) !important; }
+/* Tarjetas de herramientas */
+.tile { border: 1px solid #dcdfe3 !important; border-radius: 4px !important; box-shadow: none !important; padding: 16px 18px !important; background: #fff; }
+.tile::before, .tile::after { display: none !important; }
+.tile:hover { transform: none !important; border-color: #111 !important; box-shadow: 0 1px 4px rgba(0, 0, 0, .12) !important; }
+.tiles .tile:nth-child(n) .ico { width: 44px; height: 44px; border-radius: 4px; background: #eef1f5 !important; color: #111 !important; box-shadow: none !important; transform: none !important; }
+.tiles .tile:nth-child(n):hover .ico { background: #111 !important; color: #fff !important; }
+.tiles .tile:nth-child(n) .arrow { color: var(--brand) !important; transform: none; }
+.tile b { font-size: 16.5px; color: #111; }
+/* Paneles, indicadores y tablas */
+.kpis > *, .block, .mv, .cat-card, .pfcard, .table-wrap, .box, .chart-card, .rec { border-radius: 4px !important; }
+.kpis > *::before, .mv::before, .block::before { background: #111 !important; height: 3px !important; }
+.mv, .block, .kpi { box-shadow: none !important; border: 1px solid #dcdfe3; }
+.kpi.hi { background: #fff !important; border: 1px solid #dcdfe3 !important; box-shadow: none !important; }
+.kpi.hi small { color: #444 !important; } .kpi.hi span { color: #111 !important; }
+.kpi small { color: #555; } .kpi span { color: #111; }
+.mvbar i.pos, .bar .fill.pos { background: #1e7a4a !important; } .mvbar i.neg { background: #c8102e !important; }
+.bar .fill { background: var(--brand); }
+.rec { border-top: 2px solid #111; }
+th { background: #f5f6f7; color: #111; }
+.tbl tbody tr:hover td, .table-wrap tbody tr:hover td { background: #f5f8fc; }
+/* Botones y chips */
+.btn { background: var(--brand); border-color: var(--brand); color: #fff; border-radius: 3px; box-shadow: none !important; text-transform: none; letter-spacing: 0; font-weight: 600; }
+.btn:hover { background: var(--brand-2); border-color: var(--brand-2); }
+.btn.ghost { background: #fff; color: var(--brand); border-color: var(--brand); }
+.btn.ghost:hover { background: var(--brand-soft); }
+.btn.danger { color: #c8102e; border-color: #c8102e; background: #fff; }
+.es-chip.on { background: #111; border-color: #111; color: #fff; }
+/* Pie */
+.foot { background: #f5f6f7 !important; color: #555 !important; border-top: 1px solid #dcdfe3 !important; padding: 18px 20px; }
+.foot a { color: var(--brand); }
+/* Banner de página (Carteras, Comparador, etc.) */
+.phero, .bhead { background: #fff !important; color: #111 !important; border-bottom: 1px solid #e3e3e3; box-shadow: none !important; border-radius: 0 !important; }
+.phero h1, .bhead h1 { color: #111 !important; } .phero p, .bhead p { color: #444 !important; }
+/* Ajustes del rediseño: portada, buscador y controles que seguían en carmesí */
+.hero.vis { margin: 0 calc(50% - 50vw) 0 !important; padding: 44px max(20px, calc((100vw - var(--wide)) / 2 + 20px)) 64px !important; border-bottom: 0 !important; background: #f5f6f7 !important; }
+.hero.vis h1 { font-size: 40px; }
+.search.big { margin-top: -28px !important; max-width: 760px; }
+.search.big input { border: 1px solid #bfc4ca !important; border-radius: 4px !important; box-shadow: 0 2px 8px rgba(0, 0, 0, .1) !important; padding: 16px 20px 16px 48px; font-size: 16px; }
+.seg button[aria-pressed="true"], .btn.primary, .chip[aria-pressed="true"], .catchip[aria-pressed="true"] { background: #111 !important; border-color: #111 !important; color: #fff !important; box-shadow: none !important; }
+.catchip[aria-pressed="true"] i { background: rgba(255, 255, 255, .25); color: #fff; }
+.folder[aria-pressed="true"] { background: var(--brand-soft) !important; border-color: var(--brand) !important; box-shadow: none !important; }
+.folder[aria-pressed="true"] b { color: #111 !important; } .folder[aria-pressed="true"] small { color: #555 !important; }
+.folder[aria-pressed="true"] .mono { background: var(--brand) !important; color: #fff !important; }
+.seg { border-radius: 4px; } .seg button { border-radius: 3px; }
+.chip, .catchip, .es-chip { border-radius: 4px; }
+.search.big { margin-left: 0 !important; margin-right: auto !important; }
+.rec .tbl th:nth-child(2), .rec .tbl td:nth-child(2) { text-align: left; }
+.foot { border-radius: 0 !important; }
