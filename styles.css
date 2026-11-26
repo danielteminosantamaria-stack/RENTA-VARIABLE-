@@ -1085,3 +1085,12 @@ body:has(.fundpg), html:has(.fundpg) { background: #fff; }
 .sel .selchip b { color: #666; font-size: 17px; margin-left: 4px; }
 .sel .selchip:hover { background: #f3f3f3 !important; }
 .sel .selchip:hover b { color: #b42318; }
+
+/* Gráfico de dispersión: icono de la gestora en cada punto y aro en los de la frontera eficiente */
+.chart-card .dot { cursor: pointer; outline: none; }
+.chart-card .dot .dbg { fill: #fff; stroke: #9a9a9a; stroke-width: 1.5; }
+.chart-card .dot .dini { font-size: 8px; font-weight: 700; fill: #666; pointer-events: none; }
+.chart-card .dot:hover .dbg, .chart-card .dot:focus .dbg { stroke: #111; stroke-width: 2.2; }
+.chart-card .dot .dhalo { fill: var(--brand); fill-opacity: .14; stroke: var(--brand); stroke-width: 1.4; stroke-dasharray: 3 2; }
+.chart-card .dot.ef .dbg { stroke: var(--brand); stroke-width: 2.6; }
+.legend .efring { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--brand); border-radius: 50%; background: #fff; vertical-align: middle; margin-right: 6px; }

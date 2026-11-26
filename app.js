@@ -44,6 +44,10 @@
     return (w[0][0] + w[1][0]).toUpperCase();
   }
   function logoSlug(g) { return g.toLowerCase().replace(/&/g, "y").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
+  function logoSrc(g) {
+    var L = window.LOGOS || {}, D = window.LOGODOM || {};
+    return L[g] ? "logos/" + L[g] : D[g] ? "https://www.google.com/s2/favicons?sz=128&domain=" + encodeURIComponent(D[g]) : null;
+  }
   function logoOrInit(g) {
     var L = window.LOGOS || {}, D = window.LOGODOM || {}, src = L[g] ? "logos/" + L[g] : D[g] ? "https://www.google.com/s2/favicons?sz=128&domain=" + encodeURIComponent(D[g]) : null;
     return src ? '<img src="' + esc(src) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.textContent=\'' + esc(initials(g)) + '\'">' : esc(initials(g));
@@ -435,13 +439,16 @@
       } else note = "La frontera eficiente necesita un eje X de riesgo (volatilidad) y un eje Y de rentabilidad.";
     }
     var efIds = {}; fr.forEach(function (f) { efIds[f.id] = 1; });
-    pts.forEach(function (f) {
-      g += '<circle class="dot' + (f.g === "Renta 4" ? " r4" : "") + (efIds[f.id] ? " ef" : "") + '" tabindex="0" role="link" aria-label="' + esc(f.n) + '" data-id="' + esc(f.id) +
-        '" cx="' + X(mx.v(f)).toFixed(1) + '" cy="' + Y(my.v(f)).toFixed(1) + '" r="5.5"/>';
+    g += '<defs><clipPath id="lgclip"><circle r="8.5"/></clipPath></defs>';
+    pts.slice().sort(function (p, q) { return (efIds[p.id] ? 1 : 0) - (efIds[q.id] ? 1 : 0); }).forEach(function (f) {
+      var src = logoSrc(f.g), ef = !!efIds[f.id];
+      g += '<g class="dot' + (ef ? " ef" : "") + '" tabindex="0" role="link" aria-label="' + esc(f.n) + '" data-id="' + esc(f.id) + '" transform="translate(' + X(mx.v(f)).toFixed(1) + " " + Y(my.v(f)).toFixed(1) + ')">' +
+        (ef ? '<circle class="dhalo" r="17"/>' : "") + '<circle class="dbg" r="11"/><text class="dini" y="3" text-anchor="middle">' + esc(initials(f.g)) + "</text>" +
+        (src ? '<image href="' + esc(src) + '" x="-8.5" y="-8.5" width="17" height="17" clip-path="url(#lgclip)" preserveAspectRatio="xMidYMid slice" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'"/>' : "") + "</g>";
     });
     return '<div class="chart-card"><svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + esc(my.l) + " frente a " + esc(mx.l) + '">' + g + "</svg>" +
       '<div class="tip" id="tip"></div>' +
-      '<div class="legend"><span><i></i>Fondos</span><span><i style="background:var(--brand)"></i>Renta 4</span><span>' + pts.length + " de " + list.length + " fondos con datos</span>" + (fr.length ? '<span><i class="efi"></i>Frontera eficiente</span>' : "") + "</div>" +
+      '<div class="legend"><span>Cada punto lleva el icono de su gestora</span><span>' + pts.length + " de " + list.length + " fondos con datos</span>" + (fr.length ? '<span><i class="efi"></i>Frontera eficiente</span><span><i class="efring"></i>Fondo en la frontera</span>' : "") + "</div>" +
       (fr.length ? '<div class="eflist"><b>Fondos en la frontera (menos riesgo a más riesgo):</b> ' + fr.map(function (f) { return '<a href="#/fondo/' + encodeURIComponent(f.id) + '">' + esc(f.n) + "</a> (" + nf(mx.v(f), 1) + "%, " + nf(my.v(f), 1) + "%)"; }).join(" · ") +
         '<p class="note">Un fondo está en la frontera cuando ningún otro ofrece más rentabilidad con igual o menos volatilidad, dentro de los fondos que se muestran (respeta el filtro de categoría). Es una comparación de datos pasados, no una recomendación.</p></div>' : "") + (note ? '<p class="note">' + esc(note) + "</p>" : "") + "</div>";
   }
