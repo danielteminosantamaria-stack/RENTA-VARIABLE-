@@ -1278,7 +1278,10 @@
       return { id: l.id, w: w === null ? 0 : Math.max(0, Math.min(100, w)) };
     });
     var a = parseNum(o.amount);
-    return { id: uid(), name: o.name.slice(0, 80) || "Cartera", amount: a !== null && a > 0 ? a : null, lines: lines };
+    var out = { id: uid(), name: o.name.slice(0, 80) || "Cartera", amount: a !== null && a > 0 ? a : null, lines: lines };
+    var B = o.base;
+    if (B && Array.isArray(B.lines)) out.base = { t: String(B.t || ""), amount: parseNum(B.amount), lines: B.lines.filter(function (l) { return l && byId(l.id) && isNum(l.w); }).map(function (l) { return isNum(l.v) ? { id: l.id, w: l.w, v: l.v } : { id: l.id, w: l.w }; }) };
+    return out;
   }
 
   // Importar la cartera desde un PDF de Morningstar (ISIN o nombre del fondo + peso o importe)
@@ -1403,6 +1406,7 @@
     if (!r.total) { msg.textContent = "No he encontrado posiciones. Cada línea necesita el ISIN y, después, participaciones, precio y valor."; return false; }
     if (!r.lines.length) { msg.textContent = "Ningún fondo de la tabla está en la web." + (r.miss.length ? " Sin reconocer: " + r.miss.slice(0, 8).join("; ") + "." : ""); return false; }
     var p = { id: uid(), name: (name || "Cartera importada").slice(0, 80), amount: r.amount, lines: r.lines.map(function (l) { return l.v ? { id: l.id, w: l.w, v: l.v, w0: l.w } : { id: l.id, w: l.w }; }) };
+    p.base = snapPf(p);
     PF.push(p); savePf(); viewPortfolios();
     var m = document.getElementById("pfmsg"), sum = p.lines.reduce(function (a, l) { return a + l.w; }, 0);
     m.textContent = "Cartera «" + p.name + "» creada con " + p.lines.length + (p.lines.length === 1 ? " fondo" : " fondos") + " de " + r.total + " posiciones, valor total " + nf(r.amount, 2) + " €. Pesos: " +
@@ -1521,6 +1525,7 @@
       importPdf(file).then(function (r) {
         if (!r.lines.length) { msg.textContent = "No he encontrado ningún fondo de la web en el PDF (busco el ISIN o el nombre del fondo)." + (r.miss.length ? " Sin reconocer: " + r.miss.slice(0, 8).join(", ") + "." : ""); return; }
         var p = { id: uid(), name: r.date ? "Cartera Morningstar " + r.date : (file.name.replace(/\.pdf$/i, "").slice(0, 80) || "Cartera importada"), amount: r.amount, lines: r.lines };
+        p.base = snapPf(p);
         PF.push(p); savePf(); viewPortfolios();
         var m = document.getElementById("pfmsg"), sum = r.lines.reduce(function (a, l) { return a + l.w; }, 0);
         m.textContent = "Cartera «" + p.name + "» creada con " + r.lines.length + (r.lines.length === 1 ? " fondo" : " fondos") + (r.total ? " de " + r.total + " posiciones del PDF" : "") + ". Pesos: " +
@@ -1555,8 +1560,9 @@
     var h = '<div class="topbar"><a href="#/carteras">← Carteras</a></div>' +
       '<div class="pfhead"><input class="inp big" id="pfname" value="' + esc(p.name) + '" maxlength="80" aria-label="Nombre de la cartera">' +
       '<label class="amtl"><span class="muted">Importe (€)</span><input class="inp amt" id="pfamt" type="number" min="0" step="1000" value="' + (p.amount || "") + '" placeholder="Opcional"></label></div>' +
+      '<nav class="pftabs" role="tablist"><button type="button" role="tab" data-pt="car" class="on" aria-selected="true">Cartera</button><button type="button" role="tab" data-pt="cmb" aria-selected="false">Análisis de cambios <i id="pfnch" hidden></i></button></nav><div id="pt-car">' +
       '<div class="search tight">' + icon() + '<input id="pq" type="search" autocomplete="off" placeholder="Añadir fondo por nombre o ISIN" aria-label="Añadir fondo a la cartera"></div><div class="results" id="pres"></div>' +
-      '<div id="pftable"></div><div id="pfsum"></div>' +
+      '<div id="pftable"></div><div id="pfsum"></div></div><div id="pt-cmb" hidden></div>' +
       '<div class="row tools2">' +
       '<span id="pfpdfslot"></span>' +
       '<button class="btn ghost" type="button" id="pfdup">Duplicar</button>' +
@@ -1567,9 +1573,32 @@
     var mailb = mailBtn(function () { var nm = document.getElementById("pfname"), am = document.getElementById("pfamt"); return pfMail(nm && nm.value || p.name, am && am.value ? +am.value : 0, p.lines); });
     var slot = document.getElementById("pfpdfslot"); slot.replaceWith(pdfb); if (unlocked()) pdfb.parentNode.insertBefore(mailb, pdfb);
     function save() { savePf(); }
+    var tab = "car";
+    function drawChanges() {
+      var badge = document.getElementById("pfnch"), box = document.getElementById("pt-cmb");
+      if (!box) return;
+      var n = p.base ? pfChanged(pfDiff(p)).length : 0;
+      badge.textContent = n; badge.hidden = !n;
+      if (tab !== "cmb") return;
+      box.innerHTML = p.base ? changesHtml(p) : '<div class="empty box chempty">Esta cartera no tiene guardada su versión original. Vuelve a importar el Excel o fija la cartera actual como punto de partida: a partir de ahí se compararán los cambios.<br><button class="btn" type="button" id="chfix">Fijar la actual como original</button></div>';
+      var fix = document.getElementById("chfix");
+      if (fix) fix.addEventListener("click", function () {
+        if (p.base && fix.getAttribute("data-sure") !== "1") { fix.setAttribute("data-sure", "1"); fix.textContent = "Pulsa otra vez para confirmar"; return; }
+        p.base = snapPf(p); save(); drawChanges();
+      });
+    }
+    app.querySelectorAll("[data-pt]").forEach(function (bt) {
+      bt.addEventListener("click", function () {
+        tab = bt.getAttribute("data-pt");
+        app.querySelectorAll("[data-pt]").forEach(function (o) { var on = o === bt; o.classList.toggle("on", on); o.setAttribute("aria-selected", String(on)); });
+        document.getElementById("pt-car").hidden = tab !== "car";
+        document.getElementById("pt-cmb").hidden = tab !== "cmb";
+        drawChanges();
+      });
+    });
     function renderTable() {
       var t = document.getElementById("pftable");
-      if (!p.lines.length) { t.innerHTML = '<div class="table-wrap" style="margin-top:14px"><div class="empty">Busca un fondo arriba y añádelo para empezar.</div></div>'; document.getElementById("pfsum").innerHTML = ""; setCmp(); return; }
+      if (!p.lines.length) { t.innerHTML = '<div class="table-wrap" style="margin-top:14px"><div class="empty">Busca un fondo arriba y añádelo para empezar.</div></div>'; document.getElementById("pfsum").innerHTML = ""; setCmp(); drawChanges(); return; }
       t.innerHTML = '<div class="table-wrap" style="margin-top:14px"><table><thead><tr><th scope="col">Fondo</th><th scope="col">Peso %</th><th scope="col">Importe</th><th scope="col">Año</th><th scope="col">1 año</th><th scope="col">Vol. 1 año</th><th scope="col">Sharpe 1 año</th><th scope="col">Aporta al año</th><th scope="col"><span class="sr">Quitar</span></th></tr></thead><tbody>' +
         p.lines.map(function (l, i) {
           var f = byId(l.id);
@@ -1613,6 +1642,7 @@
       q("ta").innerHTML = y.v === null ? "–" : ret(y.v * tot / 100);
       if (q("aptrfrv")) q("aptrfrv").innerHTML = aportaRfRv(p);
       document.getElementById("pfsum").innerHTML = summary(p);
+      drawChanges();
     }
 
     document.getElementById("pfname").addEventListener("input", function (e) { p.name = e.target.value.slice(0, 80) || "Cartera"; save(); });
@@ -1646,7 +1676,7 @@
       download((p.name || "cartera").replace(/[^\w\-]+/g, "_") + ".csv", csv, "text/csv;charset=utf-8");
     });
     document.getElementById("pfdup").addEventListener("click", function () {
-      var c = cleanPf({ name: p.name + " (copia)", amount: p.amount, lines: p.lines });
+      var c = cleanPf({ name: p.name + " (copia)", amount: p.amount, lines: p.lines, base: p.base });
       PF.push(c); save(); location.hash = "#/cartera/" + encodeURIComponent(c.id);
     });
     var del = document.getElementById("pfdel");
@@ -1671,6 +1701,212 @@
         '<div class="apbar"><i style="width:' + share.toFixed(1) + '%"></i></div><div class="apf"><span>' + (ty ? nf(share, 0) + " % de la rentabilidad del año" : "–") + "</span><span>1 año: <b>" + ret(a.y1) + "</b></span></div></div>";
     }
     return '<section class="block apw"><h3>Aportación por tipo de activo</h3><div class="aptot">Cartera: <b>' + ret(ty) + "</b> en el año · <b>" + ret(t1) + "</b> en 1 año · peso " + fmtPct(tw) + '</div><div class="apgrid">' + card("Renta fija", A.rf, "#a3173f") + card("Renta variable", A.rv, "#2a5ca8") + "</div></section>";
+  }
+
+  // ---------- análisis de cambios frente a la cartera original ----------
+  function snapPf(p) {
+    return { t: new Date().toISOString(), amount: p.amount, lines: p.lines.map(function (l) { return l.v && l.w === l.w0 ? { id: l.id, w: l.w, v: l.v } : { id: l.id, w: l.w }; }) };
+  }
+  function pfDiff(p) {
+    var B = p.base, old = {}, now = {}, ids = [];
+    B.lines.forEach(function (l) { if (byId(l.id)) { old[l.id] = l; ids.push(l.id); } });
+    p.lines.forEach(function (l) { now[l.id] = l; if (!old[l.id]) ids.push(l.id); });
+    var sameAmt = (p.amount || 0) === (B.amount || 0);
+    return ids.map(function (id) {
+      var a = old[id], b = now[id], w0 = a ? a.w : 0, w1 = b ? b.w : 0, dw = Math.round((w1 - w0) * 100) / 100;
+      var e0 = a ? (a.v ? a.v : (B.amount ? B.amount * a.w / 100 : null)) : (B.amount ? 0 : null);
+      var e1 = b ? impOf(p, b) : (p.amount ? 0 : null);
+      if (a && b && !dw && sameAmt && e0 !== null) e1 = e0;
+      var de = e0 !== null && e1 !== null ? Math.round((e1 - e0) * 100) / 100 : null;
+      if (de !== null && Math.abs(de) < 0.005) de = 0;
+      var k = (!a || w0 <= 0) && w1 > 0 ? "in" : w0 > 0 && w1 <= 0 ? "out" : dw > 0 ? "up" : dw < 0 ? "down" : "same";
+      return { f: byId(id), w0: w0, w1: w1, dw: dw, e0: e0, e1: e1, de: de, k: k };
+    });
+  }
+  function pfChanged(D) { return D.filter(function (d) { return d.k !== "same" || d.de; }); }
+  var CHK = { "in": "Entra", out: "Sale", up: "Sube", down: "Baja", same: "Sin cambio de peso" };
+  function eur(v, signed) { return isNum(v) ? (signed && v > 0 ? "+" : "") + nf(v, 2) + " €" : "–"; }
+  function pp(v) { return isNum(v) ? (v > 0 ? "+" : "") + nf(v, 2) + " pp" : "–"; }
+  // sentido: 1 mejor si sube, -1 mejor si baja, 0 neutro
+  function chDelta(a, b, sense, unit) {
+    if (!isNum(a) || !isNum(b)) return '<span class="muted">–</span>';
+    var d = Math.round((b - a) * 100) / 100;
+    if (!d) return '<span class="chd">=</span>';
+    var c = !sense ? "" : d * sense > 0 ? " good" : " bad";
+    return '<span class="chd' + c + '">' + (d > 0 ? "▲ +" : "▼ ") + nf(d, 2) + (unit ? " " + unit : "") + "</span>";
+  }
+  function costOf(f) { return metric("cost").v(f); }
+  function chMetrics() {
+    return [
+      { n: "Rentabilidad del año", g: function (f) { return f.ret.ytd; }, s: 1, pc: 1 },
+      { n: "Rentabilidad 1 mes", g: function (f) { return f.ret.m1; }, s: 1, pc: 1 },
+      { n: "Rentabilidad 1 año", g: function (f) { return f.ret.y1; }, s: 1, pc: 1 },
+      { n: "Rentabilidad 3 años (anualizada)", g: function (f) { return f.ret.y3; }, s: 1, pc: 1 },
+      { n: "Rentabilidad 5 años (anualizada)", g: function (f) { return f.ret.y5; }, s: 1, pc: 1 },
+      { n: "Volatilidad 1 año", g: function (f) { return f.vol[0]; }, s: -1, pc: 1 },
+      { n: "Volatilidad 3 años", g: function (f) { return f.vol[1]; }, s: -1, pc: 1 },
+      { n: "Caída máxima 3 años", g: function (f) { return f.dd && f.dd[1]; }, s: 1, pc: 1 },
+      { n: "Sharpe 1 año", g: function (f) { return f.sharpe[0]; }, s: 1 },
+      { n: "Sharpe 3 años", g: function (f) { return f.sharpe[1]; }, s: 1 },
+      { n: "Sortino 1 año", g: function (f) { return f.sortino && f.sortino[0]; }, s: 1 },
+      { n: "Ratio MAR 1 año", g: function (f) { return f.mar && f.mar[0]; }, s: 1 },
+      { n: "Coste neto anual", g: costOf, s: -1, pc: 1 }
+    ];
+  }
+  function chLegend() { return '<div class="chleg"><span><i class="a"></i>Original</span><span><i class="b"></i>Nueva</span></div>'; }
+  // barras horizontales emparejadas: [nombre, antes, ahora]
+  function chPairs(items) {
+    var mx = Math.max.apply(null, items.map(function (x) { return Math.max(Math.abs(x[1] || 0), Math.abs(x[2] || 0)); })) || 1;
+    function bar(c, v) { return '<div class="chb"><span><i class="' + c + '" style="width:' + (Math.max(0, v) / mx * 100).toFixed(1) + '%"></i></span><b>' + pct(v, false, 1) + "</b></div>"; }
+    return chLegend() + items.map(function (x) { return '<div class="chp"><div class="chpn"><span>' + esc(x[0]) + "</span>" + chDelta(x[1], x[2], 0, "pp") + "</div>" + bar("a", x[1]) + bar("b", x[2]) + "</div>"; }).join("");
+  }
+  // columnas emparejadas por periodo: [etiqueta, antes, ahora]
+  function chColumns(items, label) {
+    var W = 560, H = 260, mx = Math.max.apply(null, items.map(function (x) { return Math.max(Math.abs(x[1]), Math.abs(x[2])); })) || 1;
+    var neg = items.some(function (x) { return x[1] < 0 || x[2] < 0; }), base = neg ? 130 : 205, ph = neg ? 92 : 165, cw = (W - 20) / items.length, bw = Math.min(30, cw * 0.36);
+    return chLegend() + '<svg viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" aria-label="' + label + '"><line x1="10" x2="' + (W - 10) + '" y1="' + base + '" y2="' + base + '" stroke="#bbb"/>' + items.map(function (x, k) {
+      var cx = 10 + k * cw + cw / 2;
+      return [1, 2].map(function (j) {
+        var v = x[j], h = Math.max(1.5, Math.abs(v) / mx * ph), bx = cx + (j === 1 ? -bw - 1 : 1), up = v >= 0;
+        return '<rect x="' + bx.toFixed(1) + '" y="' + (up ? base - h : base).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2" fill="' + (j === 1 ? "#b4b7c0" : "#a3173f") + '"><title>' + (j === 1 ? "Original: " : "Nueva: ") + pct(v, true, 2) + "</title></rect>" +
+          '<text x="' + (bx + bw / 2).toFixed(1) + '" y="' + (up ? base - h - (j === 1 ? 5 : 17) : base + h + (j === 1 ? 13 : 25)).toFixed(1) + '" text-anchor="middle" font-size="10.5" font-weight="700" fill="' + (j === 1 ? "#666a73" : "#a3173f") + '">' + nf(v, 1) + "</text>";
+      }).join("") + '<text x="' + cx.toFixed(1) + '" y="' + (H - 4) + '" text-anchor="middle" font-size="11" fill="#555">' + esc(x[0]) + "</text>";
+    }).join("") + "</svg>";
+  }
+  // mapa rentabilidad (1 año) frente a volatilidad (1 año)
+  function chScatter(A, B, moved) {
+    var pts = moved.filter(function (d) { return isNum(d.f.vol[0]) && isNum(d.f.ret.y1); }).map(function (d) { return { x: d.f.vol[0], y: d.f.ret.y1, n: d.f.n, c: d.de > 0 || (d.de === null && d.dw > 0) ? "#1e7a4a" : "#b3261e" }; });
+    if (!isNum(A.x) || !isNum(A.y) || !isNum(B.x) || !isNum(B.y)) return "";
+    var all = pts.concat([A, B]), xs = all.map(function (q) { return q.x; }), ys = all.map(function (q) { return q.y; });
+    var x0 = 0, x1 = Math.max.apply(null, xs) * 1.1 || 1, y0 = Math.min(0, Math.min.apply(null, ys)), y1 = Math.max.apply(null, ys), pad = (y1 - y0) * 0.12 || 1;
+    y1 += pad; if (y0 < 0) y0 -= pad;
+    var W = 560, H = 320, L = 44, R = 14, T = 12, Bt = 40;
+    function X(v) { return L + (v - x0) / (x1 - x0) * (W - L - R); }
+    function Y(v) { return T + (y1 - v) / (y1 - y0) * (H - T - Bt); }
+    var g = "";
+    for (var i = 0; i <= 4; i++) {
+      var vx = x0 + (x1 - x0) * i / 4, vy = y0 + (y1 - y0) * i / 4;
+      g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(vy) + '" y2="' + Y(vy) + '" stroke="#eee"/><text x="' + (L - 6) + '" y="' + (Y(vy) + 4) + '" text-anchor="end" font-size="10.5" fill="#777">' + nf(vy, 1) + '</text><text x="' + X(vx) + '" y="' + (H - 22) + '" text-anchor="middle" font-size="10.5" fill="#777">' + nf(vx, 1) + "</text>";
+    }
+    g += '<text x="' + ((W + L) / 2) + '" y="' + (H - 5) + '" text-anchor="middle" font-size="11" fill="#555">Volatilidad 1 año (%) · en vertical, rentabilidad 1 año (%)</text>';
+    pts.forEach(function (q) { g += '<circle cx="' + X(q.x) + '" cy="' + Y(q.y) + '" r="5" fill="#fff" stroke="' + q.c + '" stroke-width="2.5"><title>' + esc(q.n) + ": volatilidad " + pct(q.x, false, 1) + ", 1 año " + pct(q.y, true, 2) + "</title></circle>"; });
+    g += '<line x1="' + X(A.x) + '" y1="' + Y(A.y) + '" x2="' + X(B.x) + '" y2="' + Y(B.y) + '" stroke="#555" stroke-dasharray="4 3"/>';
+    [[A, "#8d919b"], [B, "#a3173f"]].forEach(function (q) { g += '<circle cx="' + X(q[0].x) + '" cy="' + Y(q[0].y) + '" r="8" fill="' + q[1] + '" stroke="#fff" stroke-width="2"><title>' + q[0].n + ": volatilidad " + pct(q[0].x, false, 2) + ", 1 año " + pct(q[0].y, true, 2) + "</title></circle>"; });
+    return '<div class="chleg"><span><i class="a"></i>Cartera original</span><span><i class="b"></i>Cartera nueva</span><span><i class="o in"></i>Fondo que se compra</span><span><i class="o out"></i>Fondo que se vende</span></div><svg viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" aria-label="Rentabilidad frente a volatilidad antes y después">' + g + "</svg>";
+  }
+  function changesHtml(p) {
+    var D = pfDiff(p), C = pfChanged(D), B = p.base;
+    var when = new Date(B.t), whenTxt = isNaN(when) ? "" : " guardada el " + when.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" });
+    var bar = '<div class="chbar"><span>Comparada con la cartera original' + whenTxt + '.</span>' + (C.length ? '<button class="btn ghost sm" type="button" id="chfix">Tomar la actual como original</button>' : "") + "</div>";
+    if (!C.length) return bar + '<div class="empty box chempty">Todavía no hay cambios. Modifica pesos, añade o quita fondos en la pestaña Cartera y aquí verás lo que supone.</div>';
+    var a = { lines: B.lines.filter(function (l) { return byId(l.id); }) }, b = { lines: p.lines };
+    function both(g) { return [wAvg(a, g), wAvg(b, g)]; }
+    var h = bar, tw0 = sumW(a), tw1 = sumW(b);
+    if (Math.abs(tw1 - 100) >= 0.05) h += '<p class="chwarn">Los pesos de la cartera nueva suman ' + nf(tw1, 2) + "% (" + (tw1 < 100 ? "falta " + nf(100 - tw1, 2) + "% por asignar" : "sobra " + nf(tw1 - 100, 2) + "%") + "). Las medias se calculan sobre el peso asignado.</p>";
+    if (Math.abs(tw0 - 100) >= 0.05) h += '<p class="note">Los pesos de la cartera original suman ' + nf(tw0, 2) + "%.</p>";
+
+    var M = chMetrics().map(function (m) { var r = both(m.g); return { m: m, a: r[0], b: r[1] }; });
+    function row(n) { return M.filter(function (x) { return x.m.n === n; })[0]; }
+    h += '<div class="kpis chk">' + ["Rentabilidad del año", "Rentabilidad 1 año", "Volatilidad 1 año", "Sharpe 1 año"].map(function (n) {
+      var r = row(n), fm = function (v) { return r.m.pc ? pct(v, n.indexOf("Rent") === 0, 2) : dec(v); };
+      return '<div class="kpi"><small>' + n + "</small><span>" + fm(r.b.v) + '</span><em class="ksub">Antes ' + fm(r.a.v) + "</em>" + chDelta(r.a.v, r.b.v, r.m.s, r.m.pc ? "pp" : "") + "</div>";
+    }).join("") + "</div>";
+
+    // resumen en frases
+    var n = { "in": 0, out: 0, up: 0, down: 0 }; C.forEach(function (d) { if (n[d.k] !== undefined) n[d.k]++; });
+    var buy = 0, sell = 0, wb = 0, ws = 0, hasE = C.every(function (d) { return d.de !== null; });
+    C.forEach(function (d) { if (d.de > 0) buy += d.de; else if (d.de < 0) sell -= d.de; if (d.dw > 0) wb += d.dw; else ws -= d.dw; });
+    function plural(k, s, pl) { return k + " " + (k === 1 ? s : pl); }
+    var parts = [];
+    if (n.in) parts.push(plural(n.in, "fondo entra", "fondos entran"));
+    if (n.out) parts.push(plural(n.out, "sale", "salen"));
+    if (n.up) parts.push(plural(n.up, "sube de peso", "suben de peso"));
+    if (n.down) parts.push(plural(n.down, "baja de peso", "bajan de peso"));
+    var S = [];
+    S.push("<b>Movimientos:</b> " + (parts.join(", ") || "cambia el importe de la cartera") + ". " + (hasE ? "Compras por " + eur(buy) + " y ventas por " + eur(sell) + "." : "Se compra un " + pct(wb, false, 2) + " y se vende un " + pct(ws, false, 2) + " del peso."));
+    function share(q, t) { return q.lines.reduce(function (s, l) { var f = byId(l.id); return s + (f.t === t ? l.w : 0); }, 0); }
+    function rep(t) { var x = share(a, t), y = share(b, t); return Math.abs(y - x) < 0.005 ? "se mantiene en el " + pct(x, false, 2) : "pasa del " + pct(x, false, 2) + " al " + pct(y, false, 2); }
+    S.push("<b>Reparto:</b> la renta variable " + rep("rv") + " y la renta fija " + rep("rf") + ".");
+    var r1 = row("Rentabilidad 1 año");
+    if (isNum(r1.a.v) && isNum(r1.b.v)) {
+      var d1 = r1.b.v - r1.a.v, amt = p.amount || B.amount;
+      S.push("<b>Rentabilidad:</b> con los nuevos pesos, la rentabilidad a 1 año habría sido " + (Math.abs(d1) < 0.005 ? "la misma." : nf(Math.abs(d1), 2) + " puntos " + (d1 > 0 ? "mayor" : "menor") + (amt ? " (unos " + nf(Math.abs(d1) * amt / 100, 0) + " € sobre " + nf(amt, 0) + " €)." : ".")));
+    }
+    var rv = row("Volatilidad 1 año"), rs = row("Sharpe 1 año");
+    function mov(r, u) { var d = Math.round((r.b.v - r.a.v) * 100) / 100; return !d ? "se mantiene en " + nf(r.b.v, 2) + u : (d > 0 ? "sube" : "baja") + " de " + nf(r.a.v, 2) + u + " a " + nf(r.b.v, 2) + u; }
+    if (isNum(rv.a.v) && isNum(rv.b.v) && isNum(rs.a.v) && isNum(rs.b.v)) S.push("<b>Riesgo:</b> la volatilidad " + mov(rv, "%") + " y el Sharpe " + mov(rs, "") + ".");
+    var rc = row("Coste neto anual");
+    if (isNum(rc.a.v) && isNum(rc.b.v)) {
+      var ce = function (key) { return D.reduce(function (s, d) { var c = costOf(d.f); return s + (isNum(c) && isNum(d[key]) ? d[key] * c / 100 : 0); }, 0); };
+      var c0 = ce("e0"), c1 = ce("e1");
+      S.push("<b>Coste:</b> el coste medio " + mov(rc, "%") + (c0 || c1 ? " (de unos " + nf(c0, 0) + " € a " + nf(c1, 0) + " € al año)." : "."));
+    }
+    h += '<section class="block chsec"><h3>Qué supone el cambio</h3><ul class="chsum"><li>' + S.join("</li><li>") + "</li></ul></section>";
+
+    // cambio de peso por fondo
+    var mxd = Math.max.apply(null, C.map(function (d) { return Math.abs(d.dw); })) || 1;
+    var ord = C.slice().sort(function (x, y) { return y.dw - x.dw; });
+    h += '<section class="block chsec"><h3>Cambio de peso por fondo</h3>' + ord.map(function (d) {
+      var w = (Math.abs(d.dw) / mxd * 50).toFixed(1);
+      return '<div class="chw"><div class="chwn"><b>' + esc(d.f.n) + '</b><small><span class="chtag ' + d.k + '">' + CHK[d.k] + "</span> " + pct(d.w0, false, 2) + " → " + pct(d.w1, false, 2) + '</small></div><div class="chwb"><i class="' + (d.dw < 0 ? "neg" : "pos") + '" style="width:' + w + '%"></i></div><div class="chwv ' + cls(d.dw) + '">' + pp(d.dw) + "</div></div>";
+    }).join("") + "</section>";
+
+    // operaciones
+    var rank = { out: 0, down: 1, "in": 2, up: 3, same: 4 };
+    function parts_(d) {
+      var m = /^EUR\s*([\d.,]+)/.exec(String(d.f.nav || ""));
+      if (!m || !d.de) return "–";
+      if (d.k === "out") return "Total";
+      return (d.de > 0 ? "+" : "-") + nf(Math.abs(d.de) / parseFloat(m[1].replace(/,/g, "")), 2);
+    }
+    h += '<section class="block chsec"><h3>Detalle de las operaciones</h3><div class="table-wrap"><table class="chtable"><thead><tr><th scope="col">Fondo</th><th scope="col">Movimiento</th><th scope="col">Peso antes</th><th scope="col">Peso ahora</th><th scope="col">Importe antes</th><th scope="col">Importe ahora</th><th scope="col">Compra o venta</th><th scope="col">Particip. aprox.</th></tr></thead><tbody>' +
+      D.slice().sort(function (x, y) { return rank[x.k] - rank[y.k]; }).map(function (d) {
+        return '<tr class="' + (d.k === "same" && !d.de ? "chsame" : "") + '"><td><a href="#/fondo/' + encodeURIComponent(d.f.id) + '">' + esc(d.f.n) + '</a></td><td><span class="chtag ' + d.k + '">' + CHK[d.k] + "</span></td><td>" + pct(d.w0, false, 2) + "</td><td><b>" + pct(d.w1, false, 2) + "</b></td><td>" + eur(d.e0) + "</td><td><b>" + eur(d.e1) + '</b></td><td class="' + cls(d.de) + '">' + (d.de ? eur(d.de, true) : "–") + "</td><td>" + parts_(d) + "</td></tr>";
+      }).join("") + "</tbody>" + (hasE ? '<tfoot><tr><td colspan="6"><b>Neto</b> (compras ' + eur(buy) + ", ventas " + eur(sell) + ')</td><td class="' + cls(Math.round((buy - sell) * 100) / 100) + '"><b>' + eur(Math.round((buy - sell) * 100) / 100, true) + "</b></td><td></td></tr></tfoot>" : "") + '</table></div><p class="note">Participaciones estimadas con el último valor liquidativo publicado en la web; en fondos con valor liquidativo en otra divisa no se calculan. Confírmalas con la posición real antes de ordenar traspasos.</p></section>';
+
+    // comparativa cuantitativa
+    h += '<section class="block chsec"><h3>Comparativa cuantitativa</h3><div class="table-wrap"><table class="chtable"><thead><tr><th scope="col">Medida</th><th scope="col">Original</th><th scope="col">Nueva</th><th scope="col">Diferencia</th></tr></thead><tbody>' +
+      M.filter(function (r) { return isNum(r.a.v) || isNum(r.b.v); }).map(function (r) {
+        var partial = (isNum(r.a.v) && r.a.cov < 0.999) || (isNum(r.b.v) && r.b.cov < 0.999);
+        var fm = function (v) { return r.m.pc ? pct(v, /^(Rent|Caída)/.test(r.m.n), 2) : dec(v); };
+        return "<tr><td>" + r.m.n + (partial ? " *" : "") + "</td><td>" + fm(r.a.v) + "</td><td><b>" + fm(r.b.v) + "</b></td><td>" + chDelta(r.a.v, r.b.v, r.m.s, r.m.pc ? "pp" : "") + "</td></tr>";
+      }).join("") + "<tr><td>Número de fondos</td><td>" + a.lines.filter(function (l) { return l.w > 0; }).length + "</td><td><b>" + b.lines.filter(function (l) { return l.w > 0; }).length + '</b></td><td></td></tr></tbody></table></div><p class="note">Verde mejora, rojo empeora. Medias ponderadas por peso con datos de Morningstar; la volatilidad y la caída máxima no tienen en cuenta las correlaciones. Las rentabilidades pasadas aplican los pesos a los fondos, no son la rentabilidad obtenida por el cliente. * Algún fondo no tiene ese dato.</p></section>';
+
+    // lo que se vende frente a lo que se compra
+    function side(title, list) {
+      if (!list.length) return "";
+      var q = { lines: list.map(function (d) { return { id: d.f.id, w: Math.abs(d.de !== null && hasE ? d.de : d.dw) }; }) };
+      function av(g) { return wAvg(q, g).v; }
+      var cols = [function (f) { return f.ret.ytd; }, function (f) { return f.ret.y1; }, function (f) { return f.ret.y3; }, function (f) { return f.vol[0]; }, function (f) { return f.sharpe[0]; }, costOf];
+      function cells(get) { return cols.map(function (c, i) { var v = get(c); return "<td>" + (i < 3 ? ret(v) : i === 4 ? dec(v) : pct(v, false, 2)) + "</td>"; }).join(""); }
+      return '<h4 class="chh4">' + title + '</h4><div class="table-wrap"><table class="chtable"><thead><tr><th scope="col">Fondo</th><th scope="col">' + (hasE ? "Importe movido" : "Peso movido") + '</th><th scope="col">Año</th><th scope="col">1 año</th><th scope="col">3 años</th><th scope="col">Vol. 1 año</th><th scope="col">Sharpe 1 año</th><th scope="col">Coste</th></tr></thead><tbody>' +
+        list.map(function (d, i) { return "<tr><td>" + esc(d.f.n) + "<small>" + esc(d.f.c) + "</small></td><td>" + (hasE ? eur(q.lines[i].w) : pct(q.lines[i].w, false, 2)) + "</td>" + cells(function (c) { return c(d.f); }) + "</tr>"; }).join("") +
+        '</tbody><tfoot><tr><td><b>Media ponderada</b></td><td><b>' + (hasE ? eur(sumW(q)) : pct(sumW(q), false, 2)) + "</b></td>" + cells(av) + "</tr></tfoot></table></div>";
+    }
+    function dir(d) { return d.de !== null && hasE ? d.de : d.dw; }
+    var sold = C.filter(function (d) { return dir(d) < 0; }), bought = C.filter(function (d) { return dir(d) > 0; });
+    h += '<section class="block chsec"><h3>Lo que se vende frente a lo que se compra</h3>' + side("Se vende", sold) + side("Se compra", bought) + "</section>";
+
+    // gráficos
+    h += '<div class="grid2 chgrid">';
+    var r1y = row("Rentabilidad 1 año"), vo = row("Volatilidad 1 año");
+    var sc = chScatter({ x: vo.a.v, y: r1y.a.v, n: "Cartera original" }, { x: vo.b.v, y: r1y.b.v, n: "Cartera nueva" }, sold.concat(bought).map(function (d) { return { f: d.f, de: hasE ? d.de : null, dw: d.dw }; }));
+    if (sc) h += '<section class="block"><h3>Rentabilidad frente a riesgo</h3>' + sc + "</section>";
+    var per = [["Año", "Rentabilidad del año"], ["1 mes", "Rentabilidad 1 mes"], ["1 año", "Rentabilidad 1 año"], ["3 años", "Rentabilidad 3 años (anualizada)"], ["5 años", "Rentabilidad 5 años (anualizada)"]].map(function (x) { var r = row(x[1]); return isNum(r.a.v) && isNum(r.b.v) ? [x[0], r.a.v, r.b.v] : null; }).filter(Boolean);
+    if (per.length) h += '<section class="block"><h3>Rentabilidad por plazo (%)</h3>' + chColumns(per, "Rentabilidad por plazo antes y después") + "</section>";
+    var yrs = YEARS.map(function (y) { var r = both(function (f) { return annOf(f, y); }); return r[0].cov > 0.999 && r[1].cov > 0.999 ? [y === 2026 ? "2026*" : String(y), r[0].v, r[1].v] : null; }).filter(Boolean);
+    if (yrs.length) h += '<section class="block"><h3>Rentabilidad por año (%)</h3>' + chColumns(yrs, "Rentabilidad por año antes y después") + '<p class="note">Solo años en los que todos los fondos tienen dato. * Hasta ' + esc(String(META.annDate || "").slice(0, 5)) + ".</p></section>";
+    function mixOf(q) { return [0, 1, 2, 3].map(function (i) { return wAvg(q, function (f) { return f.mix[i]; }).v; }); }
+    var m0 = mixOf(a), m1 = mixOf(b), mi = ["Acciones", "Bonos", "Efectivo", "Otros"].map(function (l, i) { return [l, m0[i] || 0, m1[i] || 0]; }).filter(function (x) { return Math.abs(x[1]) >= 0.05 || Math.abs(x[2]) >= 0.05; });
+    if (mi.length) h += '<section class="block"><h3>Composición por activo</h3>' + chPairs(mi) + "</section>";
+    function group(key) {
+      var o = {};
+      [a, b].forEach(function (q, j) { q.lines.forEach(function (l) { var k = byId(l.id)[key]; (o[k] = o[k] || [0, 0])[j] += l.w; }); });
+      return Object.keys(o).map(function (k) { return [k, o[k][0], o[k][1]]; }).filter(function (x) { return x[1] > 0 || x[2] > 0; }).sort(function (x, y) { return Math.max(y[1], y[2]) - Math.max(x[1], x[2]); });
+    }
+    h += '<section class="block"><h3>Peso por categoría</h3>' + chPairs(group("c")) + "</section>";
+    h += '<section class="block"><h3>Peso por gestora</h3>' + chPairs(group("g")) + "</section>";
+    return h + "</div>";
   }
 
   function summary(p) {
@@ -2811,38 +3047,60 @@
 
   // Sigmas: movimiento del periodo medido en desviaciones típicas del propio fondo
   var SIG_MIN = 2.5; // a partir de este valor absoluto se resalta
-  var ESS = { k: "sw", dir: 1 };
+  var ESS = { k: "sw", dir: 1, t: "rv" };
   function sigNum(v) { var n = v == null || v === "" ? NaN : parseFloat(String(v).replace(",", ".")); return isFinite(n) ? n : null; }
   function sigBig(v) { var n = sigNum(v); return n !== null && Math.abs(n) >= SIG_MIN; }
+  function sigTxt(n) { return (n > 0 ? "+" : "") + nf(n, 1); }
   function sigTag(v) {
     var n = sigNum(v);
     if (n === null) return '<span class="muted">–</span>';
-    return '<span class="sig' + (sigBig(v) ? (n < 0 ? " dn" : " up") : "") + '">' + (n > 0 ? "+" : "") + nf(n, 1) + "</span>";
+    return '<span class="sig' + (sigBig(v) ? (n < 0 ? " dn" : " up") : "") + '">' + sigTxt(n) + "</span>";
+  }
+  // barra desde el cero, con las líneas del umbral a ambos lados
+  function sigBar(v, max, label) {
+    var n = sigNum(v), thr = (SIG_MIN / max * 50).toFixed(2);
+    var bar = n === null ? "" : '<i class="' + (n < 0 ? "dn" : "up") + (sigBig(v) ? " big" : "") + '" style="width:' + (Math.min(Math.abs(n), max) / max * 50).toFixed(2) + '%"></i>';
+    return '<div class="esm"><small>' + label + '</small><div class="estrack"><em style="left:' + (50 - thr) + '%"></em><em style="left:' + (50 + +thr) + '%"></em><s></s>' + bar + "</div>" + sigTag(v) + "</div>";
   }
   function viewEstado() {
     setTitle("Estado semanal de fondos");
     var E = window.ESTADO || { fondos: {} };
-    var items = FUNDS.filter(function (f) { return f.t === "rv" && E.fondos && E.fondos[f.id]; });
+    var all = FUNDS.filter(function (f) { return E.fondos && E.fondos[f.id]; });
     var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Estado semanal de fondos</h1>' +
       '<p class="sub">' + (E.fecha ? "Datos del " + esc(E.fecha) + ". " : "") + "Resaltados los movimientos de " + nf(SIG_MIN, 1) + " sigmas o más (rojo caída, verde subida).</p>";
-    if (!items.length) {
+    if (!all.length) {
       app.innerHTML = h + '<div class="empty box" style="margin-top:18px;padding:34px 20px">Todavía no hay estado publicado. Se rellenará con el próximo informe semanal (lunes).</div>' + footer("rv");
       return;
     }
-    items.sort(function (a, b) {
-      if (ESS.k === "n") return ESS.dir * a.n.localeCompare(b.n, "es");
-      var x = sigNum(E.fondos[a.id][ESS.k]), y = sigNum(E.fondos[b.id][ESS.k]);
-      if (x === null && y === null) return 0; if (x === null) return 1; if (y === null) return -1;
-      return ESS.dir * (x - y);
+    var groups = [["rv", "Renta variable"], ["rf", "Renta fija"]].filter(function (g) { return ESS.t === "all" || ESS.t === g[0]; });
+    var shown = all.filter(function (f) { return ESS.t === "all" || f.t === ESS.t; });
+    var max = Math.ceil(Math.max.apply(null, [SIG_MIN + 0.5].concat(shown.map(function (f) { var d = E.fondos[f.id]; return Math.max(Math.abs(sigNum(d.sw) || 0), Math.abs(sigNum(d.sm) || 0)); }))));
+    h += '<div class="estools"><label for="estipo">Tipo de fondo</label><select id="estipo" class="inp">' + [["rv", "Renta variable"], ["rf", "Renta fija"], ["all", "Todos"]].map(function (o) { return '<option value="' + o[0] + '"' + (ESS.t === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select>" +
+      '<label for="esord">Ordenar por</label><select id="esord" class="inp">' + [["sw:1", "Sigma semanal (mayores caídas)"], ["sw:-1", "Sigma semanal (mayores subidas)"], ["sm:1", "Sigma mensual (mayores caídas)"], ["sm:-1", "Sigma mensual (mayores subidas)"], ["n:1", "Nombre"]].map(function (o) { return '<option value="' + o[0] + '"' + (ESS.k + ":" + ESS.dir === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></div>";
+    // resumen visual de cada periodo
+    h += '<div class="essum">' + [["sw", "Semana"], ["sm", "Mes"]].map(function (per) {
+      var dn = 0, up = 0, tot = 0;
+      shown.forEach(function (f) { var v = E.fondos[f.id][per[0]], n = sigNum(v); if (n === null) return; tot++; if (sigBig(v)) { if (n < 0) dn++; else up++; } });
+      var rest = tot - dn - up;
+      function seg(c, k) { return k ? '<i class="' + c + '" style="flex:' + k + '"></i>' : ""; }
+      return '<div class="escard"><b>' + per[1] + '</b><div class="esnums"><span class="dn"><strong>' + dn + '</strong>caídas importantes</span><span class="up"><strong>' + up + '</strong>subidas importantes</span><span><strong>' + rest + '</strong>sin movimiento importante</span></div><div class="esstack" role="img" aria-label="' + dn + " caídas, " + up + " subidas y " + rest + ' sin movimiento importante">' + seg("dn", dn) + seg("up", up) + seg("rest", rest) + "</div></div>";
+    }).join("") + "</div>";
+    groups.forEach(function (g) {
+      var items = shown.filter(function (f) { return f.t === g[0]; });
+      items.sort(function (a, b) {
+        if (ESS.k === "n") return a.n.localeCompare(b.n, "es");
+        var x = sigNum(E.fondos[a.id][ESS.k]), y = sigNum(E.fondos[b.id][ESS.k]);
+        if (x === null && y === null) return 0; if (x === null) return 1; if (y === null) return -1;
+        return ESS.dir * (x - y);
+      });
+      h += '<h2 class="sec">' + g[1] + ' <small class="muted">' + items.length + " fondos</small></h2>" + (items.length ? '<div class="eslist">' + items.map(function (f) {
+        var d = E.fondos[f.id], big = sigBig(d.sw) || sigBig(d.sm), down = (sigBig(d.sw) && sigNum(d.sw) < 0) || (sigBig(d.sm) && sigNum(d.sm) < 0);
+        return '<a class="esrow' + (big ? (down ? " big dn" : " big up") : "") + '" href="#/fondo/' + encodeURIComponent(f.id) + '"><span class="esf"><span class="flogo" aria-hidden="true">' + logoOrInit(f.g) + '</span><span class="ftxt"><b>' + esc(f.n) + "</b><small>" + esc(f.c) + "</small></span></span>" + sigBar(d.sw, max, "Semana") + sigBar(d.sm, max, "Mes") + "</a>";
+      }).join("") + "</div>" : '<p class="muted">Sin datos en el informe de esta semana.</p>');
     });
-    function th(k, l) { var on = ESS.k === k; return '<th scope="col"' + (on ? ' aria-sort="' + (ESS.dir > 0 ? "ascending" : "descending") + '"' : "") + '><button type="button" data-es="' + k + '">' + l + (on ? (ESS.dir > 0 ? " ↑" : " ↓") : "") + "</button></th>"; }
-    h += '<div class="table-wrap" style="margin-top:14px"><table class="estable"><thead><tr>' + th("n", "Fondo") + th("sw", "Sigma semanal") + th("sm", "Sigma mensual") + "</tr></thead><tbody>" +
-      items.map(function (f) {
-        var d = E.fondos[f.id];
-        return "<tr" + (sigBig(d.sw) || sigBig(d.sm) ? ' class="big"' : "") + '><td><a href="#/fondo/' + encodeURIComponent(f.id) + '">' + esc(f.n) + "</a></td><td>" + sigTag(d.sw) + "</td><td>" + sigTag(d.sm) + "</td></tr>";
-      }).join("") + "</tbody></table></div>";
     app.innerHTML = h + footer("rv");
-    app.querySelectorAll("[data-es]").forEach(function (b) { b.addEventListener("click", function () { var k = b.getAttribute("data-es"); if (ESS.k === k) ESS.dir = -ESS.dir; else { ESS.k = k; ESS.dir = 1; } viewEstado(); }); });
+    document.getElementById("estipo").addEventListener("change", function (e) { ESS.t = e.target.value; viewEstado(); });
+    document.getElementById("esord").addEventListener("change", function (e) { var v = e.target.value.split(":"); ESS.k = v[0]; ESS.dir = +v[1]; viewEstado(); });
   }
 
   /* ---- Macro ---- */
