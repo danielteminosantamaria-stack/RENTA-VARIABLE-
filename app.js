@@ -9,7 +9,7 @@
 
   var CATS = {
     rf: { title: "Renta fija", card: "Renta fija", top: "Renta fija" },
-    rv: { title: "Renta variable y mixtos", card: "Renta variable y mixtos", top: "Renta variable y mixtos" }
+    rv: { title: "Renta variable", card: "Renta variable", top: "Renta variable" }
   };
 
   // ---------- utilidades ----------
