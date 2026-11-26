@@ -1343,7 +1343,7 @@
     PF.push(p); savePf(); viewPortfolios();
     var m = document.getElementById("pfmsg"), sum = p.lines.reduce(function (a, l) { return a + l.w; }, 0);
     m.textContent = "Cartera «" + p.name + "» creada con " + p.lines.length + (p.lines.length === 1 ? " fondo" : " fondos") + " de " + r.total + " posiciones, valor total " + nf(r.amount, 2) + " €. Pesos: " +
-      p.lines.map(function (l) { return byId(l.id).n + " " + fmtPct(l.w); }).join("; ") + " (suman " + fmtPct(sum) + ")." +
+      p.lines.map(function (l) { return byId(l.id).n + " " + (l.v ? nf(l.v, 2) + " € " : "") + "(" + fmtPct(l.w) + ")"; }).join("; ") + ". Comprobación: suma de importes " + nf(p.lines.reduce(function (x, l) { return x + (l.v || 0); }, 0) + 0, 2) + " €" + (r.miss.length ? " (más " + r.miss.length + " sin reconocer)" : ", coincide con el total del Excel") + "." +
       (r.miss.length ? " No están en la web y no se han importado: " + r.miss.join("; ") + "." : "");
     return true;
   }
