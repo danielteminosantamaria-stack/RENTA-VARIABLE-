@@ -101,7 +101,7 @@
   };
   function tile(href, ic, small, title, count) {
     return '<a class="tile" href="' + href + '"><span class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[ic] + '</svg></span>' +
-      '<span class="tt"><small>' + esc(small) + "</small><b>" + esc(title) + '</b></span><span class="cnt">' + esc(count) + '</span><span class="arrow" aria-hidden="true">→</span></a>';
+      '<span class="tt">' + (small ? "<small>" + esc(small) + "</small>" : "") + "<b>" + esc(title) + '</b></span><span class="cnt">' + esc(count) + '</span><span class="arrow" aria-hidden="true">→</span></a>';
   }
   function homeSection(title, tiles) { return '<h2 class="sec">' + esc(title) + '</h2><div class="tiles">' + tiles.join("") + "</div>"; }
   function heroHtml() {
@@ -128,8 +128,8 @@
     app.innerHTML =
       heroHtml() + searchHtml() +
       homeSection("Fondos Selección 50", [
-        tile("#/rf", "chart", "Fondos de", CATS.rf.card, ofType("rf").length + " fondos"),
-        tile("#/rv", "trend", "Fondos de", CATS.rv.card, ofType("rv").length + " fondos")
+        tile("#/rf", "chart", "", CATS.rf.card, ofType("rf").length + " fondos"),
+        tile("#/rv", "trend", "", CATS.rv.card, ofType("rv").length + " fondos")
       ]) +
       homeSection("Carteras", [
         tile("#/construir", "pie", "🔒 Privado", "Construir cartera", "con el cliente"),
