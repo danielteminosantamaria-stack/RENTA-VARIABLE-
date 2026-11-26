@@ -1243,3 +1243,19 @@ h2.sec::before, .homesec h2::before, .sech::before { background: linear-gradient
 .fundpg .kpi .pos, .fundpg .kpi.hi .pos { color: #1e7a4a !important; } .fundpg .kpi .neg, .fundpg .kpi.hi .neg { color: #b42318 !important; }
 .fundpg .kpi, .fundpg .block, .fundpg .chart-card { border-radius: 4px !important; box-shadow: none !important; }
 .fundpg .kpis > *::before, .fundpg .block::before { background: #111 !important; }
+
+/* Presentación de las métricas de cartera: donut con leyenda, columnas por año y tarjetas de métricas */
+.donutw { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; padding: 6px 0; }
+.legv { list-style: none; margin: 0; padding: 0; flex: 1; min-width: 160px; }
+.legv li { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.legv li:last-child { border-bottom: 0; }
+.legv li span::before { content: ""; display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 9px; background: var(--c); vertical-align: -1px; }
+.legv li b { font-size: 15px; }
+.mcards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.mc { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; background: #fff; }
+.mc small { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.mc b { font-size: 21px; color: var(--text); }
+.mc em { display: block; font-style: normal; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.donut { width: 150px; height: 150px; border-radius: 50%; position: relative; flex: none; }
+.donut i { position: absolute; inset: 28px; background: #fff; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-style: normal; font-size: 24px; font-weight: 700; color: #111; line-height: 1; }
+.donut small { font-size: 11px; font-weight: 500; color: #666; margin-top: 4px; text-transform: uppercase; letter-spacing: .06em; }

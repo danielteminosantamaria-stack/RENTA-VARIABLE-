@@ -1645,15 +1645,14 @@
 
     h += '<div class="grid2">';
     // Composición
-    var labels = ["Acciones", "Bonos", "Efectivo", "Otros"], colors = ["#851a2e", "#3b3b3b", "#b9b9b9", "#f0c9b0"];
+    var labels = ["Acciones", "Bonos", "Efectivo", "Otros"], colors = ["#2a5ca8", "#a3173f", "#bfc3c9", "#f2b705"];
     var mix = [0, 1, 2, 3].map(function (i) { return wAvg(p, function (f) { return f.mix[i]; }).v; });
     if (mix.some(isNum)) {
-      var pos = mix.reduce(function (a, x) { return a + (isNum(x) && x > 0 ? x : 0); }, 0) || 1;
-      h += '<section class="block"><h3>Composición</h3><div class="stack">' + mix.map(function (x, i) {
-        return isNum(x) && x > 0 ? '<i style="width:' + (x / pos * 100).toFixed(2) + "%;background:" + colors[i] + '"></i>' : "";
-      }).join("") + '</div><div class="keys">' + mix.map(function (x, i) {
-        return isNum(x) && Math.abs(x) >= 0.05 ? '<span style="--c:' + colors[i] + '">' + labels[i] + " <b>" + pct(x, false, 1) + "</b></span>" : "";
-      }).join("") + "</div></section>";
+      var pos = mix.reduce(function (a, x) { return a + (isNum(x) && x > 0 ? x : 0); }, 0) || 1, acc0 = 0;
+      var grad = mix.map(function (v, i) { if (!(isNum(v) && v > 0)) return null; var a0 = acc0; acc0 += v / pos * 100; return colors[i] + " " + a0.toFixed(2) + "% " + acc0.toFixed(2) + "%"; }).filter(Boolean).join(",");
+      h += '<section class="block"><h3>Composición</h3><div class="donutw"><div class="donut" role="img" aria-label="Composición de la cartera" style="background:conic-gradient(' + grad + ')"><i>' + nf(Math.max(mix[0] || 0, mix[1] || 0), 0) + "%<small>" + (mix[0] >= mix[1] ? "Acciones" : "Bonos") + '</small></i></div><ul class="legv">' + mix.map(function (x, i) {
+        return isNum(x) && Math.abs(x) >= 0.05 ? '<li style="--c:' + colors[i] + '"><span>' + labels[i] + "</span><b>" + pct(x, false, 1) + "</b></li>" : "";
+      }).join("") + "</ul></div></section>";
     }
     // Por categoría
     var cw = {};
@@ -1663,17 +1662,22 @@
     // Por año
     var yrs = YEARS.map(function (yy) { var a = wAvg(p, function (f) { return annOf(f, yy); }); return a.cov > 0.999 ? [yearLabel(yy), a.v] : null; }).filter(function (x) { return x && isNum(x[1]); });
     if (yrs.length) {
-      h += '<section class="block"><h3>Rentabilidad por año</h3>' + bars(yrs, Math.max.apply(null, yrs.map(function (x) { return Math.abs(x[1]); })) || 1, true) +
-        '<p class="note">Solo años en los que todos los fondos tienen dato.</p></section>';
+      var yW = 560, yH = 250, ymax = Math.max.apply(null, yrs.map(function (x) { return Math.abs(x[1]); })) || 1, yneg = yrs.some(function (x) { return x[1] < 0; }), yb = yneg ? 130 : 190, yph = yneg ? 96 : 150, ycw = (yW - 20) / yrs.length;
+      h += '<section class="block"><h3>Rentabilidad por año</h3><svg viewBox="0 0 ' + yW + " " + yH + '" width="100%" role="img" aria-label="Rentabilidad por año de la cartera"><line x1="10" x2="' + (yW - 10) + '" y1="' + yb + '" y2="' + yb + '" stroke="#bbb"/>' + yrs.map(function (y, k) {
+        var hh = Math.max(2, Math.abs(y[1]) / ymax * yph), x = 10 + k * ycw + ycw * 0.18, w = ycw * 0.64, up = y[1] >= 0;
+        return '<rect x="' + x.toFixed(1) + '" y="' + (up ? yb - hh : yb).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + hh.toFixed(1) + '" rx="3" fill="' + (up ? "#1e7a4a" : "#b3261e") + '"/>' +
+          '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (up ? yb - hh - 6 : yb + hh + 14).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#222">' + nf(y[1], 1) + "%</text>" +
+          '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (yH - 6) + '" text-anchor="middle" font-size="11" fill="#666">' + esc(String(y[0]).replace(/ \(.*$/, "*")) + "</text>";
+      }).join("") + '</svg><p class="note">Solo años en los que todos los fondos tienen dato. * Año en curso.</p></section>';
     }
     // Métricas ponderadas
     var mw = [["Rentabilidad 3 años", "y3", true], ["Rentabilidad 5 años", "y5", true], ["Volatilidad 3 años", "vol3"], ["Sharpe 3 años", "sh3"], ["Sortino 1 año", "so1"], ["MAR 1 año", "mar1"], ["Coste neto", "cost"]].map(function (x) {
       var m = metric(x[1]), a = wAvg(p, m.v);
       if (a.v === null) return "";
       var txt = x[2] ? pct(a.v, true, 2) : fmtMetric(m, a.v);
-      return fact(x[0], txt + (a.cov < 0.999 ? ' <span class="muted">(' + nf(a.cov * 100, 0) + "% del peso)</span>" : ""));
+      return '<div class="mc"><small>' + x[0] + "</small><b>" + txt + "</b>" + (a.cov < 0.999 ? '<em>' + nf(a.cov * 100, 0) + "% del peso</em>" : "") + "</div>";
     }).join("");
-    if (mw) h += '<section class="block"><h3>Otras métricas ponderadas</h3><dl class="facts">' + mw + "</dl></section>";
+    if (mw) h += '<section class="block"><h3>Otras métricas ponderadas</h3><div class="mcards">' + mw + "</div></section>";
     return h + "</div>";
   }
 
