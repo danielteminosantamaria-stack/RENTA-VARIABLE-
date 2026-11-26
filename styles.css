@@ -1064,3 +1064,19 @@ body:has(.fundpg), html:has(.fundpg) { background: #fff; }
 .fundpg .rtable tbody tr:hover td { background: #f6f6f6; }
 .fundpg .doc:hover { border-color: #111; }
 .fundpg a { color: #2a5ca8; }
+/* Cabecera de ficha de fondo: líneas y letras en negro */
+.fundpg .kpis > *::before { background: #111 !important; height: 3px; }
+.fundpg .kpi small { color: #444; }
+.fundpg .kpi span { color: #111; }
+.fundpg .kpi.hi { background: #fff !important; border: 2px solid #111 !important; box-shadow: none !important; }
+.fundpg .kpi.hi small { color: #444; }
+.fundpg .kpi.hi span { color: #111; }
+.fundpg .btn, .fundpg .btn.ghost { background: #fff; color: #111; border: 1px solid #111; box-shadow: none; }
+.fundpg .btn:hover, .fundpg .btn.ghost:hover { background: #111; color: #fff; border-color: #111; }
+.fundpg .doc { color: #111; border-color: #111; }
+.fundpg .doc:hover { background: #111; color: #fff; border-color: #111; }
+.fundpg .doc small { color: #555; }
+.fundpg .doc:hover small { color: rgba(255, 255, 255, .8); }
+.fundpg a:not(.doc):not(.btn) { color: #111; }
+.fundpg .kpi span.pos, .fundpg .kpi .pos { color: var(--pos); }
+.fundpg .kpi span.neg, .fundpg .kpi .neg { color: var(--neg); }
