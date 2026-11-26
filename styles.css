@@ -1187,3 +1187,59 @@ th { background: #f5f6f7; color: #111; }
 .search.big { margin-left: 0 !important; margin-right: auto !important; }
 .rec .tbl th:nth-child(2), .rec .tbl td:nth-child(2) { text-align: left; }
 .foot { border-radius: 0 !important; }
+
+/* ===== Diseño a medio camino: granate Renta 4 como acento, tarjetas suaves y fichas de fondo estilo Morningstar ===== */
+:root { --brand: #a3173f; --brand-2: #7f1231; --brand-soft: #f8e9ed; --navy: #1b3a5c; --navy-soft: #e6eef6; --teal: #12806e; --teal-soft: #e2f4f0; --gold: #c8a04a; --dark: #1f1f1f; --soft: #f6f5f7; --line: #e3e0e5; --shadow: 0 1px 3px rgba(20, 10, 14, .08); --shadow-hi: 0 6px 16px rgba(20, 10, 14, .12); --glow: 0 8px 20px rgba(20, 10, 14, .14); }
+a:hover { color: var(--brand); }
+.site .sbar { border-bottom: 3px solid var(--brand); }
+.site { box-shadow: 0 2px 8px rgba(0, 0, 0, .08); }
+.site .logo b { color: var(--brand); }
+.site nav a:hover, .site nav a.on, .site nav summary:hover, .site nav .more[open] summary, .site nav details.on summary { color: var(--brand); border-bottom-color: var(--brand); }
+/* Portada: banner granate plano */
+.hero.vis { margin: 0 calc(50% - 50vw) 0 !important; padding: 46px max(20px, calc((100vw - var(--wide)) / 2 + 20px)) 66px !important; background: linear-gradient(110deg, #a3173f 0%, #6e1029 100%) !important; color: #fff; border-bottom: 0 !important; }
+.hero.vis h1 { color: #fff; font-size: 40px; }
+.hero.vis .lead { color: rgba(255, 255, 255, .9); }
+.hero.vis .eyebrow { color: rgba(255, 255, 255, .8); }
+.search.big input { border: 0 !important; border-radius: 8px !important; box-shadow: 0 8px 22px -8px rgba(0, 0, 0, .35) !important; }
+h2.sec::before, .homesec h2::before, .sech::before { background: linear-gradient(180deg, var(--brand), var(--gold)) !important; }
+/* Tarjetas de herramientas: redondeadas, con franja de color e icono de color */
+.tile { border: 1px solid var(--line) !important; border-radius: 10px !important; box-shadow: var(--shadow) !important; position: relative; overflow: hidden; }
+.tile::before { display: block !important; content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--brand); }
+.tile::after { display: none !important; }
+.tile:hover { transform: translateY(-2px) !important; border-color: var(--line) !important; box-shadow: var(--shadow-hi) !important; }
+.tiles .tile:nth-child(n) .ico { width: 48px; height: 48px; border-radius: 12px; background: var(--brand-soft) !important; color: var(--brand) !important; }
+.tiles .tile:nth-child(n):hover .ico { background: var(--brand) !important; color: #fff !important; }
+.tiles .tile:nth-child(n) .arrow { color: var(--brand) !important; }
+.tiles .tile:nth-child(3n+2)::before { background: var(--navy); }
+.tiles .tile:nth-child(3n+2) .ico { background: var(--navy-soft) !important; color: var(--navy) !important; }
+.tiles .tile:nth-child(3n+2):hover .ico { background: var(--navy) !important; color: #fff !important; }
+.tiles .tile:nth-child(3n+2) .arrow { color: var(--navy) !important; }
+.tiles .tile:nth-child(3n+3)::before { background: var(--teal); }
+.tiles .tile:nth-child(3n+3) .ico { background: var(--teal-soft) !important; color: var(--teal) !important; }
+.tiles .tile:nth-child(3n+3):hover .ico { background: var(--teal) !important; color: #fff !important; }
+.tiles .tile:nth-child(3n+3) .arrow { color: var(--teal) !important; }
+/* Paneles, indicadores y botones */
+.kpis > *, .block, .mv, .cat-card, .pfcard, .table-wrap, .box, .chart-card, .rec { border-radius: 10px !important; }
+.kpis > *::before, .mv::before, .block::before { background: linear-gradient(90deg, var(--brand), var(--gold)) !important; height: 3px !important; }
+.mv, .block, .kpi { box-shadow: var(--shadow) !important; }
+.kpi.hi { background: var(--brand) !important; border-color: var(--brand) !important; }
+.kpi.hi small { color: rgba(255, 255, 255, .85) !important; } .kpi.hi span { color: #fff !important; }
+.rec { border-top: 2px solid var(--brand); }
+.mvbar i.neg { background: #b42318 !important; }
+.btn { border-radius: 8px; }
+.seg button[aria-pressed="true"], .btn.primary, .chip[aria-pressed="true"], .catchip[aria-pressed="true"] { background: var(--brand) !important; border-color: var(--brand) !important; }
+.es-chip.on { background: var(--brand); border-color: var(--brand); }
+.folder[aria-pressed="true"] { background: var(--brand-soft) !important; border-color: var(--brand) !important; }
+.folder[aria-pressed="true"] .mono { background: var(--brand) !important; }
+.chip, .catchip, .es-chip { border-radius: 99px; } .seg { border-radius: 8px; }
+.tbl tbody tr:hover td, .table-wrap tbody tr:hover td { background: #faf6f8; }
+.foot { background: var(--soft) !important; border-radius: 0 !important; }
+.foot a { color: var(--brand); }
+.phero, .bhead { background: var(--soft) !important; border-left: 5px solid var(--brand) !important; border-bottom: 0 !important; border-radius: 0 !important; }
+/* Las fichas de fondo mantienen su estilo Morningstar (indicadores blancos con texto negro) */
+.fundpg .kpi.hi { background: #fff !important; border: 1px solid #e4e0e6 !important; box-shadow: none !important; }
+.fundpg .kpi.hi small { color: #444 !important; }
+.fundpg .kpi.hi span { color: #111 !important; }
+.fundpg .kpi .pos, .fundpg .kpi.hi .pos { color: #1e7a4a !important; } .fundpg .kpi .neg, .fundpg .kpi.hi .neg { color: #b42318 !important; }
+.fundpg .kpi, .fundpg .block, .fundpg .chart-card { border-radius: 4px !important; box-shadow: none !important; }
+.fundpg .kpis > *::before, .fundpg .block::before { background: #111 !important; }

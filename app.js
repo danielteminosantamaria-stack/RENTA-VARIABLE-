@@ -1429,7 +1429,7 @@
       '<input class="inp grow" id="npn" placeholder="Nombre (por ejemplo, Cartera moderada)" maxlength="80" required aria-label="Nombre de la cartera">' +
       '<input class="inp amt" id="npa" type="number" min="0" step="1000" placeholder="Importe (€), opcional" aria-label="Importe en euros">' +
       '<button class="btn" type="submit">Crear cartera</button></div></form>';
-    h += '<div class="row tools2"><button class="btn ghost" type="button" id="pfexp"' + (PF.length ? "" : " disabled") + '>Exportar todas</button>' +
+    h += '<div class="row tools2">' +
       '<label class="btn ghost" for="pfxls">Importar Excel</label><input id="pfxls" type="file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" hidden>' +
             '<label class="btn ghost" for="pfimp">Importar (JSON)</label><input id="pfimp" type="file" accept="application/json,.json" hidden>' +
       '<label class="btn ghost" for="pfpdf">Importar PDF de Morningstar</label><input id="pfpdf" type="file" accept="application/pdf,.pdf" hidden></div><p class="note" id="pfmsg"></p>';
@@ -1451,7 +1451,8 @@
         addTablePf(excelImport(rows), file.name.replace(/\.[^.]+$/, "").slice(0, 80) || "Cartera importada", msg);
       }).catch(function () { msg.textContent = "No se ha podido leer el Excel. Comprueba que el archivo no esté protegido y que tienes conexión (la lectura usa la librería SheetJS)."; });
     });
-    document.getElementById("pfexp").addEventListener("click", function () {
+    var pfe = document.getElementById("pfexp");
+    if (pfe) pfe.addEventListener("click", function () {
       download("carteras-cuaderno-de-fondos.json", JSON.stringify({ version: 1, carteras: PF }, null, 1), "application/json");
     });
     document.getElementById("pfpdf").addEventListener("change", function (e) {
