@@ -133,8 +133,7 @@
         tile("#/acciones", "bolt", "Explorar", "Stocks", stocks().length + (stocks().length === 1 ? " ficha" : " fichas")),
         tile("#/amplitud", "trend", "🔒 Privado", "Amplitud de mercado", "NYSE y gráficos"),
         tile("#/estado", "alert", "Cada lunes", "Estado semanal de fondos", "alertas y oportunidades"),
-        tile("#/nota", "doc", "Cada día", "Nota diaria", "mercados y macro"),
-        tile("#/agenda", "cal", "Semana", "Agenda semanal", "mercado y deuda")
+        tile("#/nota", "doc", "Cada día", "Nota diaria", "mercados y macro")
       ]) +
       '<h2 class="sec">Movimientos de la semana</h2><div class="movers">' + moversPanel("rf") + moversPanel("rv") + "</div>" +
       '<div class="tops">' + topList("rf") + topList("rv") + "</div>" +
@@ -2965,7 +2964,7 @@
     if (p[0] === "comparar") return viewCompare(p[1]);
     if (p[0] === "carteras") return viewPortfolios();
     if (p[0] === "acciones") return viewStocks();
-    if (p[0] === "agenda") return viewAgenda();
+    if (p[0] === "agenda") { location.hash = "#/nota"; return; }
     if (p[0] === "estado") return viewEstado();
     if (p[0] === "nota") return viewNota();
     if (p[0] === "accion" && p[1]) return viewStock(decodeURIComponent(p[1]));
