@@ -573,7 +573,7 @@
     }
 
     // Composición
-    var mix = f.mix, labels = ["Acciones", "Bonos", "Efectivo", "Otros"], colors = ["#851a2e", "#3b3b3b", "#b9b9b9", "#f0c9b0"];
+    var mix = f.mix, labels = ["Acciones", "Bonos", "Efectivo", "Otros"], colors = ["#0b3a6b", "#2f7fc1", "#b9bec6", "#9cc3e6"];
     if (mix.some(isNum)) {
       var tot = mix.reduce(function (a, v) { return a + (isNum(v) && v > 0 ? v : 0); }, 0) || 1;
       var odd = mix.some(function (v) { return isNum(v) && v < 0; }) || Math.abs(mix.reduce(function (a, v) { return a + (isNum(v) ? v : 0); }, 0) - 100) > 2;
@@ -2807,7 +2807,7 @@
     if (!p.length) return viewHome();
     if ((p[0] === "rf" || p[0] === "rv") && !p[1]) return viewList(p[0]);
     if ((p[0] === "rf" || p[0] === "rv") && p[1] === "resumen") return viewOverview(p[0]);
-    if (p[0] === "fondo" && p[1]) { var fid = decodeURIComponent(p[1]); viewFund(fid); gTheme(fid); return; }
+    if (p[0] === "fondo" && p[1]) { var fid = decodeURIComponent(p[1]); viewFund(fid); return; }
     if (p[0] === "comparar") return viewCompare(p[1]);
     if (p[0] === "carteras") return viewPortfolios();
     if (p[0] === "acciones") return viewStocks();
