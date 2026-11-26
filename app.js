@@ -1514,8 +1514,8 @@
       t.innerHTML = '<div class="table-wrap" style="margin-top:14px"><table><thead><tr><th scope="col">Fondo</th><th scope="col">Peso %</th><th scope="col">Importe</th><th scope="col">Año</th><th scope="col">1 año</th><th scope="col">Vol. 1 año</th><th scope="col">Sharpe 1 año</th><th scope="col">Aporta al año</th><th scope="col"><span class="sr">Quitar</span></th></tr></thead><tbody>' +
         p.lines.map(function (l, i) {
           var f = byId(l.id);
-          return '<tr data-i="' + i + '" class="pfrow"><td class="fund"><a href="#/fondo/' + encodeURIComponent(f.id) + '"><b>' + esc(f.n) + (f.idx ? '<span class="tag">Indexado</span>' : "") + "</b></a><small>" + esc(f.g) + " · " + esc(f.c) + vlTag(f) + "</small></td>" +
-            '<td><input class="inp w" type="number" min="0" max="100" step="0.5" value="' + (l.w || 0) + '" data-w="' + i + '" aria-label="Peso de ' + esc(f.n) + '"></td>' +
+          return '<tr data-i="' + i + '" class="pfrow" style="--c:' + (f.t === "rf" ? "#a3173f" : "#2a5ca8") + '"><td class="fund"><div class="pfn"><a href="#/fondo/' + encodeURIComponent(f.id) + '"><b>' + esc(f.n) + (f.idx ? '<span class="tag">Indexado</span>' : "") + "</b></a><small>" + esc(f.g) + " · " + esc(f.c) + vlTag(f) + "</small></div></td>" +
+            '<td class="pfw"><input class="inp w" type="number" min="0" max="100" step="0.5" value="' + (l.w || 0) + '" data-w="' + i + '" aria-label="Peso de ' + esc(f.n) + '"><span class="wbar"><i style="width:' + Math.min(100, l.w || 0) + '%"></i></span></td>' +
             '<td class="num" data-imp="' + i + '"></td><td>' + ret(f.ret.ytd) + "</td><td>" + ret(f.ret.y1) + '</td><td class="num">' + pct(f.vol[0], false, 1) + '</td><td class="num">' + dec(f.sharpe[0]) + '</td><td class="num" data-ap="' + i + '"></td>' +
             '<td><button type="button" class="x" data-del="' + i + '" aria-label="Quitar ' + esc(f.n) + '">×</button></td></tr>';
         }).join("") + '</tbody><tfoot><tr><td><b>Cartera</b></td><td class="num" id="tw"></td><td class="num" id="ti"></td><td id="ty"></td><td id="t1"></td><td class="num" id="tv"></td><td class="num" id="ts"></td><td class="num" id="ta"></td><td></td></tr></tfoot></table></div>';
@@ -1523,6 +1523,7 @@
         inp.addEventListener("input", function () {
           var w = parseNum(inp.value);
           p.lines[+inp.getAttribute("data-w")].w = w === null ? 0 : Math.max(0, Math.min(100, w));
+          var wb = inp.parentNode.querySelector(".wbar i"); if (wb) wb.style.width = Math.min(100, p.lines[+inp.getAttribute("data-w")].w) + "%";
           save(); refresh();
         });
       });

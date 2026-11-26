@@ -1275,3 +1275,18 @@ h2.sec::before, .homesec h2::before, .sech::before { background: linear-gradient
 .apbar { height: 8px; background: #eef0f3; border-radius: 4px; overflow: hidden; } .apbar i { display: block; height: 100%; background: var(--c); border-radius: 4px; }
 .apf { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); margin-top: 8px; } .apf b { color: var(--text); }
 @media (max-width: 700px) { .apgrid { grid-template-columns: 1fr; } }
+
+/* Tabla de posiciones de la cartera: nombre sobre gestora y categoría, marca RF o RV y barra de peso */
+#pftable thead th { text-transform: uppercase; font-size: 11px; letter-spacing: .05em; color: var(--muted); padding-top: 12px; padding-bottom: 12px; }
+#pftable .pfrow td { padding-top: 14px; padding-bottom: 14px; vertical-align: middle; border-bottom: 1px solid var(--line); }
+#pftable .pfrow td.fund { display: table-cell !important; border-left: 4px solid var(--c); padding-left: 16px; min-width: 300px; }
+#pftable .pfn b { display: block; font-size: 14.5px; }
+#pftable .pfn small { display: block; margin-top: 3px; font-size: 12px; }
+#pftable .pfrow:nth-child(even) td { background: transparent; }
+#pftable .pfrow:hover td { background: #faf6f8; }
+#pftable .pfw { min-width: 96px; }
+#pftable .pfw .inp.w { width: 76px; text-align: right; padding: 7px 9px; }
+#pftable .wbar { display: block; height: 5px; width: 76px; background: #eef0f3; border-radius: 3px; margin-top: 7px; overflow: hidden; }
+#pftable .wbar i { display: block; height: 100%; background: var(--c); border-radius: 3px; }
+#pftable tfoot td { background: var(--soft); font-size: 14.5px; padding-top: 14px; padding-bottom: 14px; border-top: 2px solid #111; }
+#pftable .x { color: #999; } #pftable .x:hover { color: #b42318; }
