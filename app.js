@@ -131,10 +131,10 @@
         tile("#/rf", "chart", "Fondos de", CATS.rf.card, ofType("rf").length + " fondos"),
         tile("#/rv", "trend", "Fondos de", CATS.rv.card, ofType("rv").length + " fondos")
       ]) +
-      homeSection("Xray", [
+      homeSection("Carteras", [
         tile("#/construir", "pie", "🔒 Privado", "Construir cartera", "con el cliente"),
         tile("#/comparar", "swap", "Herramienta", "Comparador de fondos", "hasta " + CMP_MAX + " fondos"),
-        tile("#/carteras", "brief", "Herramienta", "Carteras", PF.length + (PF.length === 1 ? " cartera" : " carteras")),
+        tile("#/carteras", "brief", "Herramienta", "Xray", PF.length + (PF.length === 1 ? " cartera" : " carteras")),
         tile("#/ia", "spark", "Cada trimestre", "Carteras IA", "3 perfiles")
       ]) +
       homeSection("Mercado y seguimiento", [
