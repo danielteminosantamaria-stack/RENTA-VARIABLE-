@@ -88,6 +88,11 @@
   var ICONS = {
     chart: '<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>', trend: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
     grid: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
+    pie: '<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>',
+    brief: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M3 13h18M11 13v2h2v-2"/>',
+    swap: '<path d="M4 8h14l-3-3M20 16H6l3 3"/><path d="M4 12h16" opacity=".35"/>',
+    spark: '<path d="M10 4l1.8 4.7L16.5 10.5l-4.7 1.8L10 17l-1.8-4.7L3.5 10.5l4.7-1.8z"/><path d="M18 3v4M16 5h4M18 16v4M16 18h4"/>',
+    xray: '<path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M8 15v-3M12 15V9M16 15v-5"/>',
     scan: '<path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M8 12h8"/>',
     build: '<path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="8"/>', compare: '<path d="M8 3v18M16 3v18"/><path d="M3 8h5M16 16h5"/>',
     folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>', star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
@@ -126,11 +131,11 @@
         tile("#/rf", "chart", "Fondos de", CATS.rf.card, ofType("rf").length + " fondos"),
         tile("#/rv", "trend", "Fondos de", CATS.rv.card, ofType("rv").length + " fondos")
       ]) +
-      homeSection("Herramientas de cartera", [
-        tile("#/construir", "build", "🔒 Privado", "Construir cartera", "con el cliente"),
-        tile("#/comparar", "compare", "Herramienta", "Comparador de fondos", "hasta " + CMP_MAX + " fondos"),
-        tile("#/carteras", "folder", "Herramienta", "Carteras", PF.length + (PF.length === 1 ? " cartera" : " carteras")),
-        tile("#/ia", "star", "Cada trimestre", "Carteras IA", "3 perfiles")
+      homeSection("Xray", [
+        tile("#/construir", "pie", "🔒 Privado", "Construir cartera", "con el cliente"),
+        tile("#/comparar", "swap", "Herramienta", "Comparador de fondos", "hasta " + CMP_MAX + " fondos"),
+        tile("#/carteras", "brief", "Herramienta", "Carteras", PF.length + (PF.length === 1 ? " cartera" : " carteras")),
+        tile("#/ia", "spark", "Cada trimestre", "Carteras IA", "3 perfiles")
       ]) +
       homeSection("Mercado y seguimiento", [
         tile("#/acciones", "bolt", "Explorar", "Stocks", stocks().length + (stocks().length === 1 ? " ficha" : " fichas")),
