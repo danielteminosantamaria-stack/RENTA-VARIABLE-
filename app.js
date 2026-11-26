@@ -674,7 +674,9 @@
     lo: "vol1 vol3 vol5 neg1 neg3 neg5".split(" ")
   };
   var CMP_MAX = 4;
-  var CMP_HIDE = "so1 so3 so5 rmed sh5 mar5".split(" "); // métricas que no salen en el comparador
+  var CMP_HIDE = "so1 so3 so5 rmed sh5 mar5 worst1 pos1 neg1 neg3 neg5".split(" "); // métricas que no salen en el comparador
+  var CMP_MONTH = "worst3 pos3 worst5 pos5".split(" "); // van juntas en "Comportamiento mensual"
+  var CMP_NOBAR = "beta r2 dur top10".split(" ");
   var CMP_COLORS = ["#851a2e", "#3b3b3b", "#1e7a4a", "#c27c0e"];
   var YEARS = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
 
@@ -1165,12 +1167,12 @@
     var fs = ids.map(byId);
     var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Comparador de fondos</h1>' +
       '<p class="sub">Elige entre 2 y ' + CMP_MAX + ' fondos para ver sus métricas una al lado de otra. En cada fila se marca el mejor valor.</p>';
-    h += '<div class="sel">' + fs.map(function (f, i) {
+    if (fs.length < 2) h += '<div class="sel">' + fs.map(function (f, i) {
       var rest = ids.filter(function (x) { return x !== f.id; });
       return '<a class="selchip" href="' + hashFor(rest) + '" style="--c:' + CMP_COLORS[i] + '" title="Quitar de la comparación">' + esc(f.n) + " <b>×</b></a>";
     }).join("") + "</div>";
     if (ids.length < CMP_MAX) {
-      h += '<div class="search tight">' + icon() + '<input id="cq" type="search" autocomplete="off" placeholder="Añadir fondo por nombre o ISIN" aria-label="Añadir fondo"></div><div class="results" id="cres"></div>';
+      h += '<div class="search tight">' + icon() + '<input id="cq" type="search" autocomplete="off" placeholder="Añadir fondo por nombre o ISIN" aria-label="Añadir fondo"></div><div class="results cmpres" id="cres"></div>';
     }
     h += fs.length >= 2 ? cmpTable(fs) + cmpChart(fs) : '<p class="muted" style="margin-top:20px">Añade al menos 2 fondos para compararlos.</p>';
     app.innerHTML = h + footer("rv");
@@ -1196,31 +1198,46 @@
   }
 
   function cmpTable(fs) {
-    var n = fs.length, rows = "";
-    var head = "<tr><th scope=\"col\"></th>" + fs.map(function (f, i) {
-      return '<th scope="col" class="ch"><a href="#/fondo/' + encodeURIComponent(f.id) + '" style="--c:' + CMP_COLORS[i] + '"><i></i>' + esc(f.n) + "</a><small>" + esc(f.g) + "</small></th>";
+    var n = fs.length, ids = fs.map(function (f) { return f.id; });
+    var head = '<tr><th scope="col" class="lb"><span class="cmpkey"><i></i>Mejor de la fila</span></th>' + fs.map(function (f, i) {
+      var rest = ids.filter(function (x) { return x !== f.id; });
+      return '<th scope="col" class="ch" style="--c:' + CMP_COLORS[i] + '"><a class="cq" href="' + hashFor(rest) + '" title="Quitar de la comparación" aria-label="Quitar ' + esc(f.n) + '">×</a>' +
+        '<div class="cmph"><span class="flogo">' + logoOrInit(f.g) + '</span><div><a class="cn" href="#/fondo/' + encodeURIComponent(f.id) + '">' + esc(f.n) + "</a><small>" + esc(f.g) + "</small></div></div></th>";
     }).join("") + "</tr>";
-    function textRow(label, fn) { return "<tr><td>" + label + "</td>" + fs.map(function (f) { return "<td>" + fn(f) + "</td>"; }).join("") + "</tr>"; }
-    rows += '<tr class="grp"><td colspan="' + (n + 1) + '">General</td></tr>' +
-      textRow("Categoría Morningstar", function (f) { return '<span class="cat">' + esc(f.c) + "</span>"; }) +
-      textRow("Rating Morningstar", function (f) { return f.stars ? stars(f.stars) : '<span class="muted">–</span>'; });
+    var rows = '<tr class="info"><td class="lb">Categoría y rating Morningstar</td>' + fs.map(function (f) {
+      return '<td><span class="cat">' + esc(f.c) + '</span><span class="cst">' + (f.stars ? stars(f.stars) : '<span class="muted">Sin rating</span>') + "</span></td>";
+    }).join("") + "</tr>";
+    function shown(m) { return fs.some(function (f) { var v = m.v(f); return m.txt ? !!v : isNum(v); }); }
+    var secs = [];
     GROUPS.forEach(function (g) {
-      var ms = METRICS.filter(function (m) {
-        return m.g === g && CMP_HIDE.indexOf(m.k) === -1 && fs.some(function (f) { var v = m.v(f); return m.txt ? !!v : isNum(v); });
-      });
-      if (!ms.length) return;
-      rows += '<tr class="grp"><td colspan="' + (n + 1) + '">' + g + "</td></tr>";
-      ms.forEach(function (m) {
+      secs.push([g, METRICS.filter(function (m) { return m.g === g && CMP_HIDE.indexOf(m.k) === -1 && CMP_MONTH.indexOf(m.k) === -1 && shown(m); })]);
+      if (g === "Riesgo") secs.push(["Comportamiento mensual", CMP_MONTH.map(metric).filter(shown)]);
+    });
+    secs.forEach(function (sec) {
+      if (!sec[1].length) return;
+      rows += '<tr class="grp"><th colspan="' + (n + 1) + '" scope="colgroup"><span>' + sec[0] + "</span></th></tr>";
+      sec[1].forEach(function (m) {
         var vals = fs.map(function (f) { return m.v(f); });
         var dir = BETTER.hi.indexOf(m.k) !== -1 ? 1 : BETTER.lo.indexOf(m.k) !== -1 ? -1 : 0;
         var nums = m.txt ? [] : vals.filter(isNum), best = null;
         if (dir && nums.length > 1) best = dir > 0 ? Math.max.apply(null, nums) : Math.min.apply(null, nums);
-        rows += "<tr><td>" + esc(m.l) + "</td>" + fs.map(function (f, i) {
-          return '<td' + (best !== null && vals[i] === best ? ' class="best"' : "") + ">" + cell(f, m) + "</td>";
+        var split = m.k === "pos3" || m.k === "pos5";
+        var max = nums.length && CMP_NOBAR.indexOf(m.k) === -1 ? Math.max.apply(null, nums.map(Math.abs)) : 0;
+        var label = split ? "Meses " + (m.k === "pos3" ? "3" : "5") + " años<small>En positivo y en negativo</small>" : esc(m.l);
+        rows += '<tr><td class="lb">' + label + "</td>" + fs.map(function (f, i) {
+          var v = vals[i], inner;
+          if (split && isNum(v)) {
+            var p = Math.round(v);
+            inner = '<span class="cv msv"><span class="pos"><b>' + p + '%</b> ▲</span><span class="neg">▼ <b>' + (100 - p) + '%</b></span></span><span class="msplit"><u style="width:' + p + '%"></u></span>';
+          } else {
+            inner = '<span class="cv">' + cell(f, m) + "</span>";
+            if (max > 0) inner += '<span class="cbar">' + (isNum(v) ? '<u class="' + (v < 0 ? "dn" : "") + '" style="width:' + Math.max(2, Math.abs(v) / max * 100).toFixed(1) + '%"></u>' : "") + "</span>";
+          }
+          return '<td style="--c:' + CMP_COLORS[i] + '"' + (best !== null && v === best ? ' class="best"' : "") + ">" + inner + "</td>";
         }).join("") + "</tr>";
       });
     });
-    return '<div class="table-wrap cmp"><table><thead>' + head + "</thead><tbody>" + rows + "</tbody></table></div>";
+    return '<div class="cmpx" style="--n:' + n + '"><table><colgroup><col class="lbc">' + fs.map(function () { return "<col>"; }).join("") + "</colgroup><thead>" + head + "</thead><tbody>" + rows + "</tbody></table></div>";
   }
 
   function cmpChart(fs) {
