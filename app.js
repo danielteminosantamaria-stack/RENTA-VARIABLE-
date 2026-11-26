@@ -1547,6 +1547,7 @@
       q("ty").innerHTML = ret(y.v); q("t1").innerHTML = ret(y1.v);
       q("tv").textContent = pct(v.v, false, 1); q("ts").textContent = dec(s.v);
       q("ta").innerHTML = y.v === null ? "–" : ret(y.v * tot / 100);
+      if (q("aptrfrv")) q("aptrfrv").innerHTML = aportaRfRv(p);
       document.getElementById("pfsum").innerHTML = summary(p);
     }
 
@@ -1591,12 +1592,27 @@
     renderTable();
   }
 
+  function aportaRfRv(p) {
+    var A = { rf: { w: 0, y: 0, y1: 0 }, rv: { w: 0, y: 0, y1: 0 } };
+    p.lines.forEach(function (l) {
+      var f = byId(l.id); if (!f) return;
+      var a = A[f.t === "rf" ? "rf" : "rv"];
+      a.w += l.w; if (isNum(f.ret.ytd)) a.y += f.ret.ytd * l.w / 100; if (isNum(f.ret.y1)) a.y1 += f.ret.y1 * l.w / 100;
+    });
+    var tw = A.rf.w + A.rv.w, ty = A.rf.y + A.rv.y, t1 = A.rf.y1 + A.rv.y1;
+    function row(n, a) {
+      return "<tr><td><b>" + n + '</b></td><td class="num">' + fmtPct(a.w) + '</td><td class="num">' + ret(a.y) + '</td><td class="num">' + ret(a.y1) + '</td><td class="num">' + (ty ? nf(a.y / ty * 100, 0) + " %" : "–") + "</td></tr>";
+    }
+    return '<div class="table-wrap" style="margin-top:18px"><table class="tbl"><thead><tr><th>Aportación por tipo de activo</th><th class="num">Peso</th><th class="num">Aporta en el año</th><th class="num">Aporta en 1 año</th><th class="num">% de la rentabilidad del año</th></tr></thead><tbody>' +
+      row("Renta fija", A.rf) + row("Renta variable", A.rv) + '</tbody><tfoot><tr><td><b>Cartera</b></td><td class="num">' + fmtPct(tw) + '</td><td class="num">' + ret(ty) + '</td><td class="num">' + ret(t1) + '</td><td class="num">' + (ty ? "100 %" : "–") + "</td></tr></tfoot></table></div>";
+  }
+
   function summary(p) {
     var tot = sumW(p), n = p.lines.length;
     var y = wAvg(p, function (f) { return f.ret.ytd; }), y1 = wAvg(p, function (f) { return f.ret.y1; }),
       v = wAvg(p, function (f) { return f.vol[0]; }), s = wAvg(p, function (f) { return f.sharpe[0]; });
     var h = '<div class="kpis" style="margin-top:26px">' + kpi("Rentabilidad del año", ret(y.v), true) + kpi("Rentabilidad 1 año", ret(y1.v), true) +
-      kpi("Volatilidad 1 año", pct(v.v, false, 1)) + kpi("Sharpe 1 año", dec(s.v)) + "</div>";
+      kpi("Volatilidad 1 año", pct(v.v, false, 1)) + kpi("Sharpe 1 año", dec(s.v)) + "</div>" + '<div id="aptrfrv">' + aportaRfRv(p) + "</div>";
     h += '<p class="note">Medias ponderadas por el peso de cada fondo con los datos de Morningstar. Rentabilidad pasada, no garantiza resultados futuros. La volatilidad no tiene en cuenta las correlaciones entre fondos, así que la de la cartera real suele ser menor.</p>';
 
     // Comprobaciones
