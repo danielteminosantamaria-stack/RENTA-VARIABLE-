@@ -514,8 +514,8 @@
     var r = f.ret, html = '<div class="fundpg">', TB = { res: "", ris: "", car: "", dat: "" };
     html += '<div class="topbar"><a href="#/' + f.t + '">← ' + esc(CATS[f.t].title) + '</a></div>';
     html += '<h1 class="h1star">' + esc(f.n) + ' <span class="isin">' + esc(f.id) + "</span>" + (window.FAVS ? " " + window.FAVS.star("f", f.id) : "") + "</h1>";
-    if (f.stars) html += '<p class="msstars">' + stars(f.stars) + ' <span class="muted">Rating Morningstar</span></p>';
-    html += '<p class="sub"><a href="#/gestora/' + encodeURIComponent(f.g) + '">' + esc(f.g) + "</a> · Fondo · EUR · " + esc(f.c) + vlTag(f) + (f.idx ? ' <span class="tag">Indexado</span>' : "") + "</p>";
+
+    html += '<p class="sub"><a href="#/gestora/' + encodeURIComponent(f.g) + '">' + esc(f.g) + "</a> · " + esc(f.c) + vlTag(f) + (f.idx ? ' <span class="tag">Indexado</span>' : "") + "</p>";
     var esd = window.ESTADO && window.ESTADO.fondos && window.ESTADO.fondos[f.id];
     if (esd && esd.e) html += '<p class="sub"><a href="#/estado">Estado semanal</a>: ' + esTag(esd.e) + (esd.p ? " " + esc(esd.p) : "") + "</p>";
     html += '<div class="row tools2" id="fundtools"></div><div class="kpis">' +
@@ -623,10 +623,6 @@
         (f.reg ? fact("Región principal", esc(f.reg[0]) + " " + pct(f.reg[1], false, 1)) : "") +
         (f.sec ? fact("Sector principal", esc(f.sec[0]) + " " + pct(f.sec[1], false, 1)) : "") + "</dl></section>";
     }
-
-    // Rentabilidad acumulada (tabla estilo Morningstar)
-    var TP = [["1 día", r.d1], ["1 semana", r.w1], ["1 mes", r.m1], ["3 meses", r.m3], ["6 meses", r.m6], ["En el año", r.ytd], ["1 año", r.y1], ["3 años", r.y3], ["5 años", r.y5], ["10 años", r.y10]];
-    TB.res = '<section class="block wide"><h3>Rentabilidad acumulada</h3><div class="scrollx"><table class="rtable trail"><thead><tr>' + TP.map(function (x) { return "<th>" + x[0] + "</th>"; }).join("") + "</tr></thead><tbody><tr>" + TP.map(function (x) { return '<td class="num">' + ret(x[1]) + "</td>"; }).join("") + "</tr></tbody></table></div><p class=\"note\">A 3, 5 y 10 años, rentabilidad anualizada.</p></section>" + TB.res;
 
     TB.res += '<section class="block"><h3>Evolución reciente</h3><dl class="facts">' +
       [["1 día", r.d1], ["1 semana", r.w1], ["1 mes", r.m1], ["3 meses", r.m3], ["6 meses", r.m6]].map(function (x) {
