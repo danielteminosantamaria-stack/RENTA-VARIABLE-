@@ -2919,7 +2919,17 @@
     app.style.setProperty("--brand", c[0]); app.style.setProperty("--brand-2", c[1]); app.style.setProperty("--brand-soft", mixHex(c[0], 0.9)); app.style.setProperty("--gd", c[1]);
   }
 
+  function markNav() {
+    var h = location.hash || "#/", seg = h.split("/")[1] || "";
+    var map = { fondo: null, resumen: null };
+    document.querySelectorAll(".site nav a").forEach(function (l) {
+      var s = (l.getAttribute("href").split("/")[1] || "");
+      l.classList.toggle("on", s === seg);
+    });
+    document.querySelectorAll(".site nav details").forEach(function (d) { d.classList.toggle("on", !!d.querySelector("a.on")); d.removeAttribute("open"); });
+  }
   function route() {
+    markNav();
     var h = (location.hash || "#/").replace(/^#/, ""), p = h.split("/").filter(Boolean);
     window.scrollTo(0, 0);
     gTheme(null);
