@@ -1332,10 +1332,14 @@
     var v = parseFloat(raw);
     return isFinite(v) ? v : null;
   }
+  function impOf(p, l) {
+    if (l.v && l.w === l.w0) return l.v;
+    return p.amount ? p.amount * l.w / 100 : null;
+  }
   function addTablePf(r, name, msg) {
     if (!r.total) { msg.textContent = "No he encontrado posiciones. Cada línea necesita el ISIN y, después, participaciones, precio y valor."; return false; }
     if (!r.lines.length) { msg.textContent = "Ningún fondo de la tabla está en la web." + (r.miss.length ? " Sin reconocer: " + r.miss.slice(0, 8).join("; ") + "." : ""); return false; }
-    var p = { id: uid(), name: (name || "Cartera importada").slice(0, 80), amount: r.amount, lines: r.lines.map(function (l) { return { id: l.id, w: l.w }; }) };
+    var p = { id: uid(), name: (name || "Cartera importada").slice(0, 80), amount: r.amount, lines: r.lines.map(function (l) { return l.v ? { id: l.id, w: l.w, v: l.v, w0: l.w } : { id: l.id, w: l.w }; }) };
     PF.push(p); savePf(); viewPortfolios();
     var m = document.getElementById("pfmsg"), sum = p.lines.reduce(function (a, l) { return a + l.w; }, 0);
     m.textContent = "Cartera «" + p.name + "» creada con " + p.lines.length + (p.lines.length === 1 ? " fondo" : " fondos") + " de " + r.total + " posiciones, valor total " + nf(r.amount, 2) + " €. Pesos: " +
@@ -1531,7 +1535,7 @@
       var tot = sumW(p);
       p.lines.forEach(function (l, i) {
         var f = byId(l.id), im = document.querySelector('[data-imp="' + i + '"]'), ap = document.querySelector('[data-ap="' + i + '"]');
-        if (im) im.textContent = p.amount ? nf(p.amount * l.w / 100, 0) + " €" : "–";
+        if (im) { var iv = impOf(p, l); im.textContent = iv !== null ? nf(iv, 2) + " €" : "–"; }
         if (ap) ap.innerHTML = isNum(f.ret.ytd) ? ret(f.ret.ytd * l.w / 100) : '<span class="muted">–</span>';
       });
       var y = wAvg(p, function (f) { return f.ret.ytd; }), y1 = wAvg(p, function (f) { return f.ret.y1; }),
@@ -1539,7 +1543,7 @@
       var q = function (id) { return document.getElementById(id); };
       if (!q("tw")) return;
       q("tw").textContent = nf(tot, 1) + "%";
-      q("ti").textContent = p.amount ? nf(p.amount * tot / 100, 0) + " €" : "–";
+      q("ti").textContent = p.amount ? nf(p.lines.reduce(function (a, l) { return a + (impOf(p, l) || 0); }, 0), 2) + " €" : "–";
       q("ty").innerHTML = ret(y.v); q("t1").innerHTML = ret(y1.v);
       q("tv").textContent = pct(v.v, false, 1); q("ts").textContent = dec(s.v);
       q("ta").innerHTML = y.v === null ? "–" : ret(y.v * tot / 100);
@@ -1570,7 +1574,7 @@
     document.getElementById("pfcsv").addEventListener("click", function () {
       var rows = [["ISIN", "Fondo", "Gestora", "Peso (%)", "Importe (EUR)"]].concat(p.lines.map(function (l) {
         var f = byId(l.id);
-        return [f.id, f.n, f.g, String(l.w).replace(".", ","), p.amount ? String(Math.round(p.amount * l.w) / 100).replace(".", ",") : ""];
+        return [f.id, f.n, f.g, String(l.w).replace(".", ","), p.amount ? String(Math.round(impOf(p, l) * 100) / 100).replace(".", ",") : ""];
       }));
       var csv = "﻿" + rows.map(function (r) { return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(";"); }).join("\r\n");
       download((p.name || "cartera").replace(/[^\w\-]+/g, "_") + ".csv", csv, "text/csv;charset=utf-8");
