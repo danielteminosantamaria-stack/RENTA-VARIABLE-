@@ -3,6 +3,7 @@
 
   var DATA = window.DATA || { funds: [], meta: {} };
   var FUNDS = DATA.funds;
+  (function () { var O = window.OVERRIDES || {}; FUNDS.forEach(function (f) { var o = O[f.id]; if (o) for (var k in o) f[k] = o[k]; }); })();
   var META = DATA.meta || {};
   var app = document.getElementById("app");
 
@@ -157,7 +158,8 @@
   function P(k, l, g, v, o) { o = o || {}; return { k: k, l: l, g: g, v: v, u: o.u, d: o.d, sg: o.sg, txt: o.txt, only: o.only }; }
   var RET = { u: "%", sg: 1 };
   var METRICS = [
-    P("dur", "Duración", "Cartera", function (f) { return f.dur; }, { d: 1, only: "rf" }),
+    P("tir", "TIR", "Cartera", function (f) { return f.tir; }, { u: "%", d: 2, only: "rf" }),
+    P("dur", "Duración", "Cartera", function (f) { return f.dur; }, { d: 2, only: "rf" }),
     P("cal", "Calidad", "Cartera", function (f) { return f.cal; }, { txt: 1, only: "rf" }),
     P("w1", "1 semana", "Rentabilidad", function (f) { return f.ret.w1; }, RET),
     P("m1", "1 mes", "Rentabilidad", function (f) { return f.ret.m1; }, RET),
@@ -577,7 +579,7 @@
     if (mix.some(isNum)) {
       var tot = mix.reduce(function (a, v) { return a + (isNum(v) && v > 0 ? v : 0); }, 0) || 1;
       var odd = mix.some(function (v) { return isNum(v) && v < 0; }) || Math.abs(mix.reduce(function (a, v) { return a + (isNum(v) ? v : 0); }, 0) - 100) > 2;
-      TB.car += '<section class="block"><h3>Asignación de activos</h3><div class="donutw"><div class="donut" role="img" aria-label="Composición" style="background:conic-gradient(' + (function () { var acc = 0; return mix.map(function (v, i) { if (!(isNum(v) && v > 0)) return null; var a0 = acc; acc += v / tot * 100; return colors[i] + " " + a0.toFixed(2) + "% " + acc.toFixed(2) + "%"; }).filter(Boolean).join(","); })() + ')"><i>' + (isNum(mix[0]) ? nf(mix[0], 0) + "%" : "") + '<small>' + (mix[0] >= mix[1] ? "Acciones" : "Bonos") + '</small></i></div><div class="keys">' + mix.map(function (v, i) {
+      TB.car += '<section class="block"><h3>Asignación de activos</h3><div class="donutw"><div class="donut" role="img" aria-label="Composición" style="background:conic-gradient(' + (function () { var acc = 0; return mix.map(function (v, i) { if (!(isNum(v) && v > 0)) return null; var a0 = acc; acc += v / tot * 100; return colors[i] + " " + a0.toFixed(2) + "% " + acc.toFixed(2) + "%"; }).filter(Boolean).join(","); })() + ')"><i>' + nf(Math.max(mix[0] || 0, mix[1] || 0), 0) + "%" + '<small>' + (mix[0] >= mix[1] ? "Acciones" : "Bonos") + '</small></i></div><div class="keys">' + mix.map(function (v, i) {
         return isNum(v) && Math.abs(v) >= 0.05 ? '<span style="--c:' + colors[i] + '">' + labels[i] + " <b>" + pct(v, false, 1) + "</b></span>" : "";
       }).join("") + "</div></div>" +
         (odd ? '<p class="note">Posiciones netas: pueden incluir derivados y apalancamiento, por lo que no suman 100%.</p>' : "") +
@@ -611,9 +613,9 @@
     }
 
     // Específico por tipo
-    if (f.t === "rf" && (isNum(f.dur) || isNum(f.vto) || f.cal)) {
+    if (f.t === "rf" && (isNum(f.dur) || isNum(f.vto) || isNum(f.tir) || f.cal)) {
       TB.car += '<section class="block"><h3>Cartera de bonos</h3><dl class="facts">' +
-        (isNum(f.dur) ? fact("Duración, años", dec(f.dur, 1)) : "") + (isNum(f.vto) ? fact("Vencimiento medio, años", dec(f.vto, 1)) : "") +
+        (isNum(f.tir) ? fact("TIR", pct(f.tir, false, 2)) : "") + (isNum(f.dur) ? fact("Duración, años", dec(f.dur, 2)) : "") + (isNum(f.vto) ? fact("Vencimiento medio, años", dec(f.vto, 1)) : "") +
         (f.cal ? fact("Calidad crediticia media", esc(f.cal)) : "") + "</dl></section>";
     }
     if (f.t === "rv" && (f.cap.some(isNum) || f.reg || f.sec || isNum(f.per))) {
@@ -675,7 +677,7 @@
 
   // ---------- utilidades comunes de comparador y carteras ----------
   var BETTER = {
-    hi: "w1 m1 m3 m6 ytd y1 y3 y5 y10 rmed sh1 sh3 sh5 so1 so3 so5 mar1 mar3 mar5 alpha score ddmax worst1 pos1".split(" "),
+    hi: "tir w1 m1 m3 m6 ytd y1 y3 y5 y10 rmed sh1 sh3 sh5 so1 so3 so5 mar1 mar3 mar5 alpha score ddmax worst1 pos1".split(" "),
     lo: "vol1 vol3 vol5 cost".split(" ")
   };
   var CMP_MAX = 4;
@@ -808,9 +810,9 @@
     if (risk) L.push(pick(["Qué conviene tener presente", "Riesgo y comportamiento", "Para tener en cuenta"]), risk.trim(), "");
     var inside = [];
     if (rf) {
-      if (isNum(f.dur)) inside.push("una duración de " + nf(f.dur, 1) + " años");
+      if (isNum(f.dur)) inside.push("una duración de " + nf(f.dur, 2) + " años");
       if (f.cal) inside.push("una calidad crediticia media " + f.cal);
-      if (isNum(f.vto)) inside.push("una rentabilidad al vencimiento del " + plainP(f.vto, 2));
+      if (isNum(f.tir)) inside.push("una rentabilidad al vencimiento (TIR) del " + plainP(f.tir, 2));
     } else {
       if (f.reg && f.reg[0]) inside.push("un " + nf(f.reg[1], 0) + "% en " + f.reg[0]);
       if (f.sec && f.sec[0]) inside.push("un " + nf(f.sec[1], 0) + "% en el sector " + String(f.sec[0]).toLowerCase());
@@ -1006,9 +1008,9 @@
     if (a.length) out.push(["Rentabilidad", listJoin(a)]);
     var b = [];
     if (rf) {
-      if (isNum(f.dur)) b.push("duración de " + nf(f.dur, 1) + " años");
+      if (isNum(f.dur)) b.push("duración de " + nf(f.dur, 2) + " años");
       if (f.cal) b.push("calidad " + f.cal);
-      if (isNum(f.vto)) b.push("TIR " + dkp(f.vto, 2));
+      if (isNum(f.tir)) b.push("TIR " + dkp(f.tir, 2));
     } else {
       if (f.reg && f.reg[0]) b.push(nf(f.reg[1], 0) + "% en " + f.reg[0]);
       if (f.sec && f.sec[0]) b.push(nf(f.sec[1], 0) + "% en " + String(f.sec[0]).toLowerCase());
@@ -2184,7 +2186,7 @@
       if (f.sec && f.sec[1] > 30) s.push("Sesgo sectorial a " + f.sec[0].toLowerCase() + " (" + nf(f.sec[1], 0) + "%).");
       if (f.cap && isNum(f.cap[2]) && f.cap[2] + (f.cap[3] || 0) + (f.cap[4] || 0) > 40) s.push("Peso relevante en medianas y pequeñas compañías, con más riesgo y menos liquidez.");
     } else {
-      if (isNum(f.dur)) s.push("Duración de " + nf(f.dur, 1) + " años" + (f.dur >= 5 ? ", sensible a los tipos de interés." : f.dur <= 2 ? ", poco sensible a los tipos." : "."));
+      if (isNum(f.dur)) s.push("Duración de " + nf(f.dur, 2) + " años" + (f.dur >= 5 ? ", sensible a los tipos de interés." : f.dur <= 2 ? ", poco sensible a los tipos." : "."));
       if (f.cal) s.push(/^(AAA|AA|A|BBB)$/.test(f.cal) ? "Calidad crediticia media " + f.cal + " (grado de inversión)." : "Calidad crediticia media " + f.cal + ", por debajo de grado de inversión: asume más riesgo de crédito.");
     }
     if (isNum(f.alpha)) s.push(f.alpha >= 2 ? "Gestión que ha aportado valor: alpha de " + nf(f.alpha, 1) + "% sobre su índice a 3 años." : f.alpha <= -1 ? "Ha restado valor frente a su índice a 3 años (alpha de " + nf(f.alpha, 1) + "%)." : "Rinde en línea con su índice a 3 años (alpha de " + nf(f.alpha, 1) + "%).");
