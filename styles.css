@@ -1435,4 +1435,11 @@ td.mst .muted { opacity: .35; }
 .bft td.fund a:hover { color: var(--brand); }
 .bft td.fund .ftxt { display: block; }
 .bft tfoot td { border-top: 2px solid #c9c4cc; }
-@media (max-width: 760px) { .bft.bft td:first-child, .bft.bft th:first-child { min-width: 160px; max-width: 170px; } }
+@media (max-width: 760px) { .bft.bft td:first-child, .bft.bft th:first-child { min-width: 140px; max-width: 150px; } .bft.bft td.fund b { font-size: 12.5px; } }
+.bft-t { margin: 22px 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--brand); }
+.bfr th.bfh { text-align: center; border-left: 1px solid #e4e0e6; }
+.bfr th.bfs, .bfr td.bfs { border-left: 1px solid #e4e0e6; }
+.bfr th, .bfr td { padding-left: 8px; padding-right: 8px; white-space: nowrap; }
+.bfr th:first-child, .bfr td:first-child { white-space: normal; }
+.bft.bfr thead tr + tr th:first-child { position: static; min-width: 0; max-width: none; text-align: right; background: transparent; }
+.bfp { display: block; color: var(--muted); font-size: 10.5px; }

@@ -2481,32 +2481,62 @@
     });
     return lines;
   }
-  // composición final de la cartera construida: cada fondo con su peso, importe y datos
+  // composición final de la cartera construida: cada fondo con su peso, importe, rentabilidad y riesgo
   function bldFinal(lines, amount) {
-    var q = { lines: lines }, amt = amount > 0 ? amount : 0, tw = lines.reduce(function (a, l) { return a + l.w; }, 0), cols = amt ? 10 : 8;
+    var q = { lines: lines }, amt = amount > 0 ? amount : 0, tw = lines.reduce(function (a, l) { return a + l.w; }, 0), partial = false;
     function money0(v) { return nf(v, 0) + " €"; }
     function wcell(w) { return '<td class="num bfw"><b>' + nf(w, 1) + '%</b><i><u style="width:' + Math.min(100, w) + '%"></u></i></td>'; }
-    var body = ["Renta fija", "Otros", "Renta variable"].map(function (g) {
+    var groups = ["Renta fija", "Otros", "Renta variable"].map(function (g) {
       var rows = lines.map(function (l) { var f = byId(l.id); return { l: l, f: f, k: bucketOf(f) }; })
         .filter(function (x) { return BUCKETS.some(function (b) { return b.k === x.k && b.g === g; }); })
         .sort(function (a, b) { return b.l.w - a.l.w; });
-      if (!rows.length) return "";
-      var gw = rows.reduce(function (a, x) { return a + x.l.w; }, 0);
-      return '<tr class="bfg"><td>' + (g === "Otros" ? "Alternativos y mixtos" : g) + "</td>" + wcell(gw) + (amt ? '<td class="num"><b>' + money0(amt * gw / 100) + "</b></td><td></td>" : "") + '<td colspan="' + (cols - (amt ? 4 : 2)) + '"></td></tr>' +
-        rows.map(function (x) {
-          var f = x.f, de = amt * x.l.w / 100, u = amt ? chUnits({ f: f, de: de }) : null;
-          return '<tr><td class="fund"><span class="ftxt"><b><a href="#/fondo/' + encodeURIComponent(f.id) + '">' + esc(f.n) + "</a></b><small>" + esc(bname(x.k)) + " · " + esc(f.g) + " · " + esc(f.id) + "</small></span></td>" + wcell(x.l.w) +
+      return { n: g === "Otros" ? "Alternativos y mixtos" : g, rows: rows, w: rows.reduce(function (a, x) { return a + x.l.w; }, 0) };
+    }).filter(function (g) { return g.rows.length; });
+    function name(x, extra) { return '<td class="fund"><span class="ftxt"><b><a href="#/fondo/' + encodeURIComponent(x.f.id) + '">' + esc(x.f.n) + "</a></b><small>" + extra + "</small></span></td>"; }
+    // 1. pesos e importes
+    var cols = amt ? 5 : 3;
+    var t1 = groups.map(function (g) {
+      return '<tr class="bfg"><td>' + g.n + "</td>" + wcell(g.w) + (amt ? '<td class="num"><b>' + money0(amt * g.w / 100) + "</b></td><td></td>" : "") + "<td></td></tr>" +
+        g.rows.map(function (x) {
+          var de = amt * x.l.w / 100, u = amt ? chUnits({ f: x.f, de: de }) : null;
+          return "<tr>" + name(x, esc(bname(x.k)) + " · " + esc(x.f.g) + " · " + esc(x.f.id)) + wcell(x.l.w) +
             (amt ? '<td class="num">' + money0(de) + '</td><td class="num">' + (u ? nf(u, 2) : "–") + "</td>" : "") +
-            '<td class="mst">' + (f.stars ? stars(f.stars) : '<span class="muted">–</span>') + "</td><td>" + ret(f.ret.ytd) + "</td><td>" + ret(f.ret.y1) + "</td><td>" + ret(f.ret.y3) + '</td><td class="num">' + pct(f.vol[0], false, 1) + '</td><td class="num">' + dec(f.sharpe[0]) + "</td></tr>";
+            '<td class="mst">' + (x.f.stars ? stars(x.f.stars) : '<span class="muted">–</span>') + "</td></tr>";
         }).join("");
     }).join("");
-    function avg(fn) { return wAvg(q, fn).v; }
+    // 2. rentabilidad y riesgo
+    var M = [
+      { g: "Rentabilidad", l: "Año", v: function (f) { return f.ret.ytd; }, r: 1 }, { g: "Rentabilidad", l: "1 año", v: function (f) { return f.ret.y1; }, r: 1 },
+      { g: "Rentabilidad", l: "3 años", v: function (f) { return f.ret.y3; }, r: 1 }, { g: "Rentabilidad", l: "5 años", v: function (f) { return f.ret.y5; }, r: 1 },
+      { g: "Volatilidad", l: "1 año", v: function (f) { return f.vol && f.vol[0]; } }, { g: "Volatilidad", l: "3 años", v: function (f) { return f.vol && f.vol[1]; } }, { g: "Volatilidad", l: "5 años", v: function (f) { return f.vol && f.vol[2]; } },
+      { g: "Caída máxima", l: "3 años", v: function (f) { return f.dd && f.dd[1]; } }, { g: "Caída máxima", l: "5 años", v: function (f) { return f.dd && f.dd[2]; } },
+      { g: "Sharpe", l: "1 año", v: function (f) { return f.sharpe && f.sharpe[0]; }, d: 1 }
+    ];
+    function val(m, v) { return !isNum(v) ? '<span class="muted">–</span>' : m.r ? ret(v) : '<span class="num">' + (m.d ? dec(v) : pct(v, false, 1)) + "</span>"; }
+    var h1 = "", h2 = "";
+    M.forEach(function (m, i) {
+      var first = !i || M[i - 1].g !== m.g;
+      if (first) h1 += '<th scope="colgroup" class="bfh" colspan="' + M.filter(function (z) { return z.g === m.g; }).length + '">' + m.g + "</th>";
+      h2 += '<th scope="col"' + (first ? ' class="bfs"' : "") + ">" + m.l + "</th>";
+    });
+    function cells(fn) { return M.map(function (m, i) { return "<td" + (!i || M[i - 1].g !== m.g ? ' class="bfs"' : "") + ">" + fn(m) + "</td>"; }).join(""); }
+    var t2 = groups.map(function (g) {
+      return '<tr class="bfg"><td>' + g.n + '</td><td colspan="' + M.length + '"></td></tr>' +
+        g.rows.map(function (x) { return "<tr>" + name(x, nf(x.l.w, 1) + "% de la cartera") + cells(function (m) { return val(m, m.v(x.f)); }) + "</tr>"; }).join("");
+    }).join("");
+    var tot = cells(function (m) {
+      var a = wAvg(q, m.v), part = a.v !== null && a.cov < 0.999;
+      if (part) partial = true;
+      return val(m, a.v) + (part ? '<small class="bfp">' + nf(a.cov * 100, 0) + "% del peso</small>" : "");
+    });
     return '<section class="block" style="margin-top:22px" id="bcomp"><h3>Composición final de la cartera</h3><p class="note" style="margin-top:0">' + lines.length + (lines.length === 1 ? " fondo" : " fondos") + (amt ? " · " + money0(amt) : "") + " · Perfil " + esc(BPROF[bld.profile].n.toLowerCase()) +
       (Math.abs(tw - 100) < 0.05 ? "" : ' · <b class="neg">Sin terminar: los pesos suman ' + nf(tw, 1) + "%</b>") + '</p><div class="table-wrap"><table class="bft"><thead><tr><th scope="col">Fondo</th><th scope="col">Peso</th>' +
-      (amt ? '<th scope="col">Importe</th><th scope="col">Particip. aprox.</th>' : "") + '<th scope="col">Morningstar</th><th scope="col">Año</th><th scope="col">1 año</th><th scope="col">3 años</th><th scope="col">Vol. 1 a.</th><th scope="col">Sharpe 1 a.</th></tr></thead><tbody>' + body +
-      '</tbody><tfoot><tr><td><b>Total cartera</b></td><td class="num"><b>' + nf(tw, 1) + "%</b></td>" + (amt ? '<td class="num"><b>' + money0(amt * tw / 100) + "</b></td><td></td>" : "") + "<td></td><td>" + ret(avg(function (f) { return f.ret.ytd; })) + "</td><td>" + ret(avg(function (f) { return f.ret.y1; })) + "</td><td>" + ret(avg(function (f) { return f.ret.y3; })) +
-      '</td><td class="num">' + pct(avg(function (f) { return f.vol[0]; }), false, 1) + '</td><td class="num">' + dec(avg(function (f) { return f.sharpe[0]; })) + "</td></tr></tfoot></table></div>" +
-      '<p class="note">La fila total es la media ponderada por peso.' + (amt ? " Participaciones estimadas con el último valor liquidativo publicado en la web (no se calculan si está en otra divisa)." : " Indica el importe arriba para ver los euros y las participaciones de cada fondo.") + "</p></section>";
+      (amt ? '<th scope="col">Importe</th><th scope="col">Particip. aprox.</th>' : "") + '<th scope="col">Morningstar</th></tr></thead><tbody>' + t1 +
+      '</tbody><tfoot><tr><td><b>Total cartera</b></td><td class="num"><b>' + nf(tw, 1) + "%</b></td>" + (amt ? '<td class="num"><b>' + money0(amt * tw / 100) + "</b></td><td></td>" : "") + "<td></td></tr></tfoot></table></div>" +
+      '<p class="note">' + (amt ? "Participaciones estimadas con el último valor liquidativo publicado en la web (no se calculan si está en otra divisa)." : "Indica el importe arriba para ver los euros y las participaciones de cada fondo.") + "</p>" +
+      '<h4 class="bft-t">Rentabilidad y riesgo</h4><div class="table-wrap"><table class="bft bfr"><thead><tr><th scope="col" rowspan="2">Fondo</th>' + h1 + "</tr><tr>" + h2 + "</tr></thead><tbody>" + t2 +
+      "</tbody><tfoot><tr><td><b>Total cartera</b></td>" + tot + "</tr></tfoot></table></div>" +
+      '<p class="note">Rentabilidades a 3 y 5 años anualizadas. La fila total es la media ponderada por peso' + (partial ? " (cuando falta el dato de algún fondo, solo con la parte indicada)" : "") + ". La volatilidad y la caída máxima totales no tienen en cuenta las correlaciones, así que no son las de la cartera en conjunto. Rentabilidad pasada, no garantiza resultados futuros.</p></section>";
   }
   function bandStyle(r) {
     return "background:linear-gradient(to right,#e0e0e0 0," + r[0] + "%,#f0c9b0 " + r[0] + "%," + r[1] + "%,#e0e0e0 " + r[1] + "%,#e0e0e0 100%)";
