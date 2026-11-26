@@ -1100,12 +1100,23 @@
     app.innerHTML = h + footer("rv");
     if (fs.length >= 2) { var cb = deckBtn(function () { deckCompare(fs); }); var tb = document.createElement("div"); tb.className = "row tools2"; tb.appendChild(cb); app.appendChild(tb); }
     var cq = document.getElementById("cq");
-    if (cq) cq.addEventListener("input", function () {
-      var v = cq.value.trim(), res = document.getElementById("cres");
-      res.innerHTML = v ? pickList(v, ids, function (f) {
-        return '<a href="' + hashFor(ids.concat(f.id)) + '">' + esc(f.n) + "<small>" + esc(f.g) + " · " + esc(f.c) + "</small></a>";
-      }) : "";
-    });
+    if (cq) {
+      var mk = function (f) { return '<a href="' + hashFor(ids.concat(f.id)) + '">' + esc(f.n) + "<small>" + esc(f.g) + " · " + esc(f.c) + "</small></a>"; };
+      var sug = function () {
+        var res = document.getElementById("cres");
+        if (!res || !fs.length) return;
+        var same = FUNDS.filter(function (f) { return ids.indexOf(f.id) === -1 && f.c === fs[0].c; }).slice(0, 8), tit = "Fondos de la misma categoría (" + esc(fs[0].c) + ")";
+        if (!same.length) { same = FUNDS.filter(function (f) { return ids.indexOf(f.id) === -1 && f.t === fs[0].t; }).slice(0, 8); tit = fs[0].t === "rf" ? "Otros fondos de renta fija" : "Otros fondos de renta variable"; }
+        res.innerHTML = same.length ? '<p class="note" style="margin:10px 0 4px">' + tit + "</p>" + '<div class="list">' + same.map(mk).join("") + "</div>" : "";
+      };
+      cq.addEventListener("input", function () {
+        var v = cq.value.trim(), res = document.getElementById("cres");
+        if (!v) { sug(); return; }
+        res.innerHTML = pickList(v, ids, mk);
+      });
+      sug();
+      if (fs.length === 1) try { cq.focus(); } catch (e) { /* sin foco */ }
+    }
   }
 
   function cmpTable(fs) {
