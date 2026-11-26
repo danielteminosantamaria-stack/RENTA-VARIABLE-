@@ -518,7 +518,10 @@
     html += '<p class="sub"><a href="#/gestora/' + encodeURIComponent(f.g) + '">' + esc(f.g) + "</a> · Fondo · EUR · " + esc(f.c) + vlTag(f) + (f.idx ? ' <span class="tag">Indexado</span>' : "") + "</p>";
     var esd = window.ESTADO && window.ESTADO.fondos && window.ESTADO.fondos[f.id];
     if (esd && esd.e) html += '<p class="sub"><a href="#/estado">Estado semanal</a>: ' + esTag(esd.e) + (esd.p ? " " + esc(esd.p) : "") + "</p>";
-    html += '<div class="row tools2" id="fundtools"></div>';
+    html += '<div class="row tools2" id="fundtools"></div><div class="kpis">' +
+      kpi("Vol. 1 año", pct(f.vol[0], false, 1), true) + kpi("Sharpe 1 año", dec(f.sharpe[0]), true) +
+      kpi("Último mes", ret(r.m1)) + kpi("Año", ret(r.ytd)) + kpi("1 año", ret(r.y1)) +
+      kpi("3 años", ret(r.y3)) + kpi("5 años", ret(r.y5)) + kpi("10 años", ret(r.y10)) + "</div>";
     html += '<p class="note">Rentabilidad de la clase en euros. A 3, 5 y 10 años, anualizada. Fuente: Morningstar, valor liquidativo a ' + esc(f.nd) + ". La rentabilidad de la semana cubre los 7 días naturales hasta esa fecha.</p>";
 
     var docs = [["xray", "X-Ray", "Morningstar"], ["ms", "Morningstar", "Ficha online"]]
@@ -624,6 +627,11 @@
     // Rentabilidad acumulada (tabla estilo Morningstar)
     var TP = [["1 día", r.d1], ["1 semana", r.w1], ["1 mes", r.m1], ["3 meses", r.m3], ["6 meses", r.m6], ["En el año", r.ytd], ["1 año", r.y1], ["3 años", r.y3], ["5 años", r.y5], ["10 años", r.y10]];
     TB.res = '<section class="block wide"><h3>Rentabilidad acumulada</h3><div class="scrollx"><table class="rtable trail"><thead><tr>' + TP.map(function (x) { return "<th>" + x[0] + "</th>"; }).join("") + "</tr></thead><tbody><tr>" + TP.map(function (x) { return '<td class="num">' + ret(x[1]) + "</td>"; }).join("") + "</tr></tbody></table></div><p class=\"note\">A 3, 5 y 10 años, rentabilidad anualizada.</p></section>" + TB.res;
+
+    TB.res += '<section class="block"><h3>Evolución reciente</h3><dl class="facts">' +
+      [["1 día", r.d1], ["1 semana", r.w1], ["1 mes", r.m1], ["3 meses", r.m3], ["6 meses", r.m6]].map(function (x) {
+        return fact(x[0], ret(x[1]));
+      }).join("") + "</dl></section>";
 
     // Datos generales
     TB.dat += '<section class="block"><h3>Datos generales</h3><dl class="facts">' +
