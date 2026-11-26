@@ -2527,6 +2527,27 @@
     }
     draw();
   }
+  function cotBlock(t) {
+    var q = (window.COT || {})[t];
+    if (!q || !q.h || q.h.length < 2) return "";
+    var W = 760, H = 220, L = 44, R = 12, T = 14, B = 26, v = q.h.map(function (p) { return p[1]; });
+    var lo = Math.min.apply(null, v), hi = Math.max.apply(null, v), sp = (hi - lo) || 1;
+    var X = function (i) { return L + (W - L - R) * i / (v.length - 1); }, Y = function (x) { return T + (H - T - B) * (1 - (x - lo) / sp); };
+    var line = v.map(function (x, i) { return (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(x).toFixed(1); }).join(" ");
+    var area = line + " L" + X(v.length - 1).toFixed(1) + " " + (H - B) + " L" + L + " " + (H - B) + " Z";
+    var grid = [0, .5, 1].map(function (k) { var x = lo + sp * k, y = Y(x); return '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="#e3e8ee"/><text x="' + (L - 6) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end" font-size="10" fill="#777">' + nf(x, 0) + "</text>"; }).join("");
+    var ms = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"], last = "", xl = "";
+    q.h.forEach(function (p, i) { var m = p[0].slice(0, 7); if (m !== last) { last = m; if (i && i < v.length - 2) xl += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10" fill="#777">' + ms[+p[0].slice(5, 7) - 1] + "</text>"; } });
+    var svg = '<svg viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" aria-label="Cotización de un año">' + grid +
+      '<path d="' + area + '" fill="#1f6fb5" opacity=".10"/><path d="' + line + '" fill="none" stroke="#1f6fb5" stroke-width="2"/>' + xl +
+      '<circle cx="' + X(v.length - 1).toFixed(1) + '" cy="' + Y(v[v.length - 1]).toFixed(1) + '" r="3.5" fill="#0b3a6b"/></svg>';
+    var d = q.d, cls = d > 0 ? "pos" : d < 0 ? "neg" : "";
+    return '<section class="block" style="margin-top:22px"><h3>Cotización</h3><div class="kpis kp6">' +
+      kpi("Último precio", dec(q.px)) + kpi("Variación del día", '<span class="' + cls + '">' + (d > 0 ? "+" : "") + nf(d, 2) + "%</span>") +
+      kpi("Mínimo 52 semanas", dec(q.mn)) + kpi("Máximo 52 semanas", dec(q.mx)) + "</div>" +
+      '<div style="margin-top:14px">' + svg + '</div><p class="note">Cierre del ' + esc(q.f) + ". Gráfico de un año con cierres semanales. Fuente: Interactive Brokers. Datos posiblemente diferidos.</p></section>";
+  }
+
   function viewStock(t) {
     var s = stockBy(t);
     if (!s) { viewNotFound(); return; }
@@ -2537,6 +2558,7 @@
       ((s.tec && s.tec.length) ? '<dl class="facts">' + s.tec.map(function (r) { return fact(r[0], esc(r[1])); }).join("") + "</dl>" : "") +
       (s.tecTxt ? '<p class="stxt">' + esc(s.tecTxt) + "</p>" : "") + (!(s.tec && s.tec.length) && !s.tecTxt ? '<p class="muted">Sin datos técnicos.</p>' : "") +
       '</section><section class="block"><h3>Bloque cliente</h3><p class="stxt">' + esc(s.cli || "Sin texto para el cliente.") + "</p></section></div>" +
+      cotBlock(s.t) +
       (s.img ? '<section class="block" style="margin-top:22px"><h3>Captura de MarketSurge</h3><a href="' + esc(s.img) + '" target="_blank" rel="noopener"><img class="fichaimg" src="' + esc(s.img) + '" alt="Captura de MarketSurge de ' + esc(s.n) + '" loading="lazy"></a></section>' : "") +
       '<p class="note">Ficha elaborada a partir de los datos de MarketSurge (IBD) que has enviado. Información orientativa, no es una recomendación personalizada de inversión.</p>';
     app.innerHTML = h + footer("rv");
