@@ -2506,9 +2506,15 @@
     });
     h += '<div id="btotal"></div><div id="bsum"></div><div class="row tools2"><button type="button" class="btn" id="bsave">Guardar en mis carteras</button>' +
       '<button type="button" class="btn ghost" id="bmail">Correo</button><button type="button" class="btn ghost" id="bpdf">Descargar PDF</button><button type="button" class="btn ghost" id="bnorm">Ajustar a 100%</button><button type="button" class="btn ghost" id="breset">Valores del perfil</button></div>';
-    app.innerHTML = h + footer("rv");
+    app.innerHTML = h + footer("rv") + '<div class="bleft-sp"></div><div id="bleft" role="status" aria-live="polite"></div>';
 
     function total() { return BUCKETS.reduce(function (a, b) { return a + (bld.w[b.k] || 0); }, 0); }
+    // aviso fijo con el peso que falta (o sobra) para llegar al 100%
+    function drawLeft() {
+      var t = total(), d = Math.round((100 - t) * 10) / 10, el = document.getElementById("bleft"), dc = d % 1 ? 1 : 0;
+      el.className = d > 0 ? "falta" : d < 0 ? "sobra" : "ok";
+      el.innerHTML = "<div><b>" + (d > 0 ? "Falta " + nf(d, dc) + "% para el 100%" : d < 0 ? "Sobra " + nf(-d, dc) + "%: pasa del 100%" : "Cartera completa al 100%") + "</b><span>Asignado " + nf(t, t % 1 ? 1 : 0) + '%</span></div><i><u style="width:' + Math.min(100, t) + '%"></u></i>';
+    }
     function drawBands() {
       var pr = BPROF[bld.profile], rv = RVB.reduce(function (a, k) { return a + (bld.w[k] || 0); }, 0);
       var rf = ["corto", "corp", "hy"].reduce(function (a, k) { return a + (bld.w[k] || 0); }, 0), ot = bld.w.alt || 0;
@@ -2552,6 +2558,7 @@
       else msgs.push(["info", n + " fondos seleccionados. Indica el importe para comprobar el máximo."]);
       document.getElementById("btotal").innerHTML = '<section class="block" style="margin-top:22px"><h3>Control</h3><ul class="checks">' + msgs.map(function (m) { return '<li class="' + m[0] + '"><i></i><span>' + esc(m[1]) + "</span></li>"; }).join("") + "</ul></section>";
       drawBands();
+      drawLeft();
       document.getElementById("bsum").innerHTML = n ? summary({ id: "tmp", name: bld.name, amount: bld.amount, lines: lines }) : "";
     }
     function drawAll() { BUCKETS.forEach(drawBucket); drawTotals(); }

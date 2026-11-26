@@ -1414,3 +1414,15 @@ td.etfn small { display: block; color: var(--muted); font-size: 12px; font-weigh
 @media (max-width: 600px) { .pfhead .inp.big { min-width: 0; width: 100%; max-width: 100%; } }
 td.mst { white-space: nowrap; color: #b7791f; font-size: 15px; letter-spacing: 1px; }
 td.mst .muted { opacity: .35; }
+/* construir cartera: peso que falta para el 100%, siempre a la vista */
+#bleft { position: fixed; left: 50%; transform: translateX(-50%); bottom: 16px; z-index: 40; width: min(520px, calc(100vw - 180px)); box-sizing: border-box; padding: 11px 18px 13px; border-radius: 12px; color: #fff; background: #a3173f; box-shadow: 0 8px 24px rgba(0, 0, 0, .28); }
+#bleft.sobra { background: #8a4b00; }
+#bleft.ok { background: #1e7a4a; }
+#bleft div { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 2px 14px; }
+#bleft b { font-size: 17px; line-height: 1.3; }
+#bleft span { font-size: 13px; opacity: .9; }
+#bleft i { display: block; height: 5px; margin-top: 8px; border-radius: 3px; background: rgba(255, 255, 255, .3); overflow: hidden; }
+#bleft u { display: block; height: 100%; background: #fff; }
+.bleft-sp { height: 96px; }
+@media (max-width: 760px) { #bleft { left: 12px; transform: none; width: calc(100vw - 96px); padding: 9px 12px 11px; } #bleft b { font-size: 15px; } }
+@media print { #bleft, .bleft-sp { display: none; } }
