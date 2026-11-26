@@ -13,7 +13,6 @@
   function dc(v, d) { return isNum(v) ? nf(v, d == null ? 2 : d) : "–"; }
   function norm(s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9&%\s.<>]/g, " ").replace(/\s+/g, " ").trim(); }
   function re(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
-  function cost(f) { var m = String(f.cost || "").replace(",", ".").match(/[\d.]+/); return m ? parseFloat(m[0]) : null; }
   function mnum(s) { var m = /([\d,]+(?:\.\d+)?)/.exec(String(s || "")); return m ? parseFloat(m[1].replace(/,/g, "")) : null; }
   function money(s) { var v = mnum(s); return isNum(v) ? nf(v, 2) + " M EUR" : esc(s || "–"); }
   function years(d) { var m = /(\d+)\/(\d+)\/(\d+)/.exec(String(d || "")); return m ? (new Date(2026, 10, 23) - new Date(+m[3], +m[2] - 1, +m[1])) / 31557600000 : null; }
@@ -34,7 +33,6 @@
     [/\br2\b|r cuadrado|r al cuadrado/, "R cuadrado (R2)", "Porcentaje del movimiento del fondo que se explica por su índice de referencia. Cerca de 100 significa que se comporta casi como el índice; bajo significa que su gestor se aleja mucho de él."],
     [/volatilidad|desviacion/, "Volatilidad", "Cuánto oscila la rentabilidad del fondo alrededor de su media (desviación típica anualizada). Es la medida habitual de riesgo: más volatilidad, más altibajos."],
     [/caida maxima|drawdown|\bdd\b/, "Caída máxima (drawdown)", "La mayor pérdida desde un máximo hasta el mínimo siguiente en el periodo. Indica cuánto habría llegado a perder alguien que entrase en el peor momento."],
-    [/\bter\b|coste|comision|gastos corrientes/, "Coste del fondo", "Gastos corrientes anuales que se descuentan del valor liquidativo (gestión, depósito, administración). Pesan cada año, así que a igualdad de resultado es mejor el fondo más barato."],
     [/estrellas|rating morningstar/, "Estrellas Morningstar", "Calificación de 1 a 5 según la rentabilidad ajustada al riesgo frente a fondos de su misma categoría. Es una medida del pasado, no una garantía futura."],
     [/duracion/, "Duración", "En renta fija, sensibilidad del precio a los tipos de interés. Una duración de 5 significa que, si los tipos suben un 1 %, el fondo cae aproximadamente un 5 %."],
     [/frontera eficiente/, "Frontera eficiente", "Línea formada por los fondos que no tienen otro mejor: ninguno ofrece más rentabilidad con menos riesgo. En el gráfico de dispersión se activa al elegir una categoría y un plazo."],
@@ -88,7 +86,6 @@
     if (/\bbeta\b/.test(t)) return M("Beta", function (f) { return f.beta; }, true, dc, true);
     if (/\br2\b|r cuadrado/.test(t)) return M("R2", function (f) { return f.r2; }, true, function (v) { return dc(v, 1); }, true);
     if (/\bmar\b/.test(t)) return M("MAR " + yl, function (f) { return f.mar && f.mar[i]; }, true, dc);
-    if (/barato|coste|comision|gastos/.test(t)) return M("Coste", cost, false, pn);
     if (/estrella/.test(t)) return M("Estrellas", function (f) { return f.stars; }, true, function (v) { return v + " ★"; });
     if (/patrimonio|tamano|mas grande|aum/.test(t)) return M("Patrimonio de la clase", function (f) { return mnum(f.aumc || f.aum); }, true, function (v) { return nf(v, 0) + " M EUR"; }, true);
     if (/concentrad|top 10|diversificad/.test(t)) return M("Peso de las 10 mayores posiciones", function (f) { return f.top10; }, !/diversificad/.test(t), function (v) { return pn(v, 1); });
@@ -130,7 +127,7 @@
   }
 
   var NUMK = [
-    ["volatilidad|\\bvol\\b|riesgo", "volatilidad"], ["rentabilidad|rendimiento|rentab", "rentabilidad"], ["coste|comision|gastos", "coste"],
+    ["volatilidad|\\bvol\\b|riesgo", "volatilidad"], ["rentabilidad|rendimiento|rentab", "rentabilidad"],
     ["duracion", "duracion"], ["sharpe", "sharpe"], ["sortino", "sortino"], ["\\bper\\b", "per"], ["patrimonio|tamano", "patrimonio"],
     ["\\bbeta\\b", "beta"], ["caida maxima|drawdown|caida", "caida"], ["\\balpha\\b", "alpha"], ["estrellas", "estrellas"], ["vencimiento", "vencimiento"],
     ["concentracion|top 10", "concentrado"], ["antiguedad|historia", "antiguo"]
@@ -240,7 +237,6 @@
     [/calidad crediticia|rating crediticio|calificacion/, function (f) { return isNum(f.dur) || f.cal ? "Calidad crediticia media: <b>" + esc(f.cal || "–") + "</b>." : "No aplica a este fondo."; }],
     [/duracion/, function (f) { return isNum(f.dur) ? "Duración: <b>" + dc(f.dur, 2) + "</b> años." : "No hay duración para este fondo."; }],
     [/vencimiento/, function (f) { return isNum(f.vto) ? "Vencimiento medio: <b>" + dc(f.vto, 1) + "</b> años." : "No hay vencimiento para este fondo."; }],
-    [/coste|comision|gastos|\bter\b|cuanto cobra|cobra/, function (f) { return "Coste (gastos corrientes): <b>" + esc(f.cost || "–") + "</b>."; }],
     [/creacion|antiguedad|antiguo|cuando (se )?(creo|lanzo)|desde cuando|edad|anos de historia/, function (f) { var y = years(f.cre); return "Creado el <b>" + esc(f.cre || "–") + "</b>" + (isNum(y) ? " (" + nf(y, 1) + " años de historia)." : "."); }],
     [/patrimonio|tamano del fondo|cuanto gestiona|aum/, function (f) { return "Patrimonio: fondo " + money(f.aum) + ", clase " + money(f.aumc) + "."; }],
     [/valor liquidativo|\bnav\b|precio del fondo|cotizacion/, function (f) { return "Valor liquidativo: <b>" + esc(f.nav || "–") + "</b> (a " + esc(f.nd || "–") + ")."; }],
@@ -301,7 +297,7 @@
       "<li>Rentabilidad: año " + pc(r.ytd) + ", 1 año " + pc(r.y1) + ", 3 años " + pc(r.y3) + ", 5 años " + pc(r.y5) + "</li>" +
       "<li>Riesgo: volatilidad 1 año " + pn(f.vol && f.vol[0], 1) + ", caída máxima " + pn(f.dd && f.dd[4], 1) + "</li>" +
       "<li>Sharpe 1 año " + dc(f.sharpe && f.sharpe[0]) + " y 3 años " + dc(f.sharpe && f.sharpe[1]) + "</li>" +
-      "<li>Coste " + esc(f.cost || "–") + " · " + (f.stars ? f.stars + " estrellas" : "sin estrellas") + (f.aumc ? " · patrimonio clase " + money(f.aumc) : "") + "</li></ul>" + '<p class="cfnote">Puedes preguntarme por su composición, coste, caída máxima, rentabilidad por años o fondos parecidos.</p>';
+      "<li>" + (f.stars ? f.stars + " estrellas" : "Sin estrellas") + (f.aumc ? " · patrimonio clase " + money(f.aumc) : "") + "</li></ul>" + '<p class="cfnote">Puedes preguntarme por su composición, caída máxima, rentabilidad por años o fondos parecidos.</p>';
   }
 
   function comparar(t) {
@@ -311,7 +307,7 @@
     if (fs.length === 1 && ctx.fund && ctx.fund !== fs[0] && /\b(lo|este|ese|el anterior)\b/.test(t)) fs.unshift(ctx.fund);
     if (fs.length < 2) return null;
     fs = fs.slice(0, 4); setFund(fs[0]);
-    var filas = [["Rentab. año", function (f) { return pc(f.ret.ytd); }], ["Rentab. 1 año", function (f) { return pc(f.ret.y1); }], ["Rentab. 3 años", function (f) { return pc(f.ret.y3); }], ["Rentab. 5 años", function (f) { return pc(f.ret.y5); }], ["Volatilidad 1 año", function (f) { return pn(f.vol[0], 1); }], ["Sharpe 1 año", function (f) { return dc(f.sharpe[0]); }], ["Caída máxima", function (f) { return pn(f.dd[4], 1); }], ["Coste", function (f) { return esc(f.cost || "–"); }], ["Estrellas", function (f) { return f.stars || "–"; }]];
+    var filas = [["Rentab. año", function (f) { return pc(f.ret.ytd); }], ["Rentab. 1 año", function (f) { return pc(f.ret.y1); }], ["Rentab. 3 años", function (f) { return pc(f.ret.y3); }], ["Rentab. 5 años", function (f) { return pc(f.ret.y5); }], ["Volatilidad 1 año", function (f) { return pn(f.vol[0], 1); }], ["Sharpe 1 año", function (f) { return dc(f.sharpe[0]); }], ["Caída máxima", function (f) { return pn(f.dd[4], 1); }], ["Estrellas", function (f) { return f.stars || "–"; }]];
     return '<table class="cft"><thead><tr><th></th>' + fs.map(function (f) { return "<th>" + link(f) + "</th>"; }).join("") + "</tr></thead><tbody>" +
       filas.map(function (r) { return "<tr><td>" + r[0] + "</td>" + fs.map(function (f) { return "<td>" + r[1](f) + "</td>"; }).join("") + "</tr>"; }).join("") + "</tbody></table>" +
       '<p><a href="#/comparar/' + fs.map(function (f) { return encodeURIComponent(f.id); }).join(",") + '">Abrir en el comparador completo →</a></p>';
@@ -332,8 +328,8 @@
     return "<p>Fondos de la misma categoría que " + link(f) + " (" + esc(f.c) + "):</p>" + tablaPar(f, l.slice(0, 6)) + DISC;
   }
   function tablaPar(f, l) {
-    return '<table class="cft"><thead><tr><th></th><th>1 año</th><th>Vol. 1A</th><th>Sharpe</th><th>Coste</th></tr></thead><tbody>' +
-      [f].concat(l).map(function (x) { return "<tr><td>" + (x === f ? "<b>" + esc(x.n) + "</b>" : link(x)) + "</td><td>" + pc(x.ret.y1, 1) + "</td><td>" + pn(x.vol[0], 1) + "</td><td>" + dc(x.sharpe[0]) + "</td><td>" + esc(x.cost || "–") + "</td></tr>"; }).join("") + "</tbody></table>";
+    return '<table class="cft"><thead><tr><th></th><th>1 año</th><th>Vol. 1A</th><th>Sharpe</th></tr></thead><tbody>' +
+      [f].concat(l).map(function (x) { return "<tr><td>" + (x === f ? "<b>" + esc(x.n) + "</b>" : link(x)) + "</td><td>" + pc(x.ret.y1, 1) + "</td><td>" + pn(x.vol[0], 1) + "</td><td>" + dc(x.sharpe[0]) + "</td></tr>"; }).join("") + "</tbody></table>";
   }
 
   /* ---------- Estadísticas de grupo ---------- */
@@ -409,7 +405,7 @@
       pick.lines.map(function (l) { var f = byId(l.id); return f ? "<li>" + link(f) + "<b> " + nf(l.w, 2) + " %</b></li>" : ""; }).join("") + "</ul>" +
       li(["Suma de pesos: " + nf(sw, 2) + " %", "Rentabilidad ponderada: año " + pc(wavg(pick, function (f) { return f.ret.ytd; })) + ", 1 año " + pc(wavg(pick, function (f) { return f.ret.y1; })),
         "Volatilidad 1 año ponderada: " + pn(wavg(pick, function (f) { return f.vol[0]; }), 1) + " · Sharpe " + dc(wavg(pick, function (f) { return f.sharpe[0]; })),
-        "Coste medio ponderado: " + pn(wavg(pick, cost)), mx ? "Máximo de fondos para su importe: " + mx + " (tiene " + pick.lines.length + ")" + (pick.lines.length > mx ? ". Se supera el límite." : ".") : "Sin importe definido para calcular el máximo de fondos."]) + DISC;
+        mx ? "Máximo de fondos para su importe: " + mx + " (tiene " + pick.lines.length + ")" + (pick.lines.length > mx ? ". Se supera el límite." : ".") : "Sin importe definido para calcular el máximo de fondos."]) + DISC;
   }
   function estadoNota(t) {
     if (/nota/.test(t)) {
@@ -451,8 +447,8 @@
 
   var AYUDA = "<p>Puedo responder con los datos de esta web. Algunos ejemplos:</p><ul>" +
     "<li><b>Rankings:</b> «mejores fondos de renta variable a 3 años», «fondos con menor volatilidad», «mayor patrimonio»</li>" +
-    "<li><b>Filtros:</b> «renta fija con duración menor de 3 y coste menor de 1», «tecnología con 4 estrellas»</li>" +
-    "<li><b>Un fondo:</b> «coste de Renta 4 Valor Relativo», «composición», «rentabilidad en 2022», «caída máxima»</li>" +
+    "<li><b>Filtros:</b> «renta fija con duración menor de 3 y Sharpe mayor de 1», «tecnología con 4 estrellas»</li>" +
+    "<li><b>Un fondo:</b> «Sharpe de Renta 4 Valor Relativo», «composición», «rentabilidad en 2022», «caída máxima»</li>" +
     "<li><b>Comparar y parecidos:</b> «compara A y B», «fondos parecidos a este»</li>" +
     "<li><b>Grupos:</b> «rentabilidad media de renta fija», «categoría con mejor Sharpe», «qué gestoras hay»</li>" +
     "<li><b>Otros:</b> «agenda de hoy», «mis carteras», «JFrog», «estado semanal», «qué es el Sharpe»</li></ul>";
@@ -461,6 +457,7 @@
 
   function responder(q) {
     var t = norm(q);
+    if (/\bcostes?\b|comision|\bgastos\b|barat|\bter\b|cuanto cobra/.test(t)) return "<p>Esta web no muestra datos de costes de los fondos.</p>";
     if (!t) return AYUDA;
     if (/^(hola|buenas|buenos dias|buenas tardes|hey|ayuda|que puedes hacer|que sabes|help|que me puedes preguntar|como funcionas)\b/.test(t) && t.length < 45) return AYUDA;
     if (/^(gracias|vale|ok|perfecto|genial|muchas gracias)\b/.test(t) && t.length < 25) return "A tu disposición.";

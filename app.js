@@ -199,8 +199,7 @@
     P("ddmax", "Caída máxima", "Riesgo", function (f) { return f.dd[4]; }, { u: "%", d: 1 }),
     P("worst1", "Peor mes 1 año", "Riesgo", function (f) { return f.worst[0]; }, { u: "%", d: 1 }),
     P("pos1", "Meses en positivo 1 año", "Riesgo", function (f) { return f.pos[0]; }, { u: "%", d: 0 }),
-    P("top10", "Peso top 10", "Otros", function (f) { return f.top10; }, { u: "%", d: 1 }),
-    P("cost", "Coste neto", "Otros", function (f) { var n = parseFloat(String(f.cost || "").replace(",", ".")); return isFinite(n) ? n : null; }, { u: "%", d: 2 })
+    P("top10", "Peso top 10", "Otros", function (f) { return f.top10; }, { u: "%", d: 1 })
   ];
   var GROUPS = ["Rentabilidad", "Ratios", "Riesgo", "Distribución", "Cartera", "Otros"];
   var DEFAULTS = {
@@ -623,7 +622,7 @@
     TB.dat += '<section class="block"><h3>Datos generales</h3><dl class="facts">' +
       fact("Categoría Morningstar", esc(f.c)) + fact("Gestora", esc(f.g)) +
       (f.stars ? fact("Rating Morningstar", stars(f.stars)) : "") +
-      (f.cost ? fact("Coste neto", esc(f.cost)) : "") + (f.cre ? fact("Fecha de creación", esc(f.cre)) : "") +
+      (f.cre ? fact("Fecha de creación", esc(f.cre)) : "") +
       (f.aum ? fact("Patrimonio del fondo", money(f.aum)) : "") +
       (f.aumc ? fact("Patrimonio de la clase", money(f.aumc)) : "") +
       (f.nav ? fact("Valor liquidativo", money2(f.nav) + ' <span class="muted">(' + esc(f.nd) + ")</span>") : "") + "</dl></section>";
@@ -663,7 +662,7 @@
   // ---------- utilidades comunes de comparador y carteras ----------
   var BETTER = {
     hi: "tir w1 m1 m3 m6 ytd y1 y3 y5 y10 rmed sh1 sh3 sh5 so1 so3 so5 mar1 mar3 mar5 alpha score ddmax worst1 pos1".split(" "),
-    lo: "vol1 vol3 vol5 cost".split(" ")
+    lo: "vol1 vol3 vol5".split(" ")
   };
   var CMP_MAX = 4;
   var CMP_COLORS = ["#851a2e", "#3b3b3b", "#1e7a4a", "#c27c0e"];
@@ -809,7 +808,6 @@
     var cm = (window.COMMENTS && window.COMMENTS[f.id]) || [];
     if (cm.length && cm[0].t) L.push("Lo que dice la gestora (" + (cm[0].d || "último comentario") + ")", cm[0].t, "");
     var d = ["ISIN " + f.id];
-    if (f.cost) d.push("coste neto " + f.cost);
     if (f.aum) d.push("patrimonio de " + String(f.aum).replace(/\s*EUR$/, "").replace(".", ",") + " millones de euros");
     if (f.cre) d.push("creado el " + dlong(f.cre));
     L.push(pick(["Si te parece bien, lo comentamos con calma y vemos qué papel podría jugar en tu cartera según tu perfil y tu horizonte de inversión. Quedo a tu disposición para cualquier duda.", "Cuando quieras lo vemos con más detalle y valoramos si encaja con tu perfil y tus objetivos. Quedo a tu disposición.", "Si te interesa, lo repasamos juntos y vemos cómo podría encajar en tu cartera. Cualquier duda, me dices."]));
@@ -830,16 +828,15 @@
     intro += idx ? "." : ", todos de gestión activa.";
     L.push(pick(["Cómo está construida", "Estructura", "Cómo está planteada"]), intro + (extra ? "\n" + extra.replace(/^Perfil:?\s*([^.\n]*)\.?/i, "El perfil de inversión es $1.").replace(/^El perfil de inversión es (\S+?)ora\./, "El perfil de inversión es $1or.").replace(/^El perfil de inversión es (\S+?)ada\./, "El perfil de inversión es $1ado.") : ""), "");
     L.push("Composición", linesText(lines, amount), "");
-    var a = wAvgF(lines, function (f) { return f.ret.ytd; }), b = wAvgF(lines, function (f) { return f.ret.y1; }), c = wAvgF(lines, function (f) { return f.ret.y3; }), v = wAvgF(lines, function (f) { return f.vol && f.vol[0]; }), sh = wAvgF(lines, function (f) { return f.sharpe && f.sharpe[0]; }), co = wAvgF(lines, function (f) { return pnum(f.cost); });
+    var a = wAvgF(lines, function (f) { return f.ret.ytd; }), b = wAvgF(lines, function (f) { return f.ret.y1; }), c = wAvgF(lines, function (f) { return f.ret.y3; }), v = wAvgF(lines, function (f) { return f.vol && f.vol[0]; }), sh = wAvgF(lines, function (f) { return f.sharpe && f.sharpe[0]; });
     var perf = "Con los datos actuales, la rentabilidad media ponderada de los fondos se sitúa en el " + plainP(a) + " en el año, del " + plainP(b) + " a un año y del " + plainP(c) + " anual a tres años";
     if (isNum(v)) perf += ", con una volatilidad media del " + plainP(v) + (isNum(sh) ? " y un Sharpe medio de " + nf(sh, 2) : "");
-    perf += "." + (isNum(co) ? " El coste neto medio es del " + plainP(co, 2) + "." : "");
+    perf += ".";
     var ps = [], npos = fs.filter(function (x) { return isNum(x.f.ret.y1) && x.f.ret.y1 > 0; }).length;
     if (isNum(c) && c > 0) ps.push("una rentabilidad media anualizada del " + plainP(c) + " a tres años");
     if (npos && npos >= fs.length / 2) ps.push(npos + " de los " + fs.length + " fondos con rentabilidad positiva en el último año");
     if (ng >= 3) ps.push("diversificación entre " + ng + " gestoras");
     if (isNum(sh) && sh >= 0.5) ps.push("una buena relación entre rentabilidad y riesgo (Sharpe medio de " + nf(sh, 2) + ")");
-    if (isNum(co) && co < 1.5) ps.push("un coste neto medio contenido del " + plainP(co, 2));
     if (!ps.length && fs.length) ps.push("una cartera construida con fondos de gestión activa y seguimiento cercano");
     if (ps.length) L.push(pick(["Puntos a favor", "Lo más destacable", "Aspectos positivos"]), "Entre los puntos fuertes de la propuesta, destaca " + listJoin(ps.slice(0, 4)) + ".", "");
     L.push(pick(["Cómo se ha comportado", "Evolución de la cartera", "Resultados hasta ahora"]), perf, "");
@@ -1096,7 +1093,7 @@
   function deckPortfolio(name, prof, amount, lines) {
     var fs = lines.map(function (l) { return { l: l, f: byId(l.id) }; }).filter(function (x) { return x.f && x.l.w > 0; }), tw = 0, rfW = 0, n = 2, S = [];
     fs.forEach(function (x) { tw += x.l.w; if (x.f.t === "rf") rfW += x.l.w; });
-    var a = wAvgF(lines, function (f) { return f.ret.ytd; }), b = wAvgF(lines, function (f) { return f.ret.y1; }), c3 = wAvgF(lines, function (f) { return f.ret.y3; }), v = wAvgF(lines, function (f) { return f.vol && f.vol[0]; }), sh = wAvgF(lines, function (f) { return f.sharpe && f.sharpe[0]; }), co = wAvgF(lines, function (f) { return pnum(f.cost); });
+    var a = wAvgF(lines, function (f) { return f.ret.ytd; }), b = wAvgF(lines, function (f) { return f.ret.y1; }), c3 = wAvgF(lines, function (f) { return f.ret.y3; }), v = wAvgF(lines, function (f) { return f.vol && f.vol[0]; }), sh = wAvgF(lines, function (f) { return f.sharpe && f.sharpe[0]; });
     var sub = (prof ? "Perfil " + prof.toLowerCase().replace(/a$/, "o") + " · " : "") + (amount > 0 ? nf(amount, 0) + " € · " : "") + dkDate();
     S.push(dkCover("Propuesta de cartera", name || "Cartera", sub, [["Rentabilidad 3 años anual", dkp(c3)], ["Volatilidad media", dkp(v)], ["Fondos", String(fs.length)]]));
     var rfp = tw ? rfW / tw * 100 : 0, mxw = 1;
@@ -1118,7 +1115,7 @@
     if (big && big.l.w >= 25) extra.push("Mayor posición: " + big.f.n + " (" + nf(big.l.w, 1) + "% de la cartera).");
     if (Math.abs(tw - 100) > 0.5) extra.push("Los pesos suman " + nf(tw, 1) + "%.");
     S.push(dkSlide("Rentabilidad y riesgo", "Medias ponderadas por el peso de cada fondo",
-      '<div class="dk-kpis">' + dkKpi("En el año", dkp(a), a < 0) + dkKpi("Último año", dkp(b), b < 0) + dkKpi("3 años anual", dkp(c3), c3 < 0) + dkKpi("Volatilidad", dkp(v)) + dkKpi("Sharpe", isNum(sh) ? nf(sh, 2) : "n.d.") + dkKpi("Coste medio", dkp(co, 2)) + "</div>" +
+      '<div class="dk-kpis" style="grid-template-columns:repeat(5,1fr)">' + dkKpi("En el año", dkp(a), a < 0) + dkKpi("Último año", dkp(b), b < 0) + dkKpi("3 años anual", dkp(c3), c3 < 0) + dkKpi("Volatilidad", dkp(v)) + dkKpi("Sharpe", isNum(sh) ? nf(sh, 2) : "n.d.") + "</div>" +
       '<div class="dk-two"><div class="dk-l"><h4 class="dk-h4">Rentabilidad a un año por fondo</h4>' + bars + '</div><div class="dk-r">' + dkWatch(fs.map(function (x) { return x.f; }), extra) + "</div></div>", n++));
     for (var i = 0; i < fs.length; i += 6) {
       S.push(dkSlide("Ideas clave por fondo", "", '<div class="dk-grid">' + fs.slice(i, i + 6).map(function (x) { return dkCard(x.f, nf(x.l.w, 1) + "%"); }).join("") + "</div>", n++));
@@ -1143,7 +1140,7 @@
       ["En el año", function (f) { return dkv(f.ret.ytd); }], ["1 año", function (f) { return dkv(f.ret.y1); }], ["3 años anual", function (f) { return dkv(f.ret.y3); }], ["5 años anual", function (f) { return dkv(f.ret.y5); }],
       ["Volatilidad", function (f) { return dkp(f.vol && f.vol[0]); }], ["Sharpe", function (f) { return f.sharpe && isNum(f.sharpe[0]) ? nf(f.sharpe[0], 2) : "n.d."; }],
       ["Caída máxima", function (f) { return dkp(f.dd && isNum(f.dd[4]) ? Math.abs(f.dd[4]) : null); }],
-      ["Morningstar", function (f) { return f.stars ? f.stars + " estrellas" : "n.d."; }], ["Coste neto", function (f) { return esc(f.cost || "n.d."); }]];
+      ["Morningstar", function (f) { return f.stars ? f.stars + " estrellas" : "n.d."; }]];
     S.push(dkSlide("Comparativa", "Datos de Morningstar a " + (META && (META.rv || META.rf) || ""),
       '<table class="dk-t dk-cmp"><thead><tr><th></th>' + fs.map(function (f) { return '<th class="r">' + esc(f.n) + "<small>" + esc(f.g) + "</small></th>"; }).join("") + "</tr></thead><tbody>" +
       rows.map(function (r) { return "<tr><td><b>" + r[0] + "</b></td>" + fs.map(function (f) { return '<td class="r">' + r[1](f) + "</td>"; }).join("") + "</tr>"; }).join("") + "</tbody></table>", n++));
@@ -1740,7 +1737,6 @@
     var c = !sense ? "" : d * sense > 0 ? " good" : " bad";
     return '<span class="chd' + c + '">' + (d > 0 ? "▲ +" : "▼ ") + nf(d, 2) + (unit ? " " + unit : "") + "</span>";
   }
-  function costOf(f) { return metric("cost").v(f); }
   // participaciones aproximadas del importe movido (solo valor liquidativo en euros)
   function chUnits(d) {
     var m = /^EUR\s*([\d.,]+)/.exec(String(d.f.nav || "")), v = m ? parseFloat(m[1].replace(/,/g, "")) : 0;
@@ -1759,8 +1755,7 @@
       { n: "Sharpe 1 año", g: function (f) { return f.sharpe[0]; }, s: 1 },
       { n: "Sharpe 3 años", g: function (f) { return f.sharpe[1]; }, s: 1 },
       { n: "Sortino 1 año", g: function (f) { return f.sortino && f.sortino[0]; }, s: 1 },
-      { n: "Ratio MAR 1 año", g: function (f) { return f.mar && f.mar[0]; }, s: 1 },
-      { n: "Coste neto anual", g: costOf, s: -1, pc: 1 }
+      { n: "Ratio MAR 1 año", g: function (f) { return f.mar && f.mar[0]; }, s: 1 }
     ];
   }
   function chLegend() { return '<div class="chleg"><span><i class="a"></i>Original</span><span><i class="b"></i>Nueva</span></div>'; }
@@ -1782,27 +1777,6 @@
           '<text x="' + (bx + bw / 2).toFixed(1) + '" y="' + (up ? base - h - (j === 1 ? 5 : 17) : base + h + (j === 1 ? 13 : 25)).toFixed(1) + '" text-anchor="middle" font-size="10.5" font-weight="700" fill="' + (j === 1 ? "#666a73" : "#a3173f") + '">' + nf(v, 1) + "</text>";
       }).join("") + '<text x="' + cx.toFixed(1) + '" y="' + (H - 4) + '" text-anchor="middle" font-size="11" fill="#555">' + esc(x[0]) + "</text>";
     }).join("") + "</svg>";
-  }
-  // mapa rentabilidad (1 año) frente a volatilidad (1 año)
-  function chScatter(A, B, moved) {
-    var pts = moved.filter(function (d) { return isNum(d.f.vol[0]) && isNum(d.f.ret.y1); }).map(function (d) { return { x: d.f.vol[0], y: d.f.ret.y1, n: d.f.n, c: d.de > 0 || (d.de === null && d.dw > 0) ? "#1e7a4a" : "#b3261e" }; });
-    if (!isNum(A.x) || !isNum(A.y) || !isNum(B.x) || !isNum(B.y)) return "";
-    var all = pts.concat([A, B]), xs = all.map(function (q) { return q.x; }), ys = all.map(function (q) { return q.y; });
-    var x0 = 0, x1 = Math.max.apply(null, xs) * 1.1 || 1, y0 = Math.min(0, Math.min.apply(null, ys)), y1 = Math.max.apply(null, ys), pad = (y1 - y0) * 0.12 || 1;
-    y1 += pad; if (y0 < 0) y0 -= pad;
-    var W = 560, H = 320, L = 44, R = 14, T = 12, Bt = 40;
-    function X(v) { return L + (v - x0) / (x1 - x0) * (W - L - R); }
-    function Y(v) { return T + (y1 - v) / (y1 - y0) * (H - T - Bt); }
-    var g = "";
-    for (var i = 0; i <= 4; i++) {
-      var vx = x0 + (x1 - x0) * i / 4, vy = y0 + (y1 - y0) * i / 4;
-      g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(vy) + '" y2="' + Y(vy) + '" stroke="#eee"/><text x="' + (L - 6) + '" y="' + (Y(vy) + 4) + '" text-anchor="end" font-size="10.5" fill="#777">' + nf(vy, 1) + '</text><text x="' + X(vx) + '" y="' + (H - 22) + '" text-anchor="middle" font-size="10.5" fill="#777">' + nf(vx, 1) + "</text>";
-    }
-    g += '<text x="' + ((W + L) / 2) + '" y="' + (H - 5) + '" text-anchor="middle" font-size="11" fill="#555">Volatilidad 1 año (%) · en vertical, rentabilidad 1 año (%)</text>';
-    pts.forEach(function (q) { g += '<circle cx="' + X(q.x) + '" cy="' + Y(q.y) + '" r="5" fill="#fff" stroke="' + q.c + '" stroke-width="2.5"><title>' + esc(q.n) + ": volatilidad " + pct(q.x, false, 1) + ", 1 año " + pct(q.y, true, 2) + "</title></circle>"; });
-    g += '<line x1="' + X(A.x) + '" y1="' + Y(A.y) + '" x2="' + X(B.x) + '" y2="' + Y(B.y) + '" stroke="#555" stroke-dasharray="4 3"/>';
-    [[A, "#8d919b"], [B, "#a3173f"]].forEach(function (q) { g += '<circle cx="' + X(q[0].x) + '" cy="' + Y(q[0].y) + '" r="8" fill="' + q[1] + '" stroke="#fff" stroke-width="2"><title>' + q[0].n + ": volatilidad " + pct(q[0].x, false, 2) + ", 1 año " + pct(q[0].y, true, 2) + "</title></circle>"; });
-    return '<div class="chleg"><span><i class="a"></i>Cartera original</span><span><i class="b"></i>Cartera nueva</span><span><i class="o in"></i>Fondo que se compra</span><span><i class="o out"></i>Fondo que se vende</span></div><svg viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" aria-label="Rentabilidad frente a volatilidad antes y después">' + g + "</svg>";
   }
   function changesHtml(p) {
     var D = pfDiff(p), C = pfChanged(D), B = p.base;
@@ -1845,12 +1819,6 @@
     var rv = row("Volatilidad 1 año"), rs = row("Sharpe 1 año");
     function mov(r, u) { var d = Math.round((r.b.v - r.a.v) * 100) / 100; return !d ? "se mantiene en " + nf(r.b.v, 2) + u : (d > 0 ? "sube" : "baja") + " de " + nf(r.a.v, 2) + u + " a " + nf(r.b.v, 2) + u; }
     if (isNum(rv.a.v) && isNum(rv.b.v) && isNum(rs.a.v) && isNum(rs.b.v)) S.push("<b>Riesgo:</b> la volatilidad " + mov(rv, "%") + " y el Sharpe " + mov(rs, "") + ".");
-    var rc = row("Coste neto anual");
-    if (isNum(rc.a.v) && isNum(rc.b.v)) {
-      var ce = function (key) { return D.reduce(function (s, d) { var c = costOf(d.f); return s + (isNum(c) && isNum(d[key]) ? d[key] * c / 100 : 0); }, 0); };
-      var c0 = ce("e0"), c1 = ce("e1");
-      S.push("<b>Coste:</b> el coste medio " + mov(rc, "%") + (D.every(function (d) { return d.e0 !== null && d.e1 !== null; }) && (c0 || c1) ? " (de unos " + nf(c0, 0) + " € a " + nf(c1, 0) + " € al año)." : "."));
-    }
     h += '<section class="block chsec"><h3>Qué supone el cambio</h3><ul class="chsum"><li>' + S.join("</li><li>") + "</li></ul></section>";
 
     // cambio de peso por fondo
@@ -1887,9 +1855,9 @@
       if (!list.length) return "";
       var q = { lines: list.map(function (d) { return { id: d.f.id, w: Math.abs(d.de !== null && hasE ? d.de : d.dw) }; }) };
       function av(g) { return wAvg(q, g).v; }
-      var cols = [function (f) { return f.ret.ytd; }, function (f) { return f.ret.y1; }, function (f) { return f.ret.y3; }, function (f) { return f.vol[0]; }, function (f) { return f.sharpe[0]; }, costOf];
+      var cols = [function (f) { return f.ret.ytd; }, function (f) { return f.ret.y1; }, function (f) { return f.ret.y3; }, function (f) { return f.vol[0]; }, function (f) { return f.sharpe[0]; }];
       function cells(get) { return cols.map(function (c, i) { var v = get(c); return "<td>" + (i < 3 ? ret(v) : i === 4 ? dec(v) : pct(v, false, 2)) + "</td>"; }).join(""); }
-      return '<h4 class="chh4">' + title + '</h4><div class="table-wrap"><table class="chtable"><thead><tr><th scope="col">Fondo</th><th scope="col">' + (hasE ? "Importe movido" : "Peso movido") + '</th><th scope="col">Año</th><th scope="col">1 año</th><th scope="col">3 años</th><th scope="col">Vol. 1 año</th><th scope="col">Sharpe 1 año</th><th scope="col">Coste</th></tr></thead><tbody>' +
+      return '<h4 class="chh4">' + title + '</h4><div class="table-wrap"><table class="chtable"><thead><tr><th scope="col">Fondo</th><th scope="col">' + (hasE ? "Importe movido" : "Peso movido") + '</th><th scope="col">Año</th><th scope="col">1 año</th><th scope="col">3 años</th><th scope="col">Vol. 1 año</th><th scope="col">Sharpe 1 año</th></tr></thead><tbody>' +
         list.map(function (d, i) { return "<tr><td>" + esc(d.f.n) + "<small>" + esc(d.f.c) + "</small></td><td>" + (hasE ? eur(q.lines[i].w) : pct(q.lines[i].w, false, 2)) + "</td>" + cells(function (c) { return c(d.f); }) + "</tr>"; }).join("") +
         '</tbody><tfoot><tr><td><b>Media ponderada</b></td><td><b>' + (hasE ? eur(sumW(q)) : pct(sumW(q), false, 2)) + "</b></td>" + cells(av) + "</tr></tfoot></table></div>";
     }
@@ -1899,9 +1867,6 @@
 
     // gráficos
     h += '<div class="grid2 chgrid">';
-    var r1y = row("Rentabilidad 1 año"), vo = row("Volatilidad 1 año");
-    var sc = chScatter({ x: vo.a.v, y: r1y.a.v, n: "Cartera original" }, { x: vo.b.v, y: r1y.b.v, n: "Cartera nueva" }, sold.concat(bought).map(function (d) { return { f: d.f, de: hasE ? d.de : null, dw: d.dw }; }));
-    if (sc) h += '<section class="block"><h3>Rentabilidad frente a riesgo</h3>' + sc + "</section>";
     var per = [["Año", "Rentabilidad del año"], ["1 mes", "Rentabilidad 1 mes"], ["1 año", "Rentabilidad 1 año"], ["3 años", "Rentabilidad 3 años (anualizada)"], ["5 años", "Rentabilidad 5 años (anualizada)"]].map(function (x) { var r = row(x[1]); return isNum(r.a.v) && isNum(r.b.v) ? [x[0], r.a.v, r.b.v] : null; }).filter(Boolean);
     if (per.length) h += '<section class="block"><h3>Rentabilidad por plazo (%)</h3>' + chColumns(per, "Rentabilidad por plazo antes y después") + "</section>";
     var yrs = YEARS.map(function (y) { var r = both(function (f) { return annOf(f, y); }); return r[0].cov > 0.999 && r[1].cov > 0.999 ? [y === 2026 ? "2026*" : String(y), r[0].v, r[1].v] : null; }).filter(Boolean);
@@ -1915,7 +1880,6 @@
       return Object.keys(o).map(function (k) { return [k, o[k][0], o[k][1]]; }).filter(function (x) { return x[1] > 0 || x[2] > 0; }).sort(function (x, y) { return Math.max(y[1], y[2]) - Math.max(x[1], x[2]); });
     }
     h += '<section class="block"><h3>Peso por categoría</h3>' + chPairs(group("c")) + "</section>";
-    h += '<section class="block"><h3>Peso por gestora</h3>' + chPairs(group("g")) + "</section>";
     return h + "</div>";
   }
 
@@ -1931,7 +1895,7 @@
     var M = chMetrics().map(function (m) { return { m: m, a: wAvg(a, m.g), b: wAvg(b, m.g) }; });
     function full(r) { return isNum(r.a.v) && isNum(r.b.v) && r.a.cov > 0.999 && r.b.cov > 0.999; }
     var USE = [["Rentabilidad del año", "Rentabilidad en el año", "la rentabilidad en el año"], ["Rentabilidad 1 año", "Rentabilidad a 1 año", "la rentabilidad a 1 año"], ["Rentabilidad 3 años (anualizada)", "Rentabilidad anual a 3 años", "la rentabilidad anual a 3 años"], ["Rentabilidad 5 años (anualizada)", "Rentabilidad anual a 5 años", "la rentabilidad anual a 5 años"],
-      ["Volatilidad 1 año", "Volatilidad a 1 año", "la volatilidad"], ["Caída máxima 3 años", "Caída máxima en 3 años", "la caída máxima"], ["Sharpe 1 año", "Sharpe a 1 año", "el Sharpe a 1 año"], ["Sharpe 3 años", "Sharpe a 3 años", "el Sharpe a 3 años"], ["Coste neto anual", "Coste medio anual", "el coste"]];
+      ["Volatilidad 1 año", "Volatilidad a 1 año", "la volatilidad"], ["Caída máxima 3 años", "Caída máxima en 3 años", "la caída máxima"], ["Sharpe 1 año", "Sharpe a 1 año", "el Sharpe a 1 año"], ["Sharpe 3 años", "Sharpe a 3 años", "el Sharpe a 3 años"]];
     var rows = [], missing = [];
     USE.forEach(function (u) {
       var r = M.filter(function (x) { return x.m.n === u[0]; })[0];
@@ -1949,11 +1913,10 @@
       else if (d.k === "in") t += "nueva posición con un " + p2(d.w1) + money + ".";
       else if (d.k === "same") t += "mantiene su peso del " + p2(d.w1) + " y " + (d.de < 0 ? "se reduce" : "aumenta") + " su importe" + money + ".";
       else t += (d.dw < 0 ? "baja" : "sube") + " del " + p2(d.w0) + " al " + p2(d.w1) + money + ".";
-      var s = [], c = costOf(f);
+      var s = [];
       if (isNum(f.ret.y1)) s.push("rentabilidad a 1 año " + p2(f.ret.y1));
       if (isNum(f.vol && f.vol[0])) s.push("volatilidad " + p2(f.vol[0]));
       if (isNum(f.sharpe && f.sharpe[0])) s.push("Sharpe " + nf(f.sharpe[0], 2));
-      if (isNum(c)) s.push("coste " + p2(c));
       return t + (s.length && d.k !== "same" ? "\n   En cifras: " + s.join(", ") + "." : "");
     }
 
@@ -1974,9 +1937,8 @@
         .sort(function (x, y) { return Math.abs(y[2] - y[1]) - Math.abs(x[2] - x[1]); }).slice(0, 4)
         .map(function (x) { return x[0] + " del " + p2(x[1]) + " al " + p2(x[2]); });
     }
-    var sc = shifts("c", 0.5), sg = shifts("g", 1);
+    var sc = shifts("c", 0.5);
     if (sc.length) I.push("• Por categorías: " + listJoin(sc) + ".");
-    if (sg.length) I.push("• Por gestoras: " + listJoin(sg) + ".");
     var n0 = a.lines.filter(function (l) { return l.w > 0; }).length, n1 = b.lines.filter(function (l) { return l.w > 0; }).length;
     I.push("• Número de fondos: " + (n0 === n1 ? "se mantiene en " + n1 : "pasa de " + n0 + " a " + n1) + ".");
     L.push("Cómo cambia la composición", I.join("\n"), "");
@@ -2009,9 +1971,6 @@
     if (yrs.length) bal.push("Aplicando los pesos a los " + yrs.length + " años completos con datos, la propuesta habría rentado más en " + won + " y menos en " + lost + ".");
     var r1 = rows.filter(function (r) { return r.n === "Rentabilidad a 1 año"; })[0];
     if (r1 && r1.d && amt > 0) bal.push("En euros, la diferencia a 1 año equivale a unos " + eu(r1.raw * amt / 100) + (r1.d > 0 ? " más" : " menos") + " sobre el importe de la cartera.");
-    function cost(key) { return D.reduce(function (s, d) { var c = costOf(d.f); return s + (isNum(c) && isNum(d[key]) ? d[key] * c / 100 : 0); }, 0); }
-    var c0 = cost("e0"), c1 = cost("e1");
-    if (D.every(function (d) { return d.e0 !== null && d.e1 !== null; }) && c0 && c1 && Math.abs(c1 - c0) >= 1) bal.push("El coste anual estimado pasa de unos " + eu(c0) + " a unos " + eu(c1) + ".");
     if (missing.length) bal.push("No comparo " + listJoin(missing) + " porque algún fondo no tiene ese dato.");
     L.push("Qué supone el cambio", bal.join(" "), "");
 
@@ -2113,7 +2072,7 @@
       }).join("") + '</svg><p class="note">Solo años en los que todos los fondos tienen dato. * Año en curso.</p></section>';
     }
     // Métricas ponderadas
-    var mw = [["Rentabilidad 3 años", "y3", true], ["Rentabilidad 5 años", "y5", true], ["Volatilidad 3 años", "vol3"], ["Sharpe 3 años", "sh3"], ["Sortino 1 año", "so1"], ["MAR 1 año", "mar1"], ["Coste neto", "cost"]].map(function (x) {
+    var mw = [["Rentabilidad 3 años", "y3", true], ["Rentabilidad 5 años", "y5", true], ["Volatilidad 3 años", "vol3"], ["Sharpe 3 años", "sh3"], ["Sortino 1 año", "so1"], ["MAR 1 año", "mar1"]].map(function (x) {
       var m = metric(x[1]), a = wAvg(p, m.v);
       if (a.v === null) return "";
       var txt = x[2] ? pct(a.v, true, 2) : fmtMetric(m, a.v);
@@ -2782,7 +2741,7 @@
     return m ? (new Date(2026, 10, 21) - new Date(+m[3], +m[2] - 1, +m[1])) / 31557600000 : null;
   }
   function fundComment(f) {
-    var s = [], yrs = yearsSince(f.cre), aum = numOf(f.aumc), cost = metric("cost").v(f), ps = posInCat(f);
+    var s = [], yrs = yearsSince(f.cre), aum = numOf(f.aumc), ps = posInCat(f);
     if (isNum(yrs)) s.push(yrs < 3 ? "Fondo joven (" + nf(yrs, 1) + " años de historia): sus ratios a varios años aún no son fiables." : "Cuenta con " + nf(yrs, 0) + " años de historia.");
     if (isNum(aum)) s.push(aum < 50 ? "El patrimonio de la clase es pequeño (" + nf(aum, 0) + " M€), lo que puede afectar a la liquidez y a la continuidad." : aum > 1500 ? "Tiene un patrimonio de la clase muy grande (" + nf(aum, 0) + " M€), lo que da estabilidad pero puede limitar la agilidad." : "Patrimonio de la clase de " + nf(aum, 0) + " M€.");
     if (f.t === "rv") {
@@ -2799,7 +2758,6 @@
     if (isNum(f.sharpe[1])) s.push(f.sharpe[1] >= 1 ? "Buena relación rentabilidad riesgo a 3 años (Sharpe " + dec(f.sharpe[1]) + ")." : f.sharpe[1] < 0.3 ? "Relación rentabilidad riesgo débil a 3 años (Sharpe " + dec(f.sharpe[1]) + ")." : "Relación rentabilidad riesgo aceptable a 3 años (Sharpe " + dec(f.sharpe[1]) + ").");
     if (isNum(f.dd && f.dd[4])) s.push("Caída máxima histórica de " + pct(f.dd[4], false, 1) + (isNum(f.pos && f.pos[0]) ? " y " + nf(f.pos[0], 0) + "% de meses positivos en el último año." : "."));
     if (isNum(f.skew && f.skew[0]) && f.skew[0] < -1) s.push("Distribución con colas negativas marcadas: los meses malos pueden ser peores de lo que sugiere la volatilidad.");
-    if (isNum(cost)) s.push(cost > 1.8 ? "Coste neto elevado (" + pct(cost, false, 2) + ")." : cost < 0.8 ? "Coste neto bajo (" + pct(cost, false, 2) + ")." : "Coste neto de " + pct(cost, false, 2) + ".");
     s.push("Ocupa el puesto " + ps[0] + " de " + ps[1] + " en su categoría por puntuación Morningstar" + (f.stars ? " y tiene " + f.stars + " estrellas." : "."));
     return s.filter(Boolean).join(" ");
   }
@@ -2914,10 +2872,10 @@
   function gcAnalyze() {
     var L = gcLines(), tot = gcTotal(), pr = BPROF[gc.profile], p = { lines: L };
     if (!L.length) return '<p class="muted" style="margin-top:22px">Añade los fondos de la cartera actual con su importe para ver el análisis.</p>';
-    var n = L.length, info = gcInfo(L), prop = gcPropose(info, pr, tot), cost = metric("cost").v;
+    var n = L.length, info = gcInfo(L), prop = gcPropose(info, pr, tot);
     function kp(lines) {
       var q = { lines: lines }, g = function (fn) { return wAvg(q, fn).v; };
-      return { y: g(function (f) { return f.ret.ytd; }), y1: g(function (f) { return f.ret.y1; }), y3: g(function (f) { return f.ret.y3; }), v: g(function (f) { return f.vol[0]; }), s: g(function (f) { return f.sharpe[0]; }), c: g(cost), sc: g(function (f) { return f.score && f.score[3]; }) };
+      return { y: g(function (f) { return f.ret.ytd; }), y1: g(function (f) { return f.ret.y1; }), y3: g(function (f) { return f.ret.y3; }), v: g(function (f) { return f.vol[0]; }), s: g(function (f) { return f.sharpe[0]; }), sc: g(function (f) { return f.score && f.score[3]; }) };
     }
     var a = kp(L), b = kp(prop.lines), cov = wAvg(p, function (f) { return f.ret.ytd; }).cov;
     var bw = {}; L.forEach(function (l) { bw[l.bucket] = (bw[l.bucket] || 0) + l.w; });
@@ -2930,7 +2888,7 @@
     var mf = maxFunds(tot), implied = rvw < 30 ? "conservador" : rvw <= 60 ? "moderado" : "dinámico";
     var volCap = { conservador: 6, moderado: 11, dinamico: 16 }[gc.profile];
 
-    var h = '<div class="kpis" style="margin-top:26px">' + kpi("Importe total", nf(tot, 0) + " €", true) + kpi("Rentabilidad del año", ret(a.y), true) + kpi("Rentabilidad 1 año", ret(a.y1)) + kpi("Volatilidad 1 año", pct(a.v, false, 1)) + kpi("Sharpe 1 año", dec(a.s)) + kpi("Coste neto medio", isNum(a.c) ? pct(a.c, false, 2) : "–") + "</div>" +
+    var h = '<div class="kpis" style="margin-top:26px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">' + kpi("Importe total", nf(tot, 0) + " €", true) + kpi("Rentabilidad del año", ret(a.y), true) + kpi("Rentabilidad 1 año", ret(a.y1)) + kpi("Volatilidad 1 año", pct(a.v, false, 1)) + kpi("Sharpe 1 año", dec(a.s)) + "</div>" +
       '<p class="note">Medias ponderadas con datos de Morningstar' + (cov < 0.999 ? " (" + nf(cov * 100, 0) + "% del importe tiene datos)" : "") + ". La volatilidad no tiene en cuenta las correlaciones. Rentabilidad pasada, no garantiza resultados futuros.</p>";
 
     // por categoría de inversión
@@ -2964,7 +2922,6 @@
     (eff >= n * 0.7 ? good : bad).push(eff >= n * 0.7 ? "El peso está bien repartido entre los fondos (equivalen a " + nf(eff, 1) + " fondos de igual peso)." : "El peso está concentrado: " + n + " fondos que equivalen a " + nf(eff, 1) + " de igual peso, y las tres mayores posiciones suman " + nf(top3, 0) + "%.");
     if (gtop && gw[gtop] > 40) bad.push("Dependencia alta de una gestora: " + gtop + " representa el " + nf(gw[gtop], 0) + "% de la cartera.");
     if (isNum(a.v)) (a.v <= volCap ? good : bad).push(a.v <= volCap ? "La volatilidad aproximada (" + pct(a.v, false, 1) + ") es razonable para el perfil." : "La volatilidad aproximada (" + pct(a.v, false, 1) + ") es alta para un perfil " + pr.n.toLowerCase() + ".");
-    if (isNum(a.c)) (a.c <= 1.5 ? good : bad).push(a.c <= 1.5 ? "El coste neto medio (" + pct(a.c, false, 2) + ") es contenido." : "El coste neto medio (" + pct(a.c, false, 2) + ") es elevado; conviene comprobar si compensa con la rentabilidad.");
     var good4 = info.filter(function (o) { return o.f && o.f.stars >= 4; }).reduce(function (s, o) { return s + o.l.w; }, 0);
     (good4 >= 60 ? good : bad).push("El " + nf(good4, 0) + "% del importe está en fondos con 4 o 5 estrellas Morningstar" + (good4 >= 60 ? "." : ", por debajo de lo deseable."));
     if (idxs.length) bad.push("Incluye fondos indexados (" + idxs.map(function (o) { return o.l.name; }).join(", ") + "), que no entran en la selección de fondos que haces con tus clientes.");
@@ -2991,7 +2948,7 @@
     h += '<h2 class="gh">3. Mejoras propuestas</h2><section class="block"><ol class="acts">' + (acts.length ? acts.map(function (s) { return "<li>" + esc(s) + "</li>"; }).join("") : "<li>La cartera está bien construida para el perfil; no se proponen cambios.</li>") + "</ol></section>";
 
     // cartera propuesta
-    var pn = prop.lines.length, cmpRows = [["Rentabilidad del año", ret(a.y), ret(b.y)], ["Rentabilidad 1 año", ret(a.y1), ret(b.y1)], ["Rentabilidad 3 años", ret(a.y3), ret(b.y3)], ["Volatilidad 1 año", pct(a.v, false, 1), pct(b.v, false, 1)], ["Sharpe 1 año", dec(a.s), dec(b.s)], ["Coste neto medio", isNum(a.c) ? pct(a.c, false, 2) : "–", isNum(b.c) ? pct(b.c, false, 2) : "–"], ["Puntuación Morningstar media", dec(a.sc), dec(b.sc)], ["Número de fondos", String(n), String(pn)]];
+    var pn = prop.lines.length, cmpRows = [["Rentabilidad del año", ret(a.y), ret(b.y)], ["Rentabilidad 1 año", ret(a.y1), ret(b.y1)], ["Rentabilidad 3 años", ret(a.y3), ret(b.y3)], ["Volatilidad 1 año", pct(a.v, false, 1), pct(b.v, false, 1)], ["Sharpe 1 año", dec(a.s), dec(b.s)], ["Puntuación Morningstar media", dec(a.sc), dec(b.sc)], ["Número de fondos", String(n), String(pn)]];
     var gone = info.filter(function (o) { return o.v === "Sustituir" && o.alt; }).map(function (o) { return o.l.name; });
     h += '<h2 class="gh">4. Cartera propuesta</h2><div class="grid2"><section class="block"><h3>Composición propuesta</h3><div class="table-wrap"><table><thead><tr><th scope="col">Fondo</th><th scope="col">Peso</th><th scope="col">Importe</th></tr></thead><tbody>' +
       prop.lines.map(function (x) { var f = byId(x.id); return '<tr><td class="fund"><a href="#/fondo/' + encodeURIComponent(f.id) + '"><b>' + esc(f.n) + "</b></a><small>" + esc(f.g) + " · " + esc(bname(bucketOf(f))) + (x.notes.length ? " · " + esc(x.notes.join("; ")) : "") + '</small></td><td class="num">' + nf(x.w, 1) + '%</td><td class="num">' + (tot ? nf(tot * x.w / 100, 0) + " €" : "–") + "</td></tr>"; }).join("") +
