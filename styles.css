@@ -2099,3 +2099,6 @@ a.fchip { color: var(--brand); }
 .amp-vp.ok{background:#e7f3ec;border-color:#cfe6d8}.amp-vp.ok b{color:#1f7a4d}
 .amp-vp.mal{background:#fdf0e4;border-color:#f6d9bd}.amp-vp.mal b{color:#c2570f}
 .amp-lec{margin-bottom:6px}
+/* hero pegado a la línea del menú */
+#app:has(> .hero){padding-top:0!important}
+.hero.vis{margin-top:0!important}
