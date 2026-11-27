@@ -613,9 +613,10 @@
     }
     if (f.t === "rv" && (f.cap.some(isNum) || f.reg || f.sec || isNum(f.per))) {
       var cl = ["Gigante", "Grande", "Mediana", "Pequeña", "Micro"], capm = Math.max.apply(null, f.cap.map(function (v) { return isNum(v) ? v : 0; })) || 1;
-      TB.car += '<section class="block"><h3>Estilo de la cartera</h3>' + (f.cap.some(isNum) ? '<div class="bars">' + f.cap.map(function (v, i) {
+      TB.car += '<section class="block"><h3>Tamaño de las empresas</h3>' + (f.cap.some(isNum) ? '<div class="bars">' + f.cap.map(function (v, i) {
         return isNum(v) ? bar(cl[i], v, capm, "", pct(v, false, 1)) : "";
-      }).join("") + "</div>" : "") + '<dl class="facts" style="margin-top:14px">' +
+      }).join("") + "</div>" : '<p class="note">Sin datos.</p>') + "</section>" +
+        '<section class="block"><h3>Valoración y exposición</h3><dl class="facts">' +
         (isNum(f.per) ? fact("PER", dec(f.per, 1)) : "") + (isNum(f.pcf) ? fact("Precio / flujo de caja", dec(f.pcf, 1)) : "") +
         (isNum(f.gro) ? fact("Crecimiento esperado", pct(f.gro, false, 1)) : "") +
         (f.reg ? fact("Región principal", esc(f.reg[0]) + " " + pct(f.reg[1], false, 1)) : "") +
@@ -3294,9 +3295,9 @@
     var M = mxData(), h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Macro</h1>' +
       '<p class="sub">El entorno económico en cuatro gráficas: inflación, tipos de interés, bonos y actividad. Datos a ' + esc(M.fecha || "") + ".</p>";
     if (!(M.vars || []).length) { app.innerHTML = h + '<div class="empty box" style="margin-top:18px;padding:34px 20px">Todavía no hay datos macro publicados.</div>' + footer("rv"); return; }
-    h += '<div class="row tools2" id="mxtools"></div><div class="mxgrid">';
+    h += '<div class="row tools2" id="mxtools"></div><div class="mxtop">' + mxTiles(["ipc_ez", "ipc_us", "bce", "fed", "bund", "pmi_ez"]) + '</div><div class="mxgrid">';
     MXG.forEach(function (g) {
-      h += '<section class="block mxcard"><h3>' + g[1] + '</h3><p class="mxread">' + esc((M.lecturas || {})[g[0]] || "") + "</p>" + mxChartFor(g[0]) + "</section>";
+      h += '<section class="block mxcard mx-' + g[0] + '"><h3>' + g[1] + '</h3><p class="mxread">' + esc((M.lecturas || {})[g[0]] || "") + "</p>" + mxChartFor(g[0]) + "</section>";
     });
     h += '</div><h2 class="sec">Todas las variables</h2>' + mxTable() +
       '<p class="note">Fuentes: ' + esc(M.fuentes || "") + ". Información orientativa, no constituye asesoramiento personalizado. Más contexto cada día en la <a href=\"#/nota\">Nota diaria</a>.</p>";
@@ -3331,16 +3332,29 @@
     var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Nota diaria</h1>';
     if (!a) { app.innerHTML = h + '<div class="empty box" style="margin-top:18px;padding:34px 20px">Todavía no hay nota publicada. Aparecerá tras la próxima ejecución diaria.</div>' + footer("rv"); return; }
     h += '<p class="sub">' + esc(a.titulo || "") + (a.fecha ? " (" + esc(a.fecha) + ")" : "") + ". Material de análisis, no una recomendación.</p>";
-    (a.temas || []).forEach(function (t) { h += '<div class="box" style="margin-top:14px;padding:16px 18px"><h2 style="margin:0 0 6px;font-size:1.05rem">' + esc(t.t) + '</h2><p class="stxt">' + esc(t.r) + "</p></div>"; });
-    if ((a.calendario || []).length) h += '<div class="box" style="margin-top:14px;padding:16px 18px"><h2 style="margin:0 0 8px;font-size:1.05rem">Calendario del día</h2>' + a.calendario.map(function (x) { return '<div class="agrow"><span>' + esc(x) + "</span></div>"; }).join("") + "</div>";
-    function tbl(title, rows) {
+    h += '<div class="ntemas">';
+    (a.temas || []).forEach(function (t, i) { h += '<article class="ntema"><span class="nnum">' + (i + 1) + '</span><div><h2>' + esc(t.t) + '</h2><p class="stxt">' + esc(t.r) + "</p></div></article>"; });
+    h += "</div>";
+    if ((a.calendario || []).length) h += '<section class="ncal"><h2>Calendario del día</h2>' + a.calendario.map(function (x) {
+      var m = /^(\d{1,2}:\d{2})\s+(.*)$/.exec(x), k = /^(Por la mañana|Publicado|Domingo \d+|Sentimiento|Mañana|Tarde)[:,]?\s*(.*)$/i.exec(x);
+      return '<div class="ncr"><b class="nct' + (m ? "" : " alt") + '">' + esc(m ? m[1] : /^Publicado/i.test(x) ? "Publicado" : /^Domingo/i.test(x) ? "Domingo" : "Hoy") + "</b><span>" + esc(m ? m[2] : /^Publicado:\s*/i.test(x) ? x.replace(/^Publicado:\s*/i, "") : /^Domingo \d+:\s*/i.test(x) ? x.replace(/^Domingo \d+:\s*/i, "") : x) + "</span></div>";
+    }).join("") + "</section>";
+    function pn(t) { var n = parseFloat(String(t).replace("%", "").replace("+", "").replace(",", ".")); return isNaN(n) ? null : n; }
+    function pcs(t) { var n = pn(t); return n === null ? esc(t) : '<span class="' + (n < 0 ? "dn" : "up") + '">' + esc(t) + "</span>"; }
+    function tbl(title, rows, bars) {
       if (!rows || !rows.length) return "";
-      return '<h3 class="es-cat">' + esc(title) + '</h3><div class="table-wrap"><table><thead><tr><th>Instrumento</th><th>Cierre</th><th>% día</th><th>% año</th></tr></thead><tbody>' +
-        rows.map(function (r) { return "<tr><td>" + esc(r[0]) + "</td><td>" + esc(r[1]) + "</td><td>" + esc(r[2]) + "</td><td>" + esc(r[3]) + "</td></tr>"; }).join("") + "</tbody></table></div>";
+      var mx = Math.max.apply(null, rows.map(function (r) { return Math.abs(pn(r[2]) || 0); }).concat([0.5]));
+      if (!bars) return '<h3 class="es-cat">' + esc(title) + '</h3><div class="ntiles">' + rows.map(function (r) {
+        var n = pn(r[2]); return '<div class="ntile ' + (n < 0 ? "dn" : "up") + '"><span>' + esc(r[0]) + "</span><b>" + esc(r[1]) + "</b><em>" + pcs(r[2]) + ' <small>día</small></em><small class="yy">' + pcs(r[3]) + " en el año</small></div>";
+      }).join("") + "</div>";
+      return '<h3 class="es-cat">' + esc(title) + '</h3><div class="nsec"><div class="nsh"><span></span><span></span><b>Día</b><em>Año</em></div>' + rows.map(function (r) {
+        var n = pn(r[2]) || 0, w = Math.abs(n) / mx * 50;
+        return '<div class="nsr"><span class="nsn">' + esc(r[0]) + '</span><span class="nsb"><i class="' + (n < 0 ? "dn" : "up") + '" style="' + (n < 0 ? "right:50%" : "left:50%") + ";width:" + w.toFixed(1) + '%"></i></span><b>' + pcs(r[2]) + '</b><em>' + pcs(r[3]) + "</em></div>";
+      }).join("") + "</div>";
     }
     var u = a.usa || {};
     if (u.sesion) h += '<p class="sub" style="margin-top:18px">Sesión americana del ' + esc(u.sesion) + " (vía ETF).</p>";
-    h += tbl("Índices y mega caps", u.indices) + tbl("Sectores", u.sectores);
+    h += tbl("Índices y mega caps", u.indices, false) + tbl("Sectores", u.sectores, true);
     (u.notas || []).forEach(function (x) { h += '<p class="note">' + esc(x) + "</p>"; });
     if (false && (a.ibex || []).length) h += '<div class="box" style="margin-top:14px;padding:16px 18px"><h2 style="margin:0 0 8px;font-size:1.05rem">Apuntes del Ibex 35</h2>' + a.ibex.map(function (x) { return '<div class="agrow"><span>' + esc(x) + "</span></div>"; }).join("") + "</div>";
     if (false) {
