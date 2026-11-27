@@ -289,6 +289,9 @@
       '<div class="catbar" role="group" aria-label="Categorías"><button type="button" class="catchip" data-cat="" aria-pressed="' + (!s.cat) + '">Todas <i>' + ofType(t).length + "</i></button>" + cats.map(function (c) {
         return '<button type="button" class="catchip" data-cat="' + esc(c) + '" aria-pressed="' + (s.cat === c) + '">' + esc(c) + " <i>" + cc[c] + "</i></button>";
       }).join("") + "</div>" +
+      '<label class="catsel"><span class="muted">Categoría</span><select id="catsel"><option value="">Todas (' + ofType(t).length + ")</option>" + cats.map(function (c) {
+        return '<option value="' + esc(c) + '"' + (s.cat === c ? " selected" : "") + ">" + esc(c) + " (" + cc[c] + ")</option>";
+      }).join("") + "</select></label>" +
       '<div class="filters"><div class="search">' + icon() +
       '<input id="q" type="search" placeholder="Buscar por nombre o ISIN" value="' + esc(s.q) + '" aria-label="Buscar fondo" autocomplete="off"></div>' +
       (s.view === "list" ? '<button type="button" class="chip" id="pickBtn" aria-expanded="' + s.pick + '">Columnas</button>' : "") + "</div>" +
@@ -305,6 +308,8 @@
         viewList(t);
       });
     });
+    var cs = document.getElementById("catsel");
+    cs.addEventListener("change", function () { s.cat = cs.value || null; viewList(t); document.getElementById("catsel").focus(); });
     var q = document.getElementById("q");
     q.addEventListener("input", function () { s.q = q.value; renderBody(t); });
     var pb = document.getElementById("pickBtn");
@@ -3284,7 +3289,7 @@
     var vs = mxData().vars || [], sp = vs.some(function (x) { return (x.ser || []).length >= 3; });
     return '<div class="table-wrap"><table class="mxtbl"><thead><tr><th>Variable</th><th>Dato</th><th>Periodo</th><th>Anterior</th><th>Cambio</th>' + (sp ? "<th>Evolución</th>" : "") + "</tr></thead><tbody>" +
       MXG.map(function (g) {
-        return '<tr class="mxgr"><td colspan="' + (sp ? 6 : 5) + '">' + g[1] + "</td></tr>" + vs.filter(function (x) { return x.g === g[0]; }).map(function (x) {
+        return '<tr class="mxgr"><td colspan="' + (sp ? 6 : 5) + '"><span>' + g[1] + "</span></td></tr>" + vs.filter(function (x) { return x.g === g[0]; }).map(function (x) {
           var dl = mxDelta(x);
           return "<tr><td>" + esc(x.n) + "</td><td><b>" + esc(mxNum(x, x.v)) + "</b></td><td>" + esc(x.d) + "</td><td>" + (isNum(x.p) ? esc(mxNum(x, x.p)) + ' <small>' + esc(x.pd || "") + "</small>" : "–") + "</td><td>" + (dl ? '<span class="mxd s' + dl.s + '">' + mxArrow(dl) + " " + esc(dl.t) + "</span>" : "–") + "</td>" + (sp ? "<td>" + mxSpark(x) + "</td>" : "") + "</tr>";
         }).join("");
@@ -3615,7 +3620,24 @@
       l.classList.toggle("on", s === seg);
     });
     document.querySelectorAll(".site nav details").forEach(function (d) { d.classList.toggle("on", !!d.querySelector("a.on")); d.removeAttribute("open"); });
+    setMenu(false);
   }
+  // menú del móvil
+  function setMenu(open) {
+    var site = document.querySelector("header.site"), b = document.getElementById("mbtn");
+    if (!site || !b) return;
+    site.classList.toggle("mopen", open);
+    b.setAttribute("aria-expanded", String(open));
+    if (open) site.querySelectorAll("nav details").forEach(function (d) { d.setAttribute("open", ""); });
+  }
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest) return;
+    var site = document.querySelector("header.site");
+    if (!site) return;
+    if (e.target.closest("#mbtn")) setMenu(!site.classList.contains("mopen"));
+    else if (site.classList.contains("mopen") && (e.target.closest(".site nav a") || !e.target.closest("header.site"))) setMenu(false);
+  });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") setMenu(false); });
   function route() {
     markNav();
     var h = (location.hash || "#/").replace(/^#/, ""), p = h.split("/").filter(Boolean);
