@@ -1725,7 +1725,7 @@
       '<span id="pfpdfslot"></span>' +
       '<button class="btn ghost" type="button" id="pfdup">Duplicar</button>' +
       '<button class="btn ghost danger" type="button" id="pfdel">Eliminar cartera</button></div>';
-    app.innerHTML = h + footer("rv");
+    app.innerHTML = '<div class="fundpg pfpg">' + h + "</div>" + footer("rv");
 
     var pdfb = deckBtn(function () { var nm = document.getElementById("pfname"), am = document.getElementById("pfamt"); deckPortfolio(nm && nm.value || p.name, "", am && am.value ? +am.value : 0, p.lines); });
     var mailb = mailBtn(function () {

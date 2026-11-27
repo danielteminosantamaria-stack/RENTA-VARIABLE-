@@ -1972,3 +1972,20 @@ a.fchip { color: var(--brand); }
 .es2t2 tbody tr { cursor: pointer; }
 .es2t2 .num.neg { color: #b3283d; } .es2t2 .num.pos { color: #1f7a4d; }
 .es2t2 .sgx { font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+
+/* cartera y análisis de cambios con el estilo de la ficha de fondo */
+.pfpg .pftabs { gap: 30px; border-bottom: 1px solid #dcdcdc; margin: 22px 0 6px; }
+.pfpg .pftabs button { font-size: 15.5px; font-weight: 600; color: #555; padding: 12px 2px 11px; }
+.pfpg .pftabs button.on { color: #a3173f; border-bottom: 3px solid #a3173f; }
+.pfpg .block { background: none !important; border: 0 !important; border-top: 2px solid #111 !important; border-radius: 0 !important; box-shadow: none !important; padding: 14px 0 6px !important; overflow: visible; }
+.pfpg .block::before { display: none !important; }
+.pfpg .block h3 { font-family: var(--heading); font-size: 21px !important; font-weight: 700; letter-spacing: -.01em !important; text-transform: none !important; color: #111 !important; border: 0 !important; margin: 0 0 14px !important; padding: 0 !important; }
+.pfpg .grid2 { margin-top: 26px; gap: 44px 56px; }
+.pfpg .aptot { color: #555; margin-bottom: 12px; }
+.pfpg .apc { border: 1px solid var(--line); border-left: 0; border-top: 3px solid var(--c); border-radius: 10px; box-shadow: none; }
+.pfpg .mcards > *, .pfpg .mcard { border: 1px solid var(--line); border-radius: 10px; background: #fff; box-shadow: none; }
+.pfpg .note { color: #777; font-size: 12.5px; }
+.pfpg .box { border-radius: 10px; box-shadow: none; background: #fff; }
+@media (max-width: 760px) { .pfpg .grid2 { grid-template-columns: 1fr; } }
+.pfpg .bar { grid-template-columns: 210px 1fr 56px; }
+@media (max-width: 760px) { .pfpg .bar { grid-template-columns: 120px 1fr 52px; } }
