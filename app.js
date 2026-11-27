@@ -639,7 +639,7 @@
 
     var cm = (window.COMMENTS && window.COMMENTS[f.id]) || [];
     TB.dat += '<section class="block"><h3>Comentarios de la gestora</h3>' + (cm.length
-      ? cm.map(function (c) { return '<div class="comment"><p class="cm-h"><b>' + esc(c.d || "") + "</b>" + (c.s ? " · " + esc(c.s) : "") + '</p><p class="cm-t">' + esc(c.t || "") + "</p></div>"; }).join("")
+      ? cm.map(function (c) { return '<div class="comment"><p class="cm-h"><b>' + esc(c.d || "") + "</b>" + (c.s ? " · " + esc(c.s) : "") + '</p>' + (c.secs ? '<div class="cm-secs">' + c.secs.map(function (x) { return '<div class="cm-sec"><h4>' + esc(x.h) + "</h4><p>" + esc(x.t) + "</p></div>"; }).join("") + "</div>" : '<p class="cm-t">' + esc(c.t || "") + "</p>") + "</div>"; }).join("")
       : '<p class="muted">Todavía no hay comentarios de la gestora para este fondo.</p>') + "</section>";
     var TABS = [["res", "Resumen"], ["ris", "Riesgo"], ["car", "Cartera"], ["dat", "Datos y comentarios"]].filter(function (t) { return TB[t[0]]; });
     html += '<nav class="mstabs" role="tablist">' + TABS.map(function (t, i) { return '<button type="button" role="tab" data-tab="' + t[0] + '" class="' + (i ? "" : "on") + '">' + t[1] + "</button>"; }).join("") + "</nav>";
