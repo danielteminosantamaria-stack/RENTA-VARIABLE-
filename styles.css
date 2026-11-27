@@ -2019,3 +2019,7 @@ a.fchip { color: var(--brand); }
 .hv-s b { display: block; font-size: 32px; line-height: 1.1; color: #fff; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
 .hv-s span { display: block; margin-top: 6px; font-size: 12.5px; color: rgba(255, 255, 255, .78); letter-spacing: .02em; }
 @media (max-width: 860px) { .hero.vis.hv2 { grid-template-columns: 1fr; gap: 28px; } .hero.vis.hv2 h1 { font-size: 38px; } .hv-s b { font-size: 26px; } }
+
+.nsn .nsi { width: 36px !important; height: 36px !important; padding: 0 !important; border-radius: 11px !important; background: var(--c) !important; color: #fff !important; display: grid; place-items: center; box-shadow: 0 4px 10px -4px var(--c); flex: 0 0 auto; }
+.nsn .nsi svg { width: 20px; height: 20px; }
+.nsr { padding: 9px 0; }

@@ -3339,7 +3339,8 @@
     XLV: '<path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6-8 11-8 11z"/><path d="M12 9v5M9.5 11.5h5"/>',
     XLK: '<rect x="6" y="6" width="12" height="12" rx="1.5"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/>'
   };
-  function secIcon(n) { var m = /\(([A-Z]+)\)/.exec(n || ""), p = m && SECI[m[1]]; return p ? '<svg class="nsi" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + "</svg>" : ""; }
+  var SECC = { XLB: "#b07d2b", XLRE: "#6d5bd0", XLC: "#1d8fb8", XLI: "#5b6b7b", XLE: "#e07b1a", XLF: "#2a5ca8", XLU: "#c99a00", XLP: "#1f7a4d", XLY: "#8a5cc7", XLV: "#14a38b", XLK: "#0b4fb3" };
+  function secIcon(n) { var m = /\(([A-Z]+)\)/.exec(n || ""), p = m && SECI[m[1]]; return p ? '<span class="nsi" style="--c:' + (SECC[m[1]] || "#5b6b7b") + '"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + "</svg></span>" : ""; }
   function viewNota() {
     setTitle("Nota diaria");
     var N = window.NOTA || {}, a = N.actual;
