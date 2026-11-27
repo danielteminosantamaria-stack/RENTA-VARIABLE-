@@ -3164,6 +3164,18 @@
   function esLvl(n) { return n === null ? "" : Math.abs(n) >= SIG_MIN ? " l2" : Math.abs(n) >= 1.5 ? " l1" : ""; }
   function esLast() { var m = ""; FUNDS.forEach(function (f) { var d = String(f.nd || "").split("/").reverse().join(""); if (d > m) m = d; }); return m ? m.slice(6) + "/" + m.slice(4, 6) + "/" + m.slice(0, 4) : ""; }
   var ESS2 = { p: "w1", o: "dn", t: "rv" };
+  function esDist(rows) {
+    var v = rows.filter(function (x) { return x.s !== null; }).map(function (x) { return x.s; });
+    if (!v.length) return "";
+    var M = Math.max(SIG_MIN + 0.5, Math.ceil(Math.max.apply(null, v.map(Math.abs)) + 0.3)), W = 520, H = 74, px = function (n) { return 10 + (n + M) / (2 * M) * (W - 20); };
+    var bins = {}, dots = v.slice().sort(function (a, b) { return a - b; }).map(function (n) { var k = Math.round(px(n) / 9); bins[k] = (bins[k] || 0) + 1; return '<circle cx="' + px(n).toFixed(1) + '" cy="' + (46 - (bins[k] - 1) * 8).toFixed(1) + '" r="3.6" fill="' + (n <= -SIG_MIN ? "#b3283d" : n >= SIG_MIN ? "#1f7a4d" : n < 0 ? "#c98a96" : "#8fb9a2") + '" fill-opacity=".9"/>'; }).join("");
+    var tk = []; for (var t = -Math.floor(M); t <= Math.floor(M); t++) tk.push('<text x="' + px(t).toFixed(1) + '" y="70" text-anchor="middle" font-size="10" fill="#888">' + (t > 0 ? "+" : "") + t + "</text>");
+    var md = esMed(v);
+    return '<svg class="esdist" viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" aria-label="Distribución de sigmas de los fondos">' +
+      '<rect x="10" y="12" width="' + (px(-SIG_MIN) - 10).toFixed(1) + '" height="40" fill="#b3283d" fill-opacity=".08"/><rect x="' + px(SIG_MIN).toFixed(1) + '" y="12" width="' + (W - 10 - px(SIG_MIN)).toFixed(1) + '" height="40" fill="#1f7a4d" fill-opacity=".08"/>' +
+      '<line x1="10" x2="' + (W - 10) + '" y1="52" y2="52" stroke="#d9d3d7"/><line x1="' + px(0) + '" x2="' + px(0) + '" y1="12" y2="52" stroke="#bbb" stroke-dasharray="3 3"/>' + dots +
+      '<path d="M' + px(md).toFixed(1) + ' 8 l-4 -7 h8z" fill="#1c1c26"/>' + tk.join("") + "</svg>";
+  }
   function viewEstado() {
     setTitle("Estado de fondos");
     var E = window.ESTADO || {}, P = esPer(ESS2.p), shown = FUNDS.filter(function (f) { return ESS2.t === "all" || f.t === ESS2.t; });
@@ -3183,7 +3195,7 @@
     h += '<div class="es2sum"><div class="es2k"><span>Mediana de los fondos</span><b class="' + (med < 0 ? "dn" : "up") + '">' + esPc(med) + "</b><em>" + P[1].toLowerCase() + "</em></div>" +
       '<div class="es2k"><span>Caídas poco comunes</span><b class="dn">' + dn + '</b><em>de ' + tot + " fondos</em></div>" +
       '<div class="es2k"><span>Subidas poco comunes</span><b class="up">' + up + '</b><em>de ' + tot + " fondos</em></div>" +
-      '<div class="es2m"><div class="esstack">' + seg("dn", dn) + seg("rest", tot - dn - up) + seg("up", up) + "</div><p>" + esc(ctx) + "</p></div></div>";
+      '<div class="es2m">' + esDist(rows) + "<p>" + esc(ctx) + "</p></div></div>";
     var max = Math.max(SIG_MIN + 1, Math.ceil(Math.max.apply(null, [0].concat(rows.map(function (x) { return Math.abs(x.s || 0); })))));
     [["rv", "Renta variable"], ["rf", "Renta fija"]].filter(function (g) { return ESS2.t === "all" || ESS2.t === g[0]; }).forEach(function (g) {
       var items = rows.filter(function (x) { return x.f.t === g[0]; });

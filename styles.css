@@ -1797,3 +1797,17 @@ a.fchip { color: var(--brand); }
 .kpis.fk .kpi.hi span { color: var(--ink, #1c1c26); }
 .fundpg .facts > div { padding: 9px 0; }
 @media (max-width: 760px) { .fhero { flex-direction: column; align-items: flex-start; } .fhero h1.h1star { font-size: 22px; } .kpis.fk { grid-template-columns: repeat(2, 1fr); } }
+
+.esdist { display: block; max-width: 560px; }
+.es2sum { box-shadow: 0 10px 24px -16px rgba(20, 10, 14, .3); }
+.es2r:hover { background: #faf6f8; }
+.es2c { transition: transform .12s; } .es2c:hover { transform: translateY(-1px); }
+/* ficha */
+.kpis.fk > *::before { height: 3px; }
+.kpis.fk .kpi { background: #fff; }
+.fundpg .block { box-shadow: 0 8px 22px -16px rgba(20, 10, 14, .3); }
+.fundpg .facts > div:hover { background: #faf6f8; }
+.fundpg .mstabs button.on, .fundpg .mstabs .on { color: var(--brand); border-bottom-color: var(--brand); }
+.fundpg .docs { margin-top: 14px; }
+.fundpg .docs .doc { border-radius: 12px; transition: box-shadow .15s, transform .15s; }
+.fundpg .docs .doc:hover { box-shadow: 0 6px 16px -8px rgba(20, 10, 14, .35); transform: translateY(-1px); }
