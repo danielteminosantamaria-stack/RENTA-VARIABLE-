@@ -738,7 +738,7 @@ main > * { animation-duration: .3s; }
 .catchip:hover { border-color: var(--brand); color: var(--brand); }
 .catchip[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; box-shadow: 0 4px 12px -4px rgba(176, 16, 48, .5); }
 .catchip[aria-pressed="true"] i { background: rgba(255, 255, 255, .25); color: #fff; }
-td.fund { display: flex; align-items: center; gap: 12px; }
+.fw { display: flex; align-items: center; gap: 12px; }
 .flogo { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; border: 1px solid #e4e0e6; background: #fff; display: grid; place-items: center; overflow: hidden; font-size: 11px; font-weight: 700; color: var(--brand); }
 .flogo img { width: 22px; height: 22px; object-fit: contain; }
 .ftxt { display: flex; flex-direction: column; min-width: 0; }
@@ -2146,14 +2146,11 @@ a.fchip { color: var(--brand); }
   #pftable .pfrow td.fund:first-child { min-width: 156px; max-width: 168px; padding-left: 10px; }
   #pftable .pfl { display: none; }
   #pftable .pfn b { font-size: 12.5px; line-height: 1.3; }
-  .cmpx { max-height: 76vh; max-height: 76dvh; overflow: auto; }
-  .cmpx thead th { position: sticky; top: 0; z-index: 3; background: #fff; }
-  .cmpx thead th.lb { z-index: 4; }
   #cfbot { right: 12px; bottom: 12px; }
   #cfbot .cfb-btn { width: 44px; height: 44px; }
   main { padding-bottom: 72px; }
 }
-@media print { #body > .table-wrap, .table-wrap:has(> table.es2t2), #pftable .table-wrap, .cmpx { max-height: none; overflow: visible; } }
+@media print { #body > .table-wrap, .table-wrap:has(> table.es2t2), #pftable .table-wrap { max-height: none; overflow: visible; } }
 /* Construir cartera con el estilo de las listas de fondos: blanco, líneas finas y color solo en las rentabilidades */
 .bpage .g-rf, .bft .g-rf { --gc: #33333b; } .bpage .g-alt, .bft .g-alt { --gc: #b9b9c2; } .bpage .g-rv, .bft .g-rv { --gc: #75757f; }
 .bpage .bhead, .bpage .bband { border-radius: 10px !important; box-shadow: 0 1px 3px rgba(26, 18, 32, .06) !important; }
@@ -2225,3 +2222,49 @@ a.fchip { color: var(--brand); }
 .bpage .bband .stack { height: 10px; border-radius: 5px; }
 .bpage .bband .okt { color: var(--pos); font-weight: 600; }
 .bpage .bhead { border-top: 3px solid var(--brand) !important; }
+
+/* móvil: la celda del nombre es una celda normal (en iPhone una celda flexible no se queda fija) */
+@media screen and (max-width: 760px) {
+  .fw { gap: 8px; }
+  .table-wrap table.chtable th:first-child, .table-wrap table.chtable td:first-child { min-width: 140px; max-width: 160px; white-space: normal; font-size: 12.5px; padding-left: 12px; padding-right: 8px; }
+  .table-wrap table.trtab th:first-child, .table-wrap table.trtab td:first-child { position: static; min-width: 0; box-shadow: none; }
+  .table-wrap table.trtab th:nth-child(2), .table-wrap table.trtab td:nth-child(2) { position: sticky; left: 0; z-index: 2; min-width: 150px; max-width: 168px; text-align: left; background: var(--card); box-shadow: 1px 0 0 #e4e0e6; }
+  .table-wrap table.trtab thead th:nth-child(2) { z-index: 4; background: #f7f6f8; }
+}
+/* móvil: el comparador entero cabe en la pantalla (el dato arriba y una columna por fondo debajo) */
+@media screen and (max-width: 760px) {
+  html:has(.cmpx), body:has(.cmpx) { overflow-x: clip; }
+  body:has(.cmpx) header.site { position: static; }
+  .cmpcards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; overflow: visible; padding-bottom: 0; }
+  .cmpc { flex: none; padding: 12px 9px 10px; }
+  .cmpc-n { font-size: 12.5px; }
+  .cmpc-i .cat { font-size: 10.5px; padding: 2px 7px; text-align: center; }
+  .cmpc .cst { font-size: 13px; }
+  .cmpx { overflow: visible; }
+  .cmpx table, .cmpx table thead, .cmpx table tbody { display: block; width: 100%; min-width: 0; }
+  .cmpx colgroup { display: none; }
+  .cmpx table tr { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); }
+  .cmpx table thead { position: sticky; top: 0; z-index: 5; box-shadow: 0 6px 10px -8px rgba(20, 10, 14, .35); }
+  .cmpx table thead th { position: relative; top: auto; display: flex; align-items: flex-start; justify-content: center; padding: 24px 3px 8px; min-width: 0; }
+  .cmpx table thead th.lb { display: none; }
+  .cmpx table thead th:nth-child(2) { border-top-left-radius: 13px; }
+  .cmpx .cmph { gap: 0; width: 100%; }
+  .cmpx .cmph .flogo, .cmpx .cmph small { display: none; }
+  .cmpx .cn { font-size: 11px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .cmpx .cq { top: 1px; right: 50%; margin-right: -11px; }
+  .cmpx table td.lb { grid-column: 1 / -1; position: static; text-align: center; padding: 9px 10px 1px; font-size: 12px; box-shadow: none; }
+  .cmpx table td:not(.lb) { min-width: 0; border-top: 0; padding: 3px 3px 9px; }
+  .cmpx table td[colspan] { grid-column: 1 / -1; border-top: 1px solid #efecf1; padding: 14px; }
+  .cmpx table tr.grp th { grid-column: 1 / -1; text-align: center; padding: 10px; }
+  .cmpx table tr.grp th span { position: static; }
+  .cmpx .cv { padding: 1px 5px; font-size: 13px; max-width: 100%; }
+  .cmpx .msv { gap: 4px; font-size: 11px; padding-left: 0; padding-right: 0; }
+  .cmpx .msv b { font-weight: 700; }
+  .cmpx tr.info .cat { font-size: 10.5px; padding: 2px 6px; }
+  .cmpx .cst { font-size: 12px; letter-spacing: 0; }
+}
+
+/* comparador sin rojo: positivos en verde, negativos en negro y gris */
+.cmpx .neg, .cmpcards .neg, .cmpg .neg, .cmpx .msv .neg, #deck .dk-cmp .neg { color: #1c1c26 !important; }
+.cmpx .cbar u.dn { background: #a9a4b0; }
+.cmpx .msplit { background: #d9d5dc; }

@@ -39,7 +39,7 @@
     function th(k, l) { var on = sk === k; return '<th scope="col"' + (on ? ' aria-sort="' + (dir > 0 ? "ascending" : "descending") + '"' : "") + '><button type="button" data-fs="' + k + '">' + l + (on ? (dir > 0 ? " ↑" : " ↓") : "") + "</button></th>"; }
     var html = '<div class="table-wrap"><table><thead><tr>' + th("n", "Fondo") + COLS.map(function (c) { return th(c[0], c[1]); }).join("") + "</tr></thead><tbody>" +
       rows.map(function (f) {
-        return '<tr data-id="' + esc(f.id) + '" tabindex="0"><td class="fund"><span class="flogo" aria-hidden="true">' + (u.logo ? u.logo(f.g) : "") + '</span><span class="ftxt"><b>' + esc(f.n) + (f.idx ? '<span class="tag">Indexado</span>' : "") + "</b><small>" + esc(f.g) + (f.c ? " · " + esc(f.c) : "") + (u.vl ? u.vl(f) : "") + "</small></span></td>" +
+        return '<tr data-id="' + esc(f.id) + '" tabindex="0"><td class="fund"><div class="fw"><span class="flogo" aria-hidden="true">' + (u.logo ? u.logo(f.g) : "") + '</span><span class="ftxt"><b>' + esc(f.n) + (f.idx ? '<span class="tag">Indexado</span>' : "") + "</b><small>" + esc(f.g) + (f.c ? " · " + esc(f.c) : "") + (u.vl ? u.vl(f) : "") + "</small></span></div></td>" +
           COLS.map(function (c) { return "<td>" + cellOf(c, f) + "</td>"; }).join("") + "</tr>";
       }).join("") + "</tbody></table></div>";
     return { html: html, bind: function (root) {

@@ -387,9 +387,9 @@
     body.innerHTML = '<div class="table-wrap"><table><thead><tr>' + th("n", "Fondo") + th("st", "Morningstar") +
       c.map(function (x) { return th(x.k, x.l); }).join("") + "</tr></thead><tbody>" +
       rows.map(function (f) {
-        return '<tr data-id="' + esc(f.id) + '" tabindex="0"><td class="fund"><span class="flogo" aria-hidden="true">' + logoOrInit(f.g) + '</span><span class="ftxt"><b>' + esc(f.n) +
+        return '<tr data-id="' + esc(f.id) + '" tabindex="0"><td class="fund"><div class="fw"><span class="flogo" aria-hidden="true">' + logoOrInit(f.g) + '</span><span class="ftxt"><b>' + esc(f.n) +
           (f.idx ? '<span class="tag">Indexado</span>' : "") + "</b><small>" + esc(f.g) + (f.c ? " · " + esc(f.c) : "") + vlTag(f) +
-          "</small></span></td>" +
+          "</small></span></div></td>" +
           '<td class="mst">' + (f.stars ? '<span role="img" aria-label="' + f.stars + ' de 5 estrellas">' + stars(f.stars) + "</span>" : '<span class="muted">–</span>') + "</td>" +
           c.map(function (x) { return "<td>" + x.r(f) + "</td>"; }).join("") + "</tr>";
       }).join("") + "</tbody></table></div>";
@@ -1418,9 +1418,9 @@
       return '<tr><th scope="row">' + esc(yearLabel(y)) + "</th>" + vs.map(function (v) {
         if (v === null) return '<td class="nd">–</td>';
         var a = (0.1 + Math.min(1, Math.abs(v) / 40) * 0.45).toFixed(2);
-        return '<td class="' + (v === best ? "best" : "") + '" style="background:rgba(' + (v < 0 ? "205,50,70," : "31,140,85,") + a + ')">' + pct(v, true, 1) + "</td>";
+        return '<td class="' + (v === best ? "best" : "") + '" style="background:rgba(' + (v < 0 ? "110,106,118," : "31,140,85,") + a + ')">' + pct(v, true, 1) + "</td>";
       }).join("") + "</tr>";
-    }).join("") + '</tbody></table><p class="note">Verde: año en positivo. Rojo: año en negativo. Con borde, el mejor de cada año.</p></div>';
+    }).join("") + '</tbody></table><p class="note">Verde: año en positivo. Gris: año en negativo. Con borde, el mejor de cada año.</p></div>';
   }
 
   // ---------- carteras (se guardan solo en este navegador) ----------
@@ -2818,7 +2818,7 @@
     var rows = gcTransfers(L, prop, tot), moved = rows.reduce(function (s, r) { return s + r.amt; }, 0);
     var h = '<h2 class="gh">5. Traspasos necesarios</h2><section class="block">';
     if (!rows.length) return h + '<p>La cartera actual ya coincide con la propuesta: no hacen falta traspasos.</p></section>';
-    h += '<div class="table-wrap"><table><thead><tr><th scope="col">Nº</th><th scope="col">Traspasar desde</th><th scope="col">Participaciones</th><th scope="col">Importe aprox.</th><th scope="col">Hacia</th><th scope="col">Tipo</th></tr></thead><tbody>' +
+    h += '<div class="table-wrap"><table class="trtab"><thead><tr><th scope="col">Nº</th><th scope="col">Traspasar desde</th><th scope="col">Participaciones</th><th scope="col">Importe aprox.</th><th scope="col">Hacia</th><th scope="col">Tipo</th></tr></thead><tbody>' +
       rows.map(function (r, i) { return "<tr><td>" + (i + 1) + '</td><td class="fund"><b>' + esc(r.from) + '</b></td><td class="num">' + (r.units === null ? "n.d." : nf(r.units, r.units % 1 ? 2 : 0)) + '</td><td class="num">' + nf(r.amt, 0) + ' €</td><td class="fund"><b>' + esc(r.to) + "</b></td><td>" + r.kind + "</td></tr>"; }).join("") +
       '</tbody><tfoot><tr><td></td><td><b>Total movido</b></td><td></td><td class="num">' + nf(moved, 0) + " €</td><td>" + nf(tot ? moved / tot * 100 : 0, 0) + "% de la cartera</td><td></td></tr></tfoot></table></div>" +
       '<p class="note">Los traspasos se indican por participaciones, y por la totalidad de las participaciones cuando se sale del fondo, para que las operaciones cuadren. Los importes son aproximados al último valor liquidativo disponible; la ejecución se hace al valor liquidativo del día de la operación, así que conviene recalcular el día antes. Pendiente de revisar con el cliente: si cada traspaso mantiene el diferimiento fiscal (sobre todo en fondos extranjeros), comisiones de reembolso, importes mínimos y plusvalías latentes. "n.d." indica que falta el valor liquidativo o las participaciones del fondo.</p></section>';
@@ -3091,7 +3091,7 @@
       var b = document.getElementById("stbody");
       b.innerHTML = list.length ? '<div class="table-wrap"><table><thead><tr>' + th("n", "Stock") + th("g", "Grupo industrial") + STCOLS.map(function (c) { return th(c[0], c[1]); }).join("") + th("f", "Ficha") + "</tr></thead><tbody>" +
         list.map(function (s) {
-          return '<tr data-t="' + esc(s.t) + '" tabindex="0"><td class="fund">' + stockLogo(s) + '<span class="ftxt"><b>' + esc(s.t) + "</b><small>" + esc(s.n) + '</small></span></td><td class="muted">' + esc(s.g || "–") + "</td>" + STCOLS.map(function (c) { return "<td>" + rcell(c[0], s[c[0]]) + "</td>"; }).join("") + '<td class="muted">' + esc(s.f || "–") + "</td></tr>";
+          return '<tr data-t="' + esc(s.t) + '" tabindex="0"><td class="fund"><div class="fw">' + stockLogo(s) + '<span class="ftxt"><b>' + esc(s.t) + "</b><small>" + esc(s.n) + '</small></span></div></td><td class="muted">' + esc(s.g || "–") + "</td>" + STCOLS.map(function (c) { return "<td>" + rcell(c[0], s[c[0]]) + "</td>"; }).join("") + '<td class="muted">' + esc(s.f || "–") + "</td></tr>";
         }).join("") + "</tbody></table></div>" : '<div class="table-wrap"><div class="empty">Sin resultados</div></div>';
       b.querySelectorAll("[data-ss]").forEach(function (x) { x.addEventListener("click", function () { var k = x.getAttribute("data-ss"); if (ST.sort === k) ST.dir = -ST.dir; else { ST.sort = k; ST.dir = k === "n" || k === "g" ? 1 : -1; } draw(); }); });
       b.querySelectorAll("tbody tr").forEach(function (tr) { function go() { location.hash = "#/accion/" + encodeURIComponent(tr.getAttribute("data-t")); } tr.addEventListener("click", go); tr.addEventListener("keydown", function (e) { if (e.key === "Enter") go(); }); });
@@ -3228,7 +3228,7 @@
       h += '<h2 class="sec">' + g[1] + ' <small class="muted">' + items.length + ' fondos</small></h2><div class="table-wrap"><table class="es2t2"><thead><tr><th scope="col">Fondo</th><th scope="col">Sigma ' + esc(P[1].toLowerCase()) + '</th><th scope="col">' + esc(P[1]) + '</th><th scope="col">Frente a su categoría</th><th scope="col">Día</th><th scope="col">Semana</th><th scope="col">Mes</th><th scope="col">3 meses</th></tr></thead><tbody>' +
         items.map(function (x) {
           var f = x.f;
-          return '<tr data-id="' + esc(f.id) + '" tabindex="0"><td class="fund"><span class="flogo" aria-hidden="true">' + logoOrInit(f.g) + '</span><span class="ftxt"><b>' + esc(f.n) + "</b><small>" + esc(f.g) + (f.c ? " · " + esc(f.c) : "") + vlTag(f) + "</small></span></td>" +
+          return '<tr data-id="' + esc(f.id) + '" tabindex="0"><td class="fund"><div class="fw"><span class="flogo" aria-hidden="true">' + logoOrInit(f.g) + '</span><span class="ftxt"><b>' + esc(f.n) + "</b><small>" + esc(f.g) + (f.c ? " · " + esc(f.c) : "") + vlTag(f) + "</small></span></div></td>" +
             "<td>" + sg(x.s) + "</td><td>" + ret(x.r) + "</td><td>" + (x.rel === null ? '<span class="muted">–</span>' : '<span class="num ' + (x.rel < 0 ? "neg" : x.rel > 0 ? "pos" : "") + '">' + (x.rel > 0 ? "+" : x.rel < 0 ? "−" : "") + nf(Math.abs(x.rel), 1) + " pp</span>") + "</td>" +
             ESP.map(function (p) { return "<td>" + sg(esSig(f, p)) + "</td>"; }).join("") + "</tr>";
         }).join("") + "</tbody></table></div>";

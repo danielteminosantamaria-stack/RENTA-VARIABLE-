@@ -50,8 +50,11 @@ const srv = http.createServer((q, r) => {
           const x0 = cell.getBoundingClientRect().left; sc.scrollLeft = 200;
           const moved = x0 - cell.getBoundingClientRect().left, wdt = cell.offsetWidth; sc.scrollLeft = 0;
           if (moved > 30) out.loose.push(name + " (columna sin fijar)");
+          else if (getComputedStyle(cell).position === "sticky" && getComputedStyle(cell).display !== "table-cell") out.loose.push(name + " (la celda fija no es una celda de tabla: falla en iPhone)");
           else if (wdt > sc.clientWidth * 0.62) out.loose.push(name + " (columna fija demasiado ancha: " + wdt + " de " + sc.clientWidth + ")");
         });
+        const cmp = document.querySelector("#app .cmpx");
+        if (cmp && cmp.scrollWidth > cmp.clientWidth + 2) out.loose.push("el comparador no cabe en la pantalla");
         return out;
       });
       const bad = [];
