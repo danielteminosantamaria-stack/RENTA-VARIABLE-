@@ -441,7 +441,7 @@
   var NAV = [
     [/amplitud/, "#/amplitud", "Amplitud de mercado (privado)"], [/renta fija|\brf\b/, "#/rf", "Renta fija"], [/renta variable|\brv\b/, "#/rv", "Renta variable"],
     [/stocks|acciones|stock/, "#/acciones", "Stocks"], [/carteras?\b/, "#/carteras", "Carteras"], [/comparador/, "#/comparar", "Comparador"],
-    [/construir/, "#/construir", "Construir cartera (privado)"], [/estado/, "#/estado", "Estado"],
+    [/construir/, "#/construir", "Construir cartera"], [/estado/, "#/estado", "Estado"],
     [/nota/, "#/nota", "Nota diaria"], [/agenda/, "#/agenda", "Agenda"], [/gestion/, "#/gestion", "Gestión"], [/newsletter|suscrib|boletin/, "#/newsletter", "Newsletter"], [/privacidad/, "#/privacidad", "Política de privacidad"], [/inicio|principal|home/, "#/", "Inicio"]
   ];
 

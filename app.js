@@ -583,7 +583,7 @@
       var yv = years.filter(function (y) { return isNum(y[1]); }).reverse(), CW = 560, CH = 290, cb = 190, cmax = Math.max.apply(null, yv.map(function (y) { return Math.abs(y[1]); })) || 1, cneg = yv.some(function (y) { return y[1] < 0; }), base = cneg ? 150 : 215, ph = cneg ? 115 : 185, cwd = (CW - 20) / yv.length;
       TB.res += '<section class="block"><h3>Rentabilidad por año</h3><svg viewBox="0 0 ' + CW + " " + (CH + 10) + '" width="100%" role="img" aria-label="Rentabilidad por año"><line x1="10" x2="' + (CW - 10) + '" y1="' + base + '" y2="' + base + '" stroke="#bbb"/>' + yv.map(function (y, k) {
         var h = Math.max(2, Math.abs(y[1]) / cmax * ph), x = 10 + k * cwd + cwd * 0.18, w = cwd * 0.64, up = y[1] >= 0;
-        return '<rect x="' + x.toFixed(1) + '" y="' + (up ? base - h : base).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="3" fill="' + (up ? "#1e7a4a" : "#b3261e") + '"/>' +
+        return '<rect x="' + x.toFixed(1) + '" y="' + (up ? base - h : base).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="3" fill="' + (up ? "#1e7a4a" : "#a9a4b0") + '"/>' +
           '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (up ? base - h - 6 : base + h + 14).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#222">' + nf(y[1], 1) + "%</text>" +
           '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (CH - 2) + '" text-anchor="middle" font-size="11" fill="#666">' + esc(String(y[0]).replace(/ \(.*$/, "*")) + "</text>";
       }).join("") + '</svg><p class="note">* Año en curso hasta ' + esc(String(f.nd || "").slice(0, 5)) + ".</p></section>";
@@ -675,7 +675,7 @@
       });
     });
     var ft = document.getElementById("fundtools");
-    if (ft) { if (unlocked()) ft.appendChild(mailBtn(function () { return fundMail(f); })); ft.appendChild(deckBtn(function () { deckFund(f); })); }
+    if (ft) { ft.appendChild(mailBtn(function () { return fundMail(f); })); ft.appendChild(deckBtn(function () { deckFund(f); })); }
     var apb = document.getElementById("addpfBtn");
     if (apb) apb.addEventListener("click", function () {
       var p = pfById(document.getElementById("addpf").value);
@@ -887,7 +887,7 @@
     return { subject: "Propuesta de cartera: " + (name || ""), body: mailClean(L.join("\n")) + MAIL_PIE, chart: function () { return mcPf(name, amount, fs.filter(function (x) { return x.l.w > 0; }), tw, rfW); } };
   }
   /* ---- Gráficos para los correos ---- */
-  var MC = { br: "#a3173f", bl: "#2a5ca8", ink: "#1c1c26", mut: "#717171", trk: "#ece8ea", pos: "#1f7a4d", neg: "#a3173f", line: "#e3dfe1" };
+  var MC = { br: "#a3173f", bl: "#2a5ca8", ink: "#1c1c26", mut: "#717171", trk: "#ece8ea", pos: "#1f7a4d", neg: "#8a8590", line: "#e3dfe1" };
   function mcCanvas(h) { var c = document.createElement("canvas"); c.width = 1200; c.height = h; var g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, 1200, h); return [c, g]; }
   function mcRR(g, x, y, w, h, r) { r = Math.min(r, h / 2, w / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
   function mcTitle(g, t, sub) {
@@ -1139,7 +1139,7 @@
     fs.forEach(function (x) { if (isNum(x.f.ret.y1)) mx = Math.max(mx, Math.abs(x.f.ret.y1)); });
     var bars = fs.map(function (x) {
       var y1 = x.f.ret.y1, v1 = x.f.vol && x.f.vol[0];
-      return '<div class="dk-br"><span>' + esc(x.f.n) + '</span><div><i style="width:' + (isNum(y1) ? Math.max(2, Math.abs(y1) / mx * 100) : 0) + "%;background:" + (isNum(y1) && y1 < 0 ? "#a3173f" : "#1f7a4d") + '"></i></div><b>' + dkp(y1) + "</b><em>vol. " + dkp(v1) + "</em></div>";
+      return '<div class="dk-br"><span>' + esc(x.f.n) + '</span><div><i style="width:' + (isNum(y1) ? Math.max(2, Math.abs(y1) / mx * 100) : 0) + "%;background:" + (isNum(y1) && y1 < 0 ? "#8a8590" : "#1f7a4d") + '"></i></div><b>' + dkp(y1) + "</b><em>vol. " + dkp(v1) + "</em></div>";
     }).join("");
     S.push(dkSlide("Rentabilidad y riesgo", "Medias ponderadas por el peso de cada fondo",
       '<div class="dk-kpis" style="grid-template-columns:repeat(5,1fr)">' + dkKpi("En el año", dkp(a), a < 0) + dkKpi("Último año", dkp(b), b < 0) + dkKpi("3 años anual", dkp(c3), c3 < 0) + dkKpi("Volatilidad", dkp(v)) + dkKpi("Sharpe", isNum(sh) ? nf(sh, 2) : "n.d.") + "</div>" +
@@ -1156,7 +1156,7 @@
     yrs.forEach(function (o) { mxv = Math.max(mxv, Math.abs(o.v)); });
     S.push(dkSlide(f.n, "ISIN " + f.id + " · " + f.g + " · " + f.c,
       '<div class="dk-kpis">' + dkKpi("En el año", dkp(r.ytd), r.ytd < 0) + dkKpi("Último año", dkp(r.y1), r.y1 < 0) + dkKpi("3 años anual", dkp(r.y3), r.y3 < 0) + dkKpi("5 años anual", dkp(r.y5), r.y5 < 0) + dkKpi("Volatilidad", dkp(v1)) + dkKpi("Sharpe", isNum(sh) ? nf(sh, 2) : "n.d.") + "</div>" +
-      '<div class="dk-two"><div class="dk-l"><h4 class="dk-h4">Año a año</h4>' + yrs.map(function (o) { return '<div class="dk-br"><span>' + o.y + '</span><div><i style="width:' + Math.max(2, Math.abs(o.v) / mxv * 100) + "%;background:" + (o.v < 0 ? "#a3173f" : "#1f7a4d") + '"></i></div><b>' + dkp(o.v) + "</b></div>"; }).join("") +
+      '<div class="dk-two"><div class="dk-l"><h4 class="dk-h4">Año a año</h4>' + yrs.map(function (o) { return '<div class="dk-br"><span>' + o.y + '</span><div><i style="width:' + Math.max(2, Math.abs(o.v) / mxv * 100) + "%;background:" + (o.v < 0 ? "#8a8590" : "#1f7a4d") + '"></i></div><b>' + dkp(o.v) + "</b></div>"; }).join("") +
       '</div><div class="dk-r"><div class="dk-card dk-one"><h3>Ideas clave</h3>' + dkIdeas(f).map(function (t) { return "<p><i>" + t[0] + "</i>" + esc(t[1]) + "</p>"; }).join("") + "</div></div></div>", 2));
     dkPrint(S.join(""));
   }
@@ -1755,7 +1755,7 @@
       return mailOfChange() ? chMail(name, p) : pfMail(name, am && am.value ? +am.value : 0, p.lines);
     });
     function mailOfChange() { return tab === "cmb" && !!p.base && sumW(p) > 0 && pfChanged(pfDiff(p)).length > 0; }
-    var slot = document.getElementById("pfpdfslot"); slot.replaceWith(pdfb); if (unlocked()) pdfb.parentNode.insertBefore(mailb, pdfb);
+    var slot = document.getElementById("pfpdfslot"); slot.replaceWith(pdfb); pdfb.parentNode.insertBefore(mailb, pdfb);
     function save() { savePf(); }
     var tab = "car";
     function drawChanges() {
@@ -2249,7 +2249,7 @@
       var yW = 560, yH = 250, ymax = Math.max.apply(null, yrs.map(function (x) { return Math.abs(x[1]); })) || 1, yneg = yrs.some(function (x) { return x[1] < 0; }), yb = yneg ? 130 : 190, yph = yneg ? 96 : 150, ycw = (yW - 20) / yrs.length;
       h += '<section class="block"><h3>Rentabilidad por año</h3><svg viewBox="0 0 ' + yW + " " + yH + '" width="100%" role="img" aria-label="Rentabilidad por año de la cartera"><line x1="10" x2="' + (yW - 10) + '" y1="' + yb + '" y2="' + yb + '" stroke="#bbb"/>' + yrs.map(function (y, k) {
         var hh = Math.max(2, Math.abs(y[1]) / ymax * yph), x = 10 + k * ycw + ycw * 0.18, w = ycw * 0.64, up = y[1] >= 0;
-        return '<rect x="' + x.toFixed(1) + '" y="' + (up ? yb - hh : yb).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + hh.toFixed(1) + '" rx="3" fill="' + (up ? "#1e7a4a" : "#b3261e") + '"/>' +
+        return '<rect x="' + x.toFixed(1) + '" y="' + (up ? yb - hh : yb).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + hh.toFixed(1) + '" rx="3" fill="' + (up ? "#1e7a4a" : "#a9a4b0") + '"/>' +
           '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (up ? yb - hh - 6 : yb + hh + 14).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#222">' + nf(y[1], 1) + "%</text>" +
           '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (yH - 6) + '" text-anchor="middle" font-size="11" fill="#666">' + esc(String(y[0]).replace(/ \(.*$/, "*")) + "</text>";
       }).join("") + '</svg><p class="note">Solo años en los que todos los fondos tienen dato. * Año en curso.</p></section>';
@@ -3423,37 +3423,6 @@
   }
   if (window.MutationObserver) new MutationObserver(decorate).observe(app, { childList: true });
 
-  // ---------- acceso privado (contraseña) ----------
-  var LOCK = { salt: "ec5a57c6e2be789b", hash: "e906eba26cf1faf0dcf2cda16ab9de1bd6b1f1d5ea178b80ed5966c6305b090b", key: "cf_unlock" };
-  function sha(txt) {
-    var enc = new TextEncoder().encode(txt);
-    return crypto.subtle.digest("SHA-256", enc).then(function (b) {
-      return Array.prototype.map.call(new Uint8Array(b), function (x) { return ("0" + x.toString(16)).slice(-2); }).join("");
-    });
-  }
-  function unlocked() { try { return localStorage.getItem(LOCK.key) === LOCK.hash; } catch (e) { return false; } }
-  function gate(id, title, view) {
-    if (unlocked()) return view();
-    setTitle(title);
-    app.innerHTML = '<header class="phero"><h1>' + esc(title) + '</h1><p class="sub">Apartado privado. Introduce la contraseña para usarlo.</p></header>' +
-      '<form class="lockbox" id="lockf"><label class="muted" for="lockpw">Contraseña</label><input id="lockpw" type="password" autocomplete="current-password" autofocus>' +
-      '<button type="submit" class="btn primary">Desbloquear</button><p class="lockerr" id="lockerr" hidden>Contraseña incorrecta</p></form>' + footer("rv");
-    document.getElementById("lockf").addEventListener("submit", function (e) {
-      e.preventDefault();
-      sha(LOCK.salt + document.getElementById("lockpw").value).then(function (h) {
-        if (h === LOCK.hash) { try { localStorage.setItem(LOCK.key, h); } catch (x) { /* sin almacenamiento */ } route(); setNav(); }
-        else document.getElementById("lockerr").hidden = false;
-      });
-    });
-  }
-  function setNav() { /* el menú no cambia */ }
-  function viewAcceso() {
-    setTitle("Acceso privado");
-    app.innerHTML = '<div class="topbar"><a href="#/">← Inicio</a></div><header class="phero"><h1>Acceso privado activo</h1><p class="sub">En este navegador tienes desbloqueadas las funciones privadas (por ejemplo, el botón Correo en fondos y carteras, Construir cartera y la revisión de cartera). Los demás visitantes no las ven.</p></header>' +
-      '<div class="row tools2"><button type="button" class="btn ghost" id="privout">Cerrar acceso privado</button></div>' + footer("rv");
-    document.getElementById("privout").addEventListener("click", function () { try { localStorage.removeItem(LOCK.key); } catch (e) { /* sin almacenamiento */ } location.hash = "#/"; route(); });
-  }
-
   // ---------- ETF: seguimiento y caídas (privado) ----------
   function viewETF() {
     setTitle("ETF");
@@ -3680,12 +3649,12 @@
     if (p[0] === "macro") return viewMacro();
     if (p[0] === "accion" && p[1]) return viewStock(decodeURIComponent(p[1]));
     if (p[0] === "gestora" && p[1] && window.BUSCA) return window.BUSCA.gestora(app, setTitle, decodeURIComponent(p[1]));
-    if (p[0] === "acceso") return gate("acceso", "Acceso privado", viewAcceso);
+    if (p[0] === "acceso") { location.replace("#/"); return; }
     if (p[0] === "amplitud") return viewAmplitud();
     if (p[0] === "gestion") return viewGestion();
     if (p[0] === "newsletter" && window.NEWSLETTER) return window.NEWSLETTER.view(app, setTitle);
     if (p[0] === "privacidad" && window.NEWSLETTER) return window.NEWSLETTER.privacy(app, setTitle);
-    if (p[0] === "construir") return gate("construir", "Construir cartera", viewBuild);
+    if (p[0] === "construir") return viewBuild();
     if (p[0] === "categorias") { location.replace("#/"); return; }
     if (p[0] === "cartera" && p[1]) return viewPortfolio(decodeURIComponent(p[1]));
     return viewNotFound();
