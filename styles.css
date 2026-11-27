@@ -1857,3 +1857,14 @@ a.fchip { color: var(--brand); }
 .cm-sec h4 { margin: 0 0 3px; font-size: 12px; letter-spacing: .07em; text-transform: uppercase; color: #a3173f; }
 .cm-sec:nth-child(n+4) h4 { color: #2a5ca8; }
 .cm-sec p { margin: 0; line-height: 1.6; font-size: 14px; color: #33303a; }
+
+/* comentarios al estilo de la ficha */
+.fundpg .comment { background: none; border: 0; box-shadow: none; padding: 0; margin: 0; border-radius: 0; }
+.fundpg .comment .cm-h { margin: 0 0 4px; font-size: 13px; color: var(--muted); }
+.fundpg .comment .cm-h b { color: #1c1c26; }
+.fundpg .cm-secs { display: block; margin-top: 0; }
+.fundpg .cm-sec { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 4px 18px; background: none; border: 0; border-bottom: 1px solid #ece8ea; border-radius: 0; padding: 14px 0; }
+.fundpg .cm-sec h4, .fundpg .cm-sec:nth-child(n+4) h4 { margin: 2px 0 0; font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; color: #6a6470; }
+.fundpg .cm-sec p { font-size: 14px; line-height: 1.65; color: #1c1c26; }
+.fundpg .cm-sec:nth-child(n+4) { background: none; border-left: 0; }
+@media (max-width: 760px) { .fundpg .cm-sec { grid-template-columns: 1fr; } }
