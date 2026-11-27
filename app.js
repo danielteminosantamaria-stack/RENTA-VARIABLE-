@@ -3391,9 +3391,9 @@
     }
     decorating = true;
     try {
-      if (fh) { fh.classList.add("phero"); return; }
+      if (fh) { fh.classList.add("phero"); fh.setAttribute("data-r", (location.hash.split("/")[1] || "").split("?")[0]); return; }
       if (!h1) return;
-      var w = document.createElement("header"); w.className = "phero";
+      var w = document.createElement("header"); w.className = "phero"; w.setAttribute("data-r", (location.hash.split("/")[1] || "").split("?")[0]);
       app.insertBefore(w, h1); w.appendChild(h1);
       while (w.nextElementSibling && w.nextElementSibling.matches("p.sub, .sel")) w.appendChild(w.nextElementSibling);
     } finally { decorating = false; }
