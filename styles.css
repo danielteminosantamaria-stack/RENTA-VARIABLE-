@@ -2032,3 +2032,10 @@ a.fchip { color: var(--brand); }
 .phero::before { display: none !important; }
 .phero { border-left: 0 !important; }
 .phero > h1::before, .phero h1::before { display: none !important; content: none !important; }
+/* macro sin acentos rojos */
+.mxcard, .mxcard.mx-inf, .mxcard.mx-tip, .mxcard.mx-bon, .mxcard.mx-act { border-left: 1px solid var(--line) !important; border-top: 2px solid #1c1c26 !important; }
+.mxtile, .mxtile::before, .mxtop .mxtile { border-top: 1px solid var(--line) !important; background-image: none !important; }
+.mxtile::before { display: none !important; }
+.mxtile { background: #fff !important; border: 1px solid var(--line) !important; border-radius: 12px !important; }
+.mxtop .mxtile, .mxtop .mxtile:has(.mxd.s1), .mxtop .mxtile:has(.mxd.s-1) { border-top: 1px solid var(--line) !important; }
+.sec::before, h2.sec::before { background: #1c1c26 !important; }
