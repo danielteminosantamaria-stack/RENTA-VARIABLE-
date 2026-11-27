@@ -2316,3 +2316,6 @@ a.fchip { color: var(--brand); }
   .table-wrap table.bft:not(.bfr) td.mst, .table-wrap table.bft:not(.bfr) td.mst * { font-size: 10px; letter-spacing: 0; }
   .table-wrap table.bft:not(.bfr) thead th { font-size: 11px; text-transform: none; letter-spacing: 0; }
 }
+/* sin degradado rojo y dorado en las tarjetas KPI de toda la web */
+.kpis > .kpi, .kpis .kpi { border-top: 2px solid #1c1c26 !important; }
+.kpis > .kpi::before, .kpis .kpi::before, .kpis > .kpi::after, .kpis .kpi::after { background: none !important; background-image: none !important; display: none !important; }
