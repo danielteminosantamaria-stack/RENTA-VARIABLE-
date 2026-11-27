@@ -3174,7 +3174,7 @@
     var tk = []; for (var t = -Math.floor(M); t <= Math.floor(M); t++) tk.push('<text x="' + px(t).toFixed(1) + '" y="70" text-anchor="middle" font-size="10" fill="#888">' + (t > 0 ? "+" : "") + t + "</text>");
     var md = esMed(v);
     return '<svg class="esdist" viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" aria-label="Distribución de sigmas de los fondos">' +
-      '<rect x="10" y="12" width="' + (px(-SIG_MIN) - 10).toFixed(1) + '" height="40" fill="#b3283d" fill-opacity=".08"/><rect x="' + px(SIG_MIN).toFixed(1) + '" y="12" width="' + (W - 10 - px(SIG_MIN)).toFixed(1) + '" height="40" fill="#1f7a4d" fill-opacity=".08"/>' +
+      '<rect x="10" y="12" width="' + (px(-SIG_MIN) - 10).toFixed(1) + '" height="40" fill="#8a8490" fill-opacity=".08"/><rect x="' + px(SIG_MIN).toFixed(1) + '" y="12" width="' + (W - 10 - px(SIG_MIN)).toFixed(1) + '" height="40" fill="#8a8490" fill-opacity=".08"/>' +
       '<line x1="10" x2="' + (W - 10) + '" y1="52" y2="52" stroke="#d9d3d7"/><line x1="' + px(0) + '" x2="' + px(0) + '" y1="12" y2="52" stroke="#bbb" stroke-dasharray="3 3"/>' + dots +
       '<path d="M' + px(md).toFixed(1) + ' 8 l-4 -7 h8z" fill="#1c1c26"/>' + tk.join("") + "</svg>";
   }
