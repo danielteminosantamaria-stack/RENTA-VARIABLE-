@@ -1962,3 +1962,13 @@ a.fchip { color: var(--brand); }
 .es2leg .a { background: #c9c4cb; } .es2leg .b { background: #8a8490; } .es2leg .c { background: #1c1c26; }
 .es2legn { color: #8a8490; margin-left: auto; }
 .es2sum .esdist { margin-bottom: 4px; }
+
+/* estado de fondos: mismo estilo que las listas de fondos */
+.es2sel { gap: 10px; margin: 14px 0 6px; align-items: center; }
+.es2sel label { color: var(--muted); font-size: 13px; }
+.es2kp { margin: 10px 0 6px; }
+.es2t2 td, .es2t2 th { white-space: nowrap; }
+.es2t2 td.fund { white-space: normal; min-width: 280px; }
+.es2t2 tbody tr { cursor: pointer; }
+.es2t2 .num.neg { color: #b3283d; } .es2t2 .num.pos { color: #1f7a4d; }
+.es2t2 .sgx { font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }

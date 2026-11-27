@@ -3189,16 +3189,12 @@
     var ctx = !tot ? "" : gen
       ? "Movimiento generalizado: " + Math.max(dn, up) + " de " + tot + " fondos se mueven a la vez, así que la señal es de mercado. Para ver qué fondos se desvían de verdad, mira la columna «Frente a su categoría»."
       : (dn + up ? "Movimiento selectivo: solo " + (dn + up) + " de " + tot + " fondos se salen de lo normal, y merecen revisión individual." : "Sin movimientos fuera de lo normal en este periodo.");
-    h += '<div class="es2t"><div class="es2pills" role="tablist">' + ESP.map(function (p) { return '<button type="button" class="es2p' + (p[0] === ESS2.p ? " on" : "") + '" data-p="' + p[0] + '">' + p[1] + "</button>"; }).join("") + "</div>" +
-      '<label for="estipo">Tipo</label><select id="estipo" class="inp">' + [["rv", "Renta variable"], ["rf", "Renta fija"], ["all", "Todos"]].map(function (o) { return '<option value="' + o[0] + '"' + (ESS2.t === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select>" +
+    h += '<div class="chips cats es2chips">' + ESP.map(function (p) { return '<button type="button" class="chip es2p" aria-pressed="' + (p[0] === ESS2.p ? "true" : "false") + '" data-p="' + p[0] + '">' + p[1] + "</button>"; }).join("") +
+      '</div><div class="row es2sel"><label for="estipo">Tipo</label><select id="estipo" class="inp">' + [["rv", "Renta variable"], ["rf", "Renta fija"], ["all", "Todos"]].map(function (o) { return '<option value="' + o[0] + '"' + (ESS2.t === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select>" +
       '<label for="esord">Ordenar</label><select id="esord" class="inp">' + [["dn", "Mayores caídas"], ["up", "Mayores subidas"], ["rel", "Más lejos de su categoría"], ["n", "Nombre"]].map(function (o) { return '<option value="' + o[0] + '"' + (ESS2.o === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></div>";
-    function seg(c, k) { return k ? '<i class="' + c + '" style="flex:' + k + '"></i>' : ""; }
-    h += '<div class="es2sum"><div class="es2k"><span>Mediana de los fondos</span><b class="' + (med < 0 ? "dn" : "up") + '">' + esPc(med) + "</b><em>" + P[1].toLowerCase() + "</em></div>" +
-      '<div class="es2k"><span>Caídas poco comunes</span><b class="dn">' + dn + '</b><em>de ' + tot + " fondos</em></div>" +
-      '<div class="es2k"><span>Subidas poco comunes</span><b class="up">' + up + '</b><em>de ' + tot + " fondos</em></div>" +
-      '<div class="es2m">' + esDist(rows) + "<p>" + esc(ctx) + "</p></div></div>";
-    h += '<div class="es2leg"><b>Cómo leerlo</b><span><i class="a"></i>Menos de 1,5 sigmas: movimiento normal</span><span><i class="b"></i>De 1,5 a ' + nf(SIG_MIN, 1) + ': notable</span><span><i class="c"></i>' + nf(SIG_MIN, 1) + ' o más: poco común, merece revisión</span><span class="es2legn">La barra sale a la izquierda si el fondo cae y a la derecha si sube.</span></div>';
-    var max = Math.max(SIG_MIN + 1, Math.ceil(Math.max.apply(null, [0].concat(rows.map(function (x) { return Math.abs(x.s || 0); })))));
+    h += '<div class="kpis es2kp">' + kpi("Mediana de los fondos (" + P[1].toLowerCase() + ")", ret(med)) + kpi("Caídas poco comunes", dn + " de " + tot) + kpi("Subidas poco comunes", up + " de " + tot) + kpi("Fondos analizados", String(tot)) + "</div>";
+    h += '<p class="note">' + esc(ctx) + ' Sigma: movimiento del periodo frente a la volatilidad habitual del fondo (a 3 años). Menos de 1,5 es normal, de 1,5 a ' + nf(SIG_MIN, 1) + ' es notable y ' + nf(SIG_MIN, 1) + " o más es poco común.</p>";
+    function sg(n) { return n === null ? '<span class="muted">–</span>' : '<span class="num ' + (n < 0 ? "neg" : n > 0 ? "pos" : "") + (Math.abs(n) >= SIG_MIN ? " sgx" : "") + '">' + esSg(n) + "</span>"; }
     [["rv", "Renta variable"], ["rf", "Renta fija"]].filter(function (g) { return ESS2.t === "all" || ESS2.t === g[0]; }).forEach(function (g) {
       var items = rows.filter(function (x) { return x.f.t === g[0]; });
       items.sort(function (a, b) {
@@ -3207,17 +3203,18 @@
         if (x === null && y === null) return 0; if (x === null) return 1; if (y === null) return -1;
         return ESS2.o === "up" ? y - x : ESS2.o === "rel" ? Math.abs(y) - Math.abs(x) : x - y;
       });
-      h += '<h2 class="sec">' + g[1] + ' <small class="muted">' + items.length + " fondos</small></h2><div class=\"es2l\"><div class=\"es2h\"><span>Fondo</span><span>" + P[1] + " (sigmas)</span><span>Frente a su categoría</span><span>Día, semana, mes, 3 meses</span></div>" + items.map(function (x) {
-        var f = x.f, s = x.s, big = s !== null && Math.abs(s) >= SIG_MIN, w = s === null ? 0 : Math.min(Math.abs(s), max) / max * 50;
-        var chips = ESP.map(function (p) { var q = esSig(f, p); return '<span class="es2c' + esLvl(q) + (q !== null && q < 0 ? " dn" : " up") + '" title="' + p[1] + ": " + esPc(f.ret[p[0]]) + (q === null ? "" : " (" + esSg(q) + " sigmas)") + '"><i>' + p[3] + "</i>" + esSg(q) + "</span>"; }).join("");
-        return '<a class="es2r' + (big ? (s < 0 ? " big dn" : " big up") : "") + '" href="#/fondo/' + encodeURIComponent(f.id) + '"><span class="esf"><span class="flogo" aria-hidden="true">' + logoOrInit(f.g) + '</span><span class="ftxt"><b>' + esc(f.n) + "</b><small>" + esc(f.c) + "</small></span></span>" +
-          '<span class="es2b"><span class="es2tr"><em style="left:' + (50 - SIG_MIN / max * 50) + '%"></em><em style="left:' + (50 + SIG_MIN / max * 50) + '%"></em><s></s>' + (s === null ? "" : '<i class="' + (s < 0 ? "dn" : "up") + '" style="' + (s < 0 ? "right" : "left") + ":50%;width:" + w.toFixed(2) + '%"></i>') + '</span><span class="es2n"><b>' + esSg(s) + "</b> sigmas · " + esPc(x.r) + (s === null ? "" : ' <u class="es2v' + (Math.abs(s) >= SIG_MIN ? " x" : Math.abs(s) >= 1.5 ? " m" : "") + '">' + (Math.abs(s) >= SIG_MIN ? "Poco común" : Math.abs(s) >= 1.5 ? "Notable" : "Normal") + "</u>") + "</span></span>" +
-          '<span class="es2rel' + (x.rel === null ? "" : x.rel < 0 ? " dn" : " up") + '">' + (x.rel === null ? "–" : (x.rel > 0 ? "+" : x.rel < 0 ? "−" : "") + nf(Math.abs(x.rel), 1) + " pp") + '</span><span class="es2cs">' + chips + "</span></a>";
-      }).join("") + "</div>";
+      h += '<h2 class="sec">' + g[1] + ' <small class="muted">' + items.length + ' fondos</small></h2><div class="table-wrap"><table class="es2t2"><thead><tr><th scope="col">Fondo</th><th scope="col">Sigma ' + esc(P[1].toLowerCase()) + '</th><th scope="col">' + esc(P[1]) + '</th><th scope="col">Frente a su categoría</th><th scope="col">Día</th><th scope="col">Semana</th><th scope="col">Mes</th><th scope="col">3 meses</th></tr></thead><tbody>' +
+        items.map(function (x) {
+          var f = x.f;
+          return '<tr data-id="' + esc(f.id) + '" tabindex="0"><td class="fund"><span class="flogo" aria-hidden="true">' + logoOrInit(f.g) + '</span><span class="ftxt"><b>' + esc(f.n) + "</b><small>" + esc(f.g) + (f.c ? " · " + esc(f.c) : "") + vlTag(f) + "</small></span></td>" +
+            "<td>" + sg(x.s) + "</td><td>" + ret(x.r) + "</td><td>" + (x.rel === null ? '<span class="muted">–</span>' : '<span class="num ' + (x.rel < 0 ? "neg" : x.rel > 0 ? "pos" : "") + '">' + (x.rel > 0 ? "+" : x.rel < 0 ? "−" : "") + nf(Math.abs(x.rel), 1) + " pp</span>") + "</td>" +
+            ESP.map(function (p) { return "<td>" + sg(esSig(f, p)) + "</td>"; }).join("") + "</tr>";
+        }).join("") + "</tbody></table></div>";
     });
     if (E.resumen) h += '<div class="box" style="margin-top:18px;padding:16px 18px"><h2 style="margin:0 0 6px;font-size:1.05rem">Resumen del informe semanal (' + esc(E.fecha || "") + ")</h2><p class=\"stxt\">" + esc(E.resumen) + "</p></div>";
     h += '<p class="note">La sigma divide la rentabilidad del periodo entre la volatilidad a 3 años del fondo ajustada a ese periodo. «Frente a su categoría» resta la mediana de los fondos de la misma categoría de esta web (solo si hay 3 o más). Se recalcula con cada actualización de datos.</p>';
     app.innerHTML = h + footer("rv");
+    Array.prototype.forEach.call(document.querySelectorAll(".es2t2 tbody tr"), function (tr) { function go() { location.hash = "#/fondo/" + encodeURIComponent(tr.getAttribute("data-id")); } tr.addEventListener("click", go); tr.addEventListener("keydown", function (e) { if (e.key === "Enter") go(); }); });
     document.getElementById("estipo").addEventListener("change", function (e) { ESS2.t = e.target.value; viewEstado(); });
     document.getElementById("esord").addEventListener("change", function (e) { ESS2.o = e.target.value; viewEstado(); });
     Array.prototype.forEach.call(document.querySelectorAll(".es2p"), function (b) { b.addEventListener("click", function () { ESS2.p = b.getAttribute("data-p"); viewEstado(); }); });
