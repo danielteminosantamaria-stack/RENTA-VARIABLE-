@@ -2218,3 +2218,10 @@ a.fchip { color: var(--brand); }
 /* resumen de Construir cartera igual que la ficha de fondo (con sitio para nombres de categoría largos) */
 .bpage #bsum .fundpg .bar { grid-template-columns: minmax(140px, 230px) 1fr 64px; }
 @media (max-width: 760px) { .bpage #bsum .fundpg .bar { grid-template-columns: minmax(96px, 130px) 1fr 52px; gap: 8px; font-size: 12.5px; } }
+/* algo de color en la cabecera de Construir cartera, con los mismos tonos que los gráficos de la ficha */
+.bpage .bband .g-rf { --gc: #a3173f; } .bpage .bband .g-alt { --gc: #d99a00; } .bpage .bband .g-rv { --gc: #2a5ca8; }
+.bpage .bband .btl b { color: var(--gc); }
+.bpage .bband .btl small::before { width: 10px; height: 10px; }
+.bpage .bband .stack { height: 10px; border-radius: 5px; }
+.bpage .bband .okt { color: var(--pos); font-weight: 600; }
+.bpage .bhead { border-top: 3px solid var(--brand) !important; }
