@@ -2103,7 +2103,12 @@ a.fchip { color: var(--brand); }
 #app:has(> .hero){padding-top:0!important}
 .hero.vis{margin-top:0!important}
 /* móvil: menú en una línea, categorías en desplegable y tablas deslizables */
-.mbtn, .catsel { display: none; }
+.mbtn { display: none; }
+.catsel { display: flex; align-items: center; gap: 10px; max-width: 520px; margin: 16px 0 12px; font-size: 13px; font-weight: 600; }
+.catsel select { flex: 1; min-width: 0; font: inherit; font-size: 16px; font-weight: 600; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: #fff; color: var(--text); cursor: pointer; }
+.catsel select:hover { border-color: var(--brand); }
+@media (max-width: 760px) { .catsel { margin-top: 0; max-width: none; } }
+@media print { .catsel { display: none; } }
 @media screen and (max-width: 760px) {
   .site .sbar .in { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0 8px; height: auto; padding: 0 16px; }
   .site .logo { order: 1; padding: 14px 0; }
@@ -2118,9 +2123,6 @@ a.fchip { color: var(--brand); }
   .site nav summary { display: none; }
   .site nav .menu { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; position: static; min-width: 0; border: 0; box-shadow: none; }
   .site nav .menu a { padding: 12px 4px; }
-  .catbar { display: none !important; }
-  .catsel { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; font-size: 13px; font-weight: 600; }
-  .catsel select { flex: 1; min-width: 0; font: inherit; font-size: 16px; font-weight: 600; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: #fff; color: var(--text); }
   .table-wrap { overflow: auto; -webkit-overflow-scrolling: touch; }
   .table-wrap .es2t2 td.fund, .es2t2 td.fund { min-width: 170px; max-width: 190px; }
 }

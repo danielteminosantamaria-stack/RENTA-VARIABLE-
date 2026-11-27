@@ -286,9 +286,6 @@
       '<button type="button" data-view="list" aria-pressed="' + (s.view === "list") + '">Lista</button>' +
       '<button type="button" data-view="chart" aria-pressed="' + (s.view === "chart") + '">Gráfico</button></div>' +
       '<a class="link" href="#/' + t + '/resumen">Visión general</a></div></div>' +
-      '<div class="catbar" role="group" aria-label="Categorías"><button type="button" class="catchip" data-cat="" aria-pressed="' + (!s.cat) + '">Todas <i>' + ofType(t).length + "</i></button>" + cats.map(function (c) {
-        return '<button type="button" class="catchip" data-cat="' + esc(c) + '" aria-pressed="' + (s.cat === c) + '">' + esc(c) + " <i>" + cc[c] + "</i></button>";
-      }).join("") + "</div>" +
       '<label class="catsel"><span class="muted">Categoría</span><select id="catsel"><option value="">Todas (' + ofType(t).length + ")</option>" + cats.map(function (c) {
         return '<option value="' + esc(c) + '"' + (s.cat === c ? " selected" : "") + ">" + esc(c) + " (" + cc[c] + ")</option>";
       }).join("") + "</select></label>" +
@@ -300,13 +297,6 @@
 
     app.querySelectorAll("[data-view]").forEach(function (b) {
       b.addEventListener("click", function () { s.view = b.getAttribute("data-view"); viewList(t); });
-    });
-    app.querySelectorAll(".catchip").forEach(function (b) {
-      b.addEventListener("click", function () {
-        var c = b.getAttribute("data-cat");
-        s.cat = c && s.cat !== c ? c : null;
-        viewList(t);
-      });
     });
     var cs = document.getElementById("catsel");
     cs.addEventListener("change", function () { s.cat = cs.value || null; viewList(t); document.getElementById("catsel").focus(); });
@@ -448,7 +438,7 @@
     g += '<text transform="translate(14 ' + (T + (H - T - B) / 2) + ') rotate(-90)" text-anchor="middle" fill="#717171" font-size="11">' + esc(my.l) + "</text>";
     var fr = [], note = "";
     if (state.front) {
-      if (!state[t].cat) note = "La frontera eficiente solo se calcula dentro de una misma categoría: elige una categoría arriba.";
+      if (!state[t].cat) note = "La frontera eficiente solo se calcula dentro de una misma categoría: elige una categoría en el desplegable de arriba.";
       else if (pts.length < 3) note = "Hay menos de 3 fondos con datos en esta categoría, así que no se dibuja la frontera.";
       else if (mx.g === "Riesgo" && my.g !== "Riesgo") {
         var srt = pts.slice().sort(function (a, b) { return mx.v(a) - mx.v(b) || my.v(b) - my.v(a); }), best = -Infinity;
