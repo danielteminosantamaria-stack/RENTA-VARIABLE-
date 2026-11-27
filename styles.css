@@ -2058,3 +2058,10 @@ a.fchip { color: var(--brand); }
 .amp-lec h3,.amp-card h3{color:#1c1c26!important;border-bottom:1px solid var(--line)!important}
 .kp8{margin-bottom:6px}
 .catbar{margin:16px 0 14px!important}
+/* iconos de portada con color y relleno */
+.tiles .tile:nth-child(n){--c:#a3173f}
+.tiles .tile:nth-child(n) .ico{background:var(--c)!important;color:#fff!important;border-radius:12px!important;box-shadow:0 6px 14px -6px var(--c)!important}
+.tiles .tile:nth-child(n):hover .ico{background:var(--c)!important;filter:brightness(1.1);transform:scale(1.05)!important}
+.tiles .tile:nth-child(n)::before{background:var(--c)!important}
+.tiles .tile:nth-child(n) .arrow{color:var(--c)!important}
+.tiles .tile:nth-child(n):hover{border-color:var(--c)!important}

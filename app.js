@@ -102,7 +102,8 @@
     doc: '<path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/>', cal: '<rect x="3" y="5" width="18" height="16" rx="1"/><path d="M3 10h18M8 3v4M16 3v4"/>'
   };
   function tile(href, ic, small, title, count) {
-    return '<a class="tile" href="' + href + '"><span class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[ic] + '</svg></span>' +
+    var TC = { chart: "#a3173f", trend: "#2a5ca8", pie: "#8a5cc7", swap: "#1d8fb8", brief: "#14a38b", bolt: "#e07b1a", alert: "#c99a00", doc: "#5b6b7b" };
+    return '<a class="tile" style="--c:' + (TC[ic] || "#a3173f") + '" href="' + href + '"><span class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="rgba(255,255,255,.3)" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[ic] + '</svg></span>' +
       '<span class="tt">' + (small ? "<small>" + esc(small) + "</small>" : "") + "<b>" + esc(title) + '</b></span><span class="cnt">' + esc(count) + '</span><span class="arrow" aria-hidden="true">→</span></a>';
   }
   function homeSection(title, tiles) { return '<h2 class="sec">' + esc(title) + '</h2><div class="tiles">' + tiles.join("") + "</div>"; }
