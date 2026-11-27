@@ -536,15 +536,14 @@
     setTitle(f.n);
     var r = f.ret, html = '<div class="fundpg">', TB = { res: "", ris: "", car: "", dat: "" };
     html += '<div class="topbar"><a href="#/' + f.t + '">← ' + esc(CATS[f.t].title) + '</a></div>';
-    html += '<h1 class="h1star">' + esc(f.n) + ' <span class="isin">' + esc(f.id) + "</span>" + "</h1>";
-
-    html += '<p class="sub"><a href="#/gestora/' + encodeURIComponent(f.g) + '">' + esc(f.g) + "</a> · " + esc(f.c) + vlTag(f) + (f.idx ? ' <span class="tag">Indexado</span>' : "") + "</p>";
-    var esd = window.ESTADO && window.ESTADO.fondos && window.ESTADO.fondos[f.id];
-    if (esd) html += '<p class="sub"><a href="#/estado">Estado semanal</a>: sigma semanal ' + sigTag(esd.sw) + " · sigma mensual " + sigTag(esd.sm) + "</p>";
-    html += '<div class="row tools2" id="fundtools"></div><div class="kpis">' +
-      kpi("Vol. 1 año", pct(f.vol[0], false, 1), true) + kpi("Sharpe 1 año", dec(f.sharpe[0]), true) +
-      kpi("Último mes", ret(r.m1)) + kpi("Año", ret(r.ytd)) + kpi("1 año", ret(r.y1)) +
-      kpi("3 años", ret(r.y3)) + kpi("5 años", ret(r.y5)) + kpi("10 años", ret(r.y10)) + "</div>";
+    var fsg = ESP.map(function (p) { var n = esSig(f, p); return n === null ? "" : '<span class="fsg' + esLvl(n) + (n < 0 ? " neg" : "") + '" title="' + p[1] + ": " + esSg(n) + ' sigmas"><em>' + p[3] + "</em>" + esSg(n) + "</span>"; }).join("");
+    html += '<header class="fhero"><span class="flogo big">' + logoOrInit(f.g) + '</span><div class="fhm"><h1 class="h1star">' + esc(f.n) + ' <span class="isin">' + esc(f.id) + "</span></h1>" +
+      '<p class="fchips"><a class="fchip" href="#/gestora/' + encodeURIComponent(f.g) + '">' + esc(f.g) + '</a><span class="fchip alt">' + esc(f.c) + '</span><span class="fchip ' + f.t + '">' + (f.t === "rf" ? "Renta fija" : "Renta variable") + "</span>" +
+      (f.stars ? '<span class="fchip star">' + "★".repeat(f.stars) + "</span>" : "") + (f.idx ? '<span class="fchip">Indexado</span>' : "") + (f.nd ? '<span class="fchip vl">VL ' + esc(String(f.nd).slice(0, 5)) + "</span>" : "") + "</p>" +
+      (fsg ? '<p class="fsgs"><a href="#/estado">Sigmas</a>' + fsg + "</p>" : "") + "</div></header>";
+    html += '<div class="row tools2" id="fundtools"></div><div class="kpis fk">' +
+      kpi("Último mes", ret(r.m1)) + kpi("Año", ret(r.ytd)) + kpi("1 año", ret(r.y1)) + kpi("3 años", ret(r.y3)) +
+      kpi("5 años", ret(r.y5)) + kpi("10 años", ret(r.y10)) + kpi("Vol. 1 año", pct(f.vol[0], false, 1), true) + kpi("Sharpe 1 año", dec(f.sharpe[0]), true) + "</div>";
     html += '<p class="note">Rentabilidad de la clase en euros. A 3, 5 y 10 años, anualizada. Fuente: Morningstar, valor liquidativo a ' + esc(f.nd) + ". La rentabilidad de la semana cubre los 7 días naturales hasta esa fecha.</p>";
 
     var docs = [["xray", "X-Ray", "Morningstar"], ["ms", "Morningstar", "Ficha online"]]
