@@ -2031,3 +2031,4 @@ a.fchip { color: var(--brand); }
 .hv-stats { display: none; }
 .phero::before { display: none !important; }
 .phero { border-left: 0 !important; }
+.phero > h1::before, .phero h1::before { display: none !important; content: none !important; }
