@@ -3327,6 +3327,20 @@
     return { subject: "Entorno macroeconómico: resumen a " + dlong(M.fecha), body: mailClean(L.join("\n")) + MAIL_PIE_MACRO, chart: function () { return mcMacro(); } };
   }
   var MAIL_PIE_MACRO = "\n\nComo siempre, te recuerdo que esta información es orientativa y no constituye asesoramiento personalizado ni una recomendación de inversión. Las rentabilidades pasadas no garantizan resultados futuros.";
+  var SECI = {
+    XLB: '<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3"/><path d="M7.5 15h9"/>',
+    XLRE: '<path d="M4 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16M14 10h5a1 1 0 0 1 1 1v10M2 21h20M8 8h2M8 12h2M8 16h2M17 14h1M17 18h1"/>',
+    XLC: '<path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/><path d="M1.5 9a15 15 0 0 1 21 0"/>',
+    XLI: '<path d="M2 21V9l6 4V9l6 4V5h4v16zM6 17h2M11 17h2M16 17h2"/>',
+    XLE: '<path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 .3 1.5 1 2 2 2 0-3-.5-5 1-8z"/>',
+    XLF: '<path d="M3 10 12 4l9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 21h18"/>',
+    XLU: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.8.7 1.5 1.6 1.5 2.6V17h4v-.5c0-1 .7-1.9 1.5-2.6A6 6 0 0 0 12 3z"/>',
+    XLP: '<path d="M3 9h18l-2 10a2 2 0 0 1-2 1.7H7a2 2 0 0 1-2-1.7zM8 9l3-5M16 9l-3-5M9 13v4M12 13v4M15 13v4"/>',
+    XLY: '<path d="M6 7h12l1.5 13H4.5zM9 7a3 3 0 0 1 6 0"/>',
+    XLV: '<path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6-8 11-8 11z"/><path d="M12 9v5M9.5 11.5h5"/>',
+    XLK: '<rect x="6" y="6" width="12" height="12" rx="1.5"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/>'
+  };
+  function secIcon(n) { var m = /\(([A-Z]+)\)/.exec(n || ""), p = m && SECI[m[1]]; return p ? '<svg class="nsi" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + "</svg>" : ""; }
   function viewNota() {
     setTitle("Nota diaria");
     var N = window.NOTA || {}, a = N.actual;
@@ -3350,7 +3364,7 @@
       }).join("") + "</div>";
       return '<h3 class="es-cat">' + esc(title) + '</h3><div class="nsec"><div class="nsh"><span></span><span></span><b>Día</b><em>Año</em></div>' + rows.map(function (r) {
         var n = pn(r[2]) || 0, w = Math.abs(n) / mx * 50;
-        return '<div class="nsr"><span class="nsn">' + esc(r[0]) + '</span><span class="nsb"><i class="' + (n < 0 ? "dn" : "up") + '" style="' + (n < 0 ? "right:50%" : "left:50%") + ";width:" + w.toFixed(1) + '%"></i></span><b>' + pcs(r[2]) + '</b><em>' + pcs(r[3]) + "</em></div>";
+        return '<div class="nsr"><span class="nsn">' + secIcon(r[0]) + "<span>" + esc(r[0].replace(/ \([A-Z]+\)$/, "")) + ' <small>' + esc((/\(([A-Z]+)\)/.exec(r[0]) || [])[1] || "") + "</small></span></span>"+'<span class="nsb"><i class="' + (n < 0 ? "dn" : "up") + '" style="' + (n < 0 ? "right:50%" : "left:50%") + ";width:" + w.toFixed(1) + '%"></i></span><b>' + pcs(r[2]) + '</b><em>' + pcs(r[3]) + "</em></div>";
       }).join("") + "</div>";
     }
     var u = a.usa || {};

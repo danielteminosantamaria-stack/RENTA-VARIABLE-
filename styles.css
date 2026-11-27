@@ -1937,3 +1937,8 @@ a.fchip { color: var(--brand); }
 .es2c.l1.dn, .es2c.l1.up { background: #f1eff2; color: #2b2831; }
 .fsg.l1, .fsg.l1.neg { background: #f5f4f6; }
 .phero a.link { color: #a3173f !important; text-decoration: underline; font-weight: 600; }
+
+.nsn { display: flex; align-items: center; gap: 10px; }
+.nsn .nsi { flex: 0 0 auto; width: 30px; height: 30px; padding: 6px; border-radius: 9px; background: #f1eff2; color: #4a4450; box-sizing: border-box; }
+.nsn small { color: #9a949e; font-size: 11.5px; margin-left: 4px; }
+.nsr { grid-template-columns: 230px 1fr 74px 74px; }
