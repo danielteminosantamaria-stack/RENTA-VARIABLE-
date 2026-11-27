@@ -675,7 +675,7 @@
       });
     });
     var ft = document.getElementById("fundtools");
-    if (ft) { ft.appendChild(mailBtn(function () { return fundMail(f); })); ft.appendChild(deckBtn(function () { deckFund(f); })); }
+    if (ft) { ft.appendChild(shareBtn(f)); ft.appendChild(mailBtn(function () { return fundMail(f); })); ft.appendChild(deckBtn(function () { deckFund(f); })); }
     var apb = document.getElementById("addpfBtn");
     if (apb) apb.addEventListener("click", function () {
       var p = pfById(document.getElementById("addpf").value);
@@ -1033,6 +1033,21 @@
   function mailBtn(fn, cls) {
     var b = document.createElement("button"); b.type = "button"; b.className = cls || "btn ghost"; b.textContent = "Correo";
     b.addEventListener("click", function () { mailModal(fn()); });
+    return b;
+  }
+  function shareBtn(f) {
+    var b = document.createElement("button"); b.type = "button"; b.className = "btn ghost"; b.textContent = "Compartir";
+    b.addEventListener("click", function () {
+      var url = location.origin + location.pathname + "#/fondo/" + encodeURIComponent(f.id), txt = f.n + " (" + f.g + ")";
+      function copied() { b.textContent = "Enlace copiado"; setTimeout(function () { b.textContent = "Compartir"; }, 2200); }
+      function fb() {
+        var t = document.createElement("textarea"); t.value = url; t.style.position = "fixed"; t.style.opacity = "0"; document.body.appendChild(t); t.select();
+        try { document.execCommand("copy"); copied(); } catch (e) { window.prompt("Copia el enlace:", url); } document.body.removeChild(t);
+      }
+      if (navigator.share) { navigator.share({ title: f.n, text: txt, url: url }).catch(function () { /* cancelado */ }); }
+      else if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(url).then(copied, fb); }
+      else fb();
+    });
     return b;
   }
   function pdfNow(title, sub, only) {
