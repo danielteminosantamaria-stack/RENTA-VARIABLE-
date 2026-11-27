@@ -142,7 +142,7 @@
         tile("#/acciones", "bolt", "Explorar", "Stocks", stocks().length + (stocks().length === 1 ? " ficha" : " fichas")),
         tile("#/etf", "grid", "🔒 Privado", "ETF", "seguimiento y caídas"),
         tile("#/amplitud", "trend", "🔒 Privado", "Amplitud de mercado", "NYSE y gráficos"),
-        tile("#/estado", "alert", "Cada lunes", "Estado semanal de fondos", "sigma semanal y mensual"),
+        tile("#/estado", "alert", "Cada lunes", "Estado de fondos", "sigmas de día, semana y mes"),
         tile("#/macro", "chart", "Para el cliente", "Macro", "gráficos y PDF"),
         tile("#/nota", "doc", "Cada día", "Nota diaria", "mercados y macro")
       ]) +
@@ -3149,45 +3149,65 @@
     var bar = n === null ? "" : '<i class="' + (n < 0 ? "dn" : "up") + (sigBig(v) ? " big" : "") + '" style="width:' + (Math.min(Math.abs(n), max) / max * 50).toFixed(2) + '%"></i>';
     return '<div class="esm"><small>' + label + '</small><div class="estrack"><em style="left:' + (50 - thr) + '%"></em><em style="left:' + (50 + +thr) + '%"></em><s></s>' + bar + "</div>" + sigTag(v) + "</div>";
   }
+  // Sigmas calculadas en vivo con los datos de la web: rentabilidad del periodo entre la volatilidad normal del fondo para ese periodo
+  var ESP = [["d1", "Día", 252, "D"], ["w1", "Semana", 52, "S"], ["m1", "Mes", 12, "M"], ["m3", "3 meses", 4, "3M"]];
+  function esPer(k) { for (var i = 0; i < ESP.length; i++) if (ESP[i][0] === k) return ESP[i]; return ESP[1]; }
+  function esVol(f) { var v = f.vol && (isNum(f.vol[1]) ? f.vol[1] : f.vol[0]); return isNum(v) && v > 0 ? v : null; }
+  function esSig(f, p) { var r = f.ret && f.ret[p[0]], v = esVol(f); return isNum(r) && v !== null ? r / (v / Math.sqrt(p[2])) : null; }
+  function esMed(a) { a = a.filter(isNum).sort(function (x, y) { return x - y; }); var n = a.length; return !n ? null : n % 2 ? a[(n - 1) / 2] : (a[n / 2 - 1] + a[n / 2]) / 2; }
+  function esRel(f, p) {
+    var peers = FUNDS.filter(function (g) { return g.c === f.c && isNum(g.ret && g.ret[p[0]]); });
+    if (peers.length < 3 || !isNum(f.ret[p[0]])) return null;
+    return f.ret[p[0]] - esMed(peers.map(function (g) { return g.ret[p[0]]; }));
+  }
+  function esSg(n) { return n === null ? "–" : (n > 0 ? "+" : n < 0 ? "−" : "") + nf(Math.abs(n), 1); }
+  function esPc(n) { return n === null || n === undefined ? "–" : (n > 0 ? "+" : n < 0 ? "−" : "") + nf(Math.abs(n), 1) + "%"; }
+  function esLvl(n) { return n === null ? "" : Math.abs(n) >= SIG_MIN ? " l2" : Math.abs(n) >= 1.5 ? " l1" : ""; }
+  function esLast() { var m = ""; FUNDS.forEach(function (f) { var d = String(f.nd || "").split("/").reverse().join(""); if (d > m) m = d; }); return m ? m.slice(6) + "/" + m.slice(4, 6) + "/" + m.slice(0, 4) : ""; }
+  var ESS2 = { p: "w1", o: "dn", t: "rv" };
   function viewEstado() {
-    setTitle("Estado semanal de fondos");
-    var E = window.ESTADO || { fondos: {} };
-    var all = FUNDS.filter(function (f) { return E.fondos && E.fondos[f.id]; });
-    var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Estado semanal de fondos</h1>' +
-      '<p class="sub">' + (E.fecha ? "Datos del " + esc(E.fecha) + ". " : "") + "Resaltados los movimientos de " + nf(SIG_MIN, 1) + " sigmas o más (rojo caída, verde subida).</p>";
-    if (!all.length) {
-      app.innerHTML = h + '<div class="empty box" style="margin-top:18px;padding:34px 20px">Todavía no hay estado publicado. Se rellenará con el próximo informe semanal (lunes).</div>' + footer("rv");
-      return;
-    }
-    var groups = [["rv", "Renta variable"], ["rf", "Renta fija"]].filter(function (g) { return ESS.t === "all" || ESS.t === g[0]; });
-    var shown = all.filter(function (f) { return ESS.t === "all" || f.t === ESS.t; });
-    var max = Math.ceil(Math.max.apply(null, [SIG_MIN + 0.5].concat(shown.map(function (f) { var d = E.fondos[f.id]; return Math.max(Math.abs(sigNum(d.sw) || 0), Math.abs(sigNum(d.sm) || 0)); }))));
-    h += '<div class="estools"><label for="estipo">Tipo de fondo</label><select id="estipo" class="inp">' + [["rv", "Renta variable"], ["rf", "Renta fija"], ["all", "Todos"]].map(function (o) { return '<option value="' + o[0] + '"' + (ESS.t === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select>" +
-      '<label for="esord">Ordenar por</label><select id="esord" class="inp">' + [["sw:1", "Sigma semanal (mayores caídas)"], ["sw:-1", "Sigma semanal (mayores subidas)"], ["sm:1", "Sigma mensual (mayores caídas)"], ["sm:-1", "Sigma mensual (mayores subidas)"], ["n:1", "Nombre"]].map(function (o) { return '<option value="' + o[0] + '"' + (ESS.k + ":" + ESS.dir === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></div>";
-    // resumen visual de cada periodo
-    h += '<div class="essum">' + [["sw", "Semana"], ["sm", "Mes"]].map(function (per) {
-      var dn = 0, up = 0, tot = 0;
-      shown.forEach(function (f) { var v = E.fondos[f.id][per[0]], n = sigNum(v); if (n === null) return; tot++; if (sigBig(v)) { if (n < 0) dn++; else up++; } });
-      var rest = tot - dn - up;
-      function seg(c, k) { return k ? '<i class="' + c + '" style="flex:' + k + '"></i>' : ""; }
-      return '<div class="escard"><b>' + per[1] + '</b><div class="esnums"><span class="dn"><strong>' + dn + '</strong>caídas importantes</span><span class="up"><strong>' + up + '</strong>subidas importantes</span><span><strong>' + rest + '</strong>sin movimiento importante</span></div><div class="esstack" role="img" aria-label="' + dn + " caídas, " + up + " subidas y " + rest + ' sin movimiento importante">' + seg("dn", dn) + seg("up", up) + seg("rest", rest) + "</div></div>";
-    }).join("") + "</div>";
-    groups.forEach(function (g) {
-      var items = shown.filter(function (f) { return f.t === g[0]; });
+    setTitle("Estado de fondos");
+    var E = window.ESTADO || {}, P = esPer(ESS2.p), shown = FUNDS.filter(function (f) { return ESS2.t === "all" || f.t === ESS2.t; });
+    var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Estado de fondos</h1>' +
+      '<p class="sub">Cuánto se ha movido cada fondo frente a lo normal en él. Una sigma es su volatilidad habitual (a 3 años) ajustada al periodo; con ' + nf(SIG_MIN, 1) + " sigmas o más el movimiento es poco común. Datos con VL a " + esc(esLast()) + ".</p>";
+    var rows = shown.map(function (f) { return { f: f, s: esSig(f, P), r: f.ret[P[0]], rel: esRel(f, P) }; });
+    var tot = 0, dn = 0, up = 0;
+    rows.forEach(function (x) { if (x.s === null) return; tot++; if (x.s <= -SIG_MIN) dn++; else if (x.s >= SIG_MIN) up++; });
+    var med = esMed(rows.map(function (x) { return x.r; })), gen = tot && Math.max(dn, up) / tot >= 0.4;
+    var ctx = !tot ? "" : gen
+      ? "Movimiento generalizado: " + Math.max(dn, up) + " de " + tot + " fondos se mueven a la vez, así que la señal es de mercado. Para ver qué fondos se desvían de verdad, mira la columna «Frente a su categoría»."
+      : (dn + up ? "Movimiento selectivo: solo " + (dn + up) + " de " + tot + " fondos se salen de lo normal, y merecen revisión individual." : "Sin movimientos fuera de lo normal en este periodo.");
+    h += '<div class="es2t"><div class="es2pills" role="tablist">' + ESP.map(function (p) { return '<button type="button" class="es2p' + (p[0] === ESS2.p ? " on" : "") + '" data-p="' + p[0] + '">' + p[1] + "</button>"; }).join("") + "</div>" +
+      '<label for="estipo">Tipo</label><select id="estipo" class="inp">' + [["rv", "Renta variable"], ["rf", "Renta fija"], ["all", "Todos"]].map(function (o) { return '<option value="' + o[0] + '"' + (ESS2.t === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select>" +
+      '<label for="esord">Ordenar</label><select id="esord" class="inp">' + [["dn", "Mayores caídas"], ["up", "Mayores subidas"], ["rel", "Más lejos de su categoría"], ["n", "Nombre"]].map(function (o) { return '<option value="' + o[0] + '"' + (ESS2.o === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></div>";
+    function seg(c, k) { return k ? '<i class="' + c + '" style="flex:' + k + '"></i>' : ""; }
+    h += '<div class="es2sum"><div class="es2k"><span>Mediana de los fondos</span><b class="' + (med < 0 ? "dn" : "up") + '">' + esPc(med) + "</b><em>" + P[1].toLowerCase() + "</em></div>" +
+      '<div class="es2k"><span>Caídas poco comunes</span><b class="dn">' + dn + '</b><em>de ' + tot + " fondos</em></div>" +
+      '<div class="es2k"><span>Subidas poco comunes</span><b class="up">' + up + '</b><em>de ' + tot + " fondos</em></div>" +
+      '<div class="es2m"><div class="esstack">' + seg("dn", dn) + seg("rest", tot - dn - up) + seg("up", up) + "</div><p>" + esc(ctx) + "</p></div></div>";
+    var max = Math.max(SIG_MIN + 1, Math.ceil(Math.max.apply(null, [0].concat(rows.map(function (x) { return Math.abs(x.s || 0); })))));
+    [["rv", "Renta variable"], ["rf", "Renta fija"]].filter(function (g) { return ESS2.t === "all" || ESS2.t === g[0]; }).forEach(function (g) {
+      var items = rows.filter(function (x) { return x.f.t === g[0]; });
       items.sort(function (a, b) {
-        if (ESS.k === "n") return a.n.localeCompare(b.n, "es");
-        var x = sigNum(E.fondos[a.id][ESS.k]), y = sigNum(E.fondos[b.id][ESS.k]);
+        if (ESS2.o === "n") return a.f.n.localeCompare(b.f.n, "es");
+        var k = ESS2.o === "rel" ? "rel" : "s", x = a[k], y = b[k];
         if (x === null && y === null) return 0; if (x === null) return 1; if (y === null) return -1;
-        return ESS.dir * (x - y);
+        return ESS2.o === "up" ? y - x : ESS2.o === "rel" ? Math.abs(y) - Math.abs(x) : x - y;
       });
-      h += '<h2 class="sec">' + g[1] + ' <small class="muted">' + items.length + " fondos</small></h2>" + (items.length ? '<div class="eslist">' + items.map(function (f) {
-        var d = E.fondos[f.id], big = sigBig(d.sw) || sigBig(d.sm), down = (sigBig(d.sw) && sigNum(d.sw) < 0) || (sigBig(d.sm) && sigNum(d.sm) < 0);
-        return '<a class="esrow' + (big ? (down ? " big dn" : " big up") : "") + '" href="#/fondo/' + encodeURIComponent(f.id) + '"><span class="esf"><span class="flogo" aria-hidden="true">' + logoOrInit(f.g) + '</span><span class="ftxt"><b>' + esc(f.n) + "</b><small>" + esc(f.c) + "</small></span></span>" + sigBar(d.sw, max, "Semana") + sigBar(d.sm, max, "Mes") + "</a>";
-      }).join("") + "</div>" : '<p class="muted">Sin datos en el informe de esta semana.</p>');
+      h += '<h2 class="sec">' + g[1] + ' <small class="muted">' + items.length + " fondos</small></h2><div class=\"es2l\"><div class=\"es2h\"><span>Fondo</span><span>" + P[1] + " (sigmas)</span><span>Frente a su categoría</span><span>Día, semana, mes, 3 meses</span></div>" + items.map(function (x) {
+        var f = x.f, s = x.s, big = s !== null && Math.abs(s) >= SIG_MIN, w = s === null ? 0 : Math.min(Math.abs(s), max) / max * 50;
+        var chips = ESP.map(function (p) { var q = esSig(f, p); return '<span class="es2c' + esLvl(q) + (q !== null && q < 0 ? " dn" : " up") + '" title="' + p[1] + ": " + esPc(f.ret[p[0]]) + (q === null ? "" : " (" + esSg(q) + " sigmas)") + '"><i>' + p[3] + "</i>" + esSg(q) + "</span>"; }).join("");
+        return '<a class="es2r' + (big ? (s < 0 ? " big dn" : " big up") : "") + '" href="#/fondo/' + encodeURIComponent(f.id) + '"><span class="esf"><span class="flogo" aria-hidden="true">' + logoOrInit(f.g) + '</span><span class="ftxt"><b>' + esc(f.n) + "</b><small>" + esc(f.c) + "</small></span></span>" +
+          '<span class="es2b"><span class="es2tr"><em style="left:' + (50 - SIG_MIN / max * 50) + '%"></em><em style="left:' + (50 + SIG_MIN / max * 50) + '%"></em><s></s>' + (s === null ? "" : '<i class="' + (s < 0 ? "dn" : "up") + '" style="' + (s < 0 ? "right" : "left") + ":50%;width:" + w.toFixed(2) + '%"></i>') + '</span><span class="es2n"><b>' + esSg(s) + "</b> · " + esPc(x.r) + "</span></span>" +
+          '<span class="es2rel' + (x.rel === null ? "" : x.rel < 0 ? " dn" : " up") + '">' + (x.rel === null ? "–" : (x.rel > 0 ? "+" : x.rel < 0 ? "−" : "") + nf(Math.abs(x.rel), 1) + " pp") + '</span><span class="es2cs">' + chips + "</span></a>";
+      }).join("") + "</div>";
     });
+    if (E.resumen) h += '<div class="box" style="margin-top:18px;padding:16px 18px"><h2 style="margin:0 0 6px;font-size:1.05rem">Resumen del informe semanal (' + esc(E.fecha || "") + ")</h2><p class=\"stxt\">" + esc(E.resumen) + "</p></div>";
+    h += '<p class="note">La sigma divide la rentabilidad del periodo entre la volatilidad a 3 años del fondo ajustada a ese periodo. «Frente a su categoría» resta la mediana de los fondos de la misma categoría de esta web (solo si hay 3 o más). Se recalcula con cada actualización de datos.</p>';
     app.innerHTML = h + footer("rv");
-    document.getElementById("estipo").addEventListener("change", function (e) { ESS.t = e.target.value; viewEstado(); });
-    document.getElementById("esord").addEventListener("change", function (e) { var v = e.target.value.split(":"); ESS.k = v[0]; ESS.dir = +v[1]; viewEstado(); });
+    document.getElementById("estipo").addEventListener("change", function (e) { ESS2.t = e.target.value; viewEstado(); });
+    document.getElementById("esord").addEventListener("change", function (e) { ESS2.o = e.target.value; viewEstado(); });
+    Array.prototype.forEach.call(document.querySelectorAll(".es2p"), function (b) { b.addEventListener("click", function () { ESS2.p = b.getAttribute("data-p"); viewEstado(); }); });
   }
 
   /* ---- Macro ---- */
