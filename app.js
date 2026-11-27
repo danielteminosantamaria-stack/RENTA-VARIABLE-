@@ -141,7 +141,7 @@
       ]) +
       homeSection("Mercado y seguimiento", [
         tile("#/acciones", "bolt", "Explorar", "Stocks", stocks().length + (stocks().length === 1 ? " ficha" : " fichas")),
-        tile("#/amplitud", "trend", "🔒 Privado", "Amplitud de mercado", "NYSE y gráficos"),
+        tile("#/amplitud", "trend", "Privado", "Amplitud de mercado", "NYSE y gráficos"),
         tile("#/estado", "alert", "Cada lunes", "Estado de fondos", "sigmas de día, semana y mes"),
         tile("#/macro", "chart", "Para el cliente", "Macro", "gráficos y PDF"),
         tile("#/nota", "doc", "Cada día", "Nota diaria", "mercados y macro")
@@ -3501,7 +3501,7 @@
   }
   function viewAmplitud() {
     setTitle("Amplitud");
-    var head = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>🔒 Amplitud de mercado</h1><p class="sub">NYSE: línea avance/descenso, RASI, McClellan, Summation y porcentaje de valores sobre sus medias. Apartado privado.</p>';
+    var head = '<div class="topbar"><a href="#/">← Inicio</a></div><header class="phero"><h1>Amplitud de mercado</h1><p class="sub">Cuántos valores del NYSE acompañan la subida o la caída del índice. Si pocos valores sostienen el mercado, el movimiento es frágil.</p></header>';
     if (AMP.data) return ampRender(head);
     var saved = ""; try { saved = sessionStorage.getItem("cf_amp") || ""; } catch (e) { /* sin almacenamiento */ }
     function open(pw, bad) {
@@ -3526,25 +3526,37 @@
     var nyseAll = full("nyse"), s200 = sma(nyseAll, 200).slice(all.length - n), mx12 = Math.max.apply(null, nyseAll.slice(-252)), caida = (1 - c("nyse") / mx12) * 100;
     var dt = last[0].split("-"), fecha = dt[2] + "/" + dt[1] + "/" + dt[0];
     function kp(l, v, sub) { return '<div class="kpi"><small>' + esc(l) + "</small><span>" + v + "</span>" + (sub ? '<em class="ksub">' + sub + "</em>" : "") + "</div>"; }
-    var p200 = c("p200"), p50 = c("p50"), ad = c("ad"), wma = c("wma");
-    var kp8 = kp("NYSE", nf(c("nyse"), 0), "caída " + nf(caida, 1) + "% desde el máximo de 12 meses") + kp("% sobre media 200", p200 === null ? "–" : nf(p200, 1) + "%", p200 !== null && p200 < 50 ? "por debajo de 50: debilidad" : "por encima de 50") +
-      kp("% sobre media 50", p50 === null ? "–" : nf(p50, 1) + "%", p50 !== null && p50 < 20 ? "sobrevendido" : p50 !== null && p50 > 80 ? "sobrecomprado" : "zona normal") +
-      kp("Línea AD", nf(ad, 0), ad < wma ? "bajo su media de 150 (WMA150)" : "sobre su media de 150") +
-      kp("RASI", nf(c("rasi"), 0), "") + kp("McClellan", nf(c("mcos"), 0), "") + kp("Summation", nf(c("sum"), 0), "") + kp("Máx. / mín. 52 sem.", nf(c("nmax"), 0) + " / " + nf(c("nmin"), 0), c("nmin") > c("nmax") ? "más mínimos que máximos" : "más máximos que mínimos");
+    var p200 = c("p200"), p50 = c("p50"), ad = c("ad"), wma = c("wma"), mc = c("mcos"), rs = c("rasi"), sm = c("sum"), nx = c("nmax"), nn = c("nmin"), px = c("nyse");
+    var m200 = s200[s200.length - 1];
+    function lec(t, est, tono, expl) { return '<div class="amp-lr"><span class="amp-st ' + tono + '">' + est + '</span><div><b>' + t + '</b><p>' + expl + '</p></div></div>'; }
+    var lecs = [
+      lec("Tendencia del índice", m200 === null ? "Sin dato" : px >= m200 ? "Alcista" : "Bajista", m200 === null ? "n" : px >= m200 ? "ok" : "mal", m200 === null ? "Faltan sesiones para calcular la media de 200." : "El NYSE está " + (px >= m200 ? "por encima" : "por debajo") + " de su media de 200 sesiones (" + nf(m200, 0) + ")."),
+      lec("Participación (% sobre media 200)", p200 === null ? "Sin dato" : p200 >= 50 ? "Amplia" : "Estrecha", p200 === null ? "n" : p200 >= 50 ? "ok" : "mal", p200 === null ? "" : nf(p200, 1) + "% de los valores cotiza sobre su media de 200. Por debajo de 50 el mercado se apoya en pocos valores."),
+      lec("Corto plazo (% sobre media 50)", p50 === null ? "Sin dato" : p50 < 20 ? "Sobrevendido" : p50 > 80 ? "Sobrecomprado" : "Normal", p50 === null ? "n" : (p50 < 20 || p50 > 80) ? "av" : "n", p50 === null ? "" : nf(p50, 1) + "% sobre su media de 50. Bajo 20 suele indicar agotamiento vendedor, sobre 80 exceso de euforia."),
+      lec("Línea avance/descenso", ad >= wma ? "Positiva" : "Débil", ad >= wma ? "ok" : "mal", "Está " + (ad >= wma ? "sobre" : "bajo") + " su media de 150. Si el índice sube y la línea no, hay divergencia."),
+      lec("Impulso (McClellan)", mc >= 0 ? "Positivo" : "Negativo", mc >= 0 ? "ok" : "mal", "Oscilador en " + nf(mc, 0) + ". Sobre cero, más valores suben que bajan en el corto plazo."),
+      lec("Máximos y mínimos de 52 semanas", nx >= nn ? "Más máximos" : "Más mínimos", nx >= nn ? "ok" : "mal", nf(nx, 0) + " valores en máximos frente a " + nf(nn, 0) + " en mínimos.")
+    ];
+    var pos = lecs.filter(function (x) { return x.indexOf(" ok") > -1; }).length, tot = lecs.length;
+    var kp8 = kp("NYSE", nf(px, 0), "a " + nf(caida, 1) + "% de su máximo de 12 meses") + kp("% sobre media 200", p200 === null ? "–" : nf(p200, 1) + "%", "Participación de largo plazo") +
+      kp("% sobre media 50", p50 === null ? "–" : nf(p50, 1) + "%", "Participación de corto plazo") + kp("Línea AD", nf(ad, 0), "Avances menos descensos acumulados") +
+      kp("RASI", nf(rs, 0), "AD ajustada por tamaño del mercado") + kp("McClellan", nf(mc, 0), "Impulso de corto plazo") + kp("Summation", nf(sm, 0), "McClellan acumulado (largo plazo)") + kp("Máx. / mín. 52 sem.", nf(nx, 0) + " / " + nf(nn, 0), "Nuevos máximos y mínimos");
+    var lectura = '<section class="block amp-lec"><h3>Lectura de un vistazo <span class="amp-sc">' + pos + ' de ' + tot + ' señales positivas</span></h3><div class="amp-lg">' + lecs.join("") + '</div></section>';
     var dates = col("f");
     var rng = [[63, "3 meses"], [126, "6 meses"], [252, "1 año"], [all.length, "Todo"]].map(function (r) { return '<button type="button" class="catchip" data-r="' + r[0] + '" aria-pressed="' + (AMP.range === r[0]) + '">' + r[1] + "</button>"; }).join("");
-    function card(t, svg, leg) { return '<section class="block amp-card"><h3>' + t + '</h3><div class="amp-wrap">' + svg + '<div class="amp-tip"></div></div><div class="legend">' + leg + "</div></section>"; }
+    var EXP = { "NYSE y media": "Si el índice cae bajo su media de 200 sesiones, la tendencia de fondo se deteriora.", "Línea avance": "Suma diaria de valores que suben menos los que bajan. Debe acompañar al índice.", "Valores sobre": "Porcentaje de valores sobre sus medias. Bajo 20 es sobreventa, sobre 80 es euforia.", "RASI y": "Versiones suavizadas de la amplitud. Cruzar por encima de cero marca mejora del mercado.", "Oscilador": "Impulso de corto plazo de la amplitud. Sobre cero, predominan las subidas.", "Nuevos": "Valores que marcan máximos o mínimos anuales. Más máximos indica fortaleza interna." };
+    function card(t, svg, leg, ex) { Object.keys(EXP).forEach(function (k) { if (!ex && t.indexOf(k) === 0) ex = EXP[k]; }); return '<section class="block amp-card"><h3>' + t + '</h3>' + (ex ? '<p class="amp-ex">' + ex + '</p>' : "") + '<div class="amp-wrap">' + svg + '<div class="amp-tip"></div></div><div class="legend">' + leg + "</div></section>"; }
     function lg(items) { return items.map(function (i) { return '<span><i style="background:' + i[0] + '"></i>' + i[1] + "</span>"; }).join(""); }
-    var col1 = "#b01030", col2 = "#1b3a5c", col3 = "#12806e", col4 = "#c8a04a";
+    var col1 = "#1c1c26", col2 = "#2a5ca8", col3 = "#1f7a4d", col4 = "#b07d2b", colr = "#b3283d";
     var charts = [
       card("NYSE y media de 200 sesiones", lineChart(dates, [{ v: col("nyse"), c: col1 }, { v: s200, c: col4, dash: true }]), lg([[col1, "NYSE"], [col4, "Media 200"]])),
       card("Línea avance/descenso y su media de 150", lineChart(dates, [{ v: col("ad"), c: col2 }, { v: col("wma"), c: col4, dash: true }]), lg([[col2, "Línea AD"], [col4, "WMA150"]])),
-      card("Valores sobre su media de 50 y de 200 sesiones (%)", lineChart(dates, [{ v: col("p50"), c: col3 }, { v: col("p200"), c: col1 }], { min: 0, max: 100, lines: [{ y: 20, c: "#12806e", t: "20 sobrevendido" }, { y: 50, c: "#717171", t: "50" }, { y: 80, c: "#b01030", t: "80 sobrecomprado" }] }), lg([[col3, "% sobre media 50"], [col1, "% sobre media 200"]])),
+      card("Valores sobre su media de 50 y de 200 sesiones (%)", lineChart(dates, [{ v: col("p50"), c: col3 }, { v: col("p200"), c: col1 }], { min: 0, max: 100, lines: [{ y: 20, c: "#1f7a4d", t: "20 sobrevendido" }, { y: 50, c: "#717171", t: "50" }, { y: 80, c: "#b07d2b", t: "80 sobrecomprado" }] }), lg([[col3, "% sobre media 50"], [col1, "% sobre media 200"]])),
       card("RASI y Summation Index", lineChart(dates, [{ v: col("rasi"), c: col1 }, { v: col("sum"), c: col2 }], { lines: [{ y: 0, c: "#717171" }] }), lg([[col1, "RASI"], [col2, "Summation"]])),
       card("Oscilador McClellan", lineChart(dates, [{ v: col("mcos"), c: col3 }], { lines: [{ y: 0, c: "#717171" }] }), lg([[col3, "McClellan"]])),
-      card("Nuevos máximos y mínimos de 52 semanas", lineChart(dates, [{ v: col("nmax"), c: col3 }, { v: col("nmin"), c: col1 }]), lg([[col3, "Nuevos máximos"], [col1, "Nuevos mínimos"]]))
+      card("Nuevos máximos y mínimos de 52 semanas", lineChart(dates, [{ v: col("nmax"), c: col3 }, { v: col("nmin"), c: colr }]), lg([[col3, "Nuevos máximos"], [colr, "Nuevos mínimos"]]))
     ];
-    app.innerHTML = head + '<p class="note">Datos de amplitud del NYSE a ' + fecha + '. Los porcentajes sobre medias pueden revisarse al alza o a la baja el día siguiente.</p><div class="kpis kp8">' + kp8 + '</div>' +
+    app.innerHTML = head + '<p class="note">Datos de amplitud del NYSE a ' + fecha + '. Los porcentajes sobre medias pueden revisarse al alza o a la baja el día siguiente.</p>' + lectura + '<div class="kpis kp8">' + kp8 + '</div>' +
       '<div class="catbar" role="group" aria-label="Periodo">' + rng + '</div><div class="amp-grid">' + charts.join("") + "</div>" +
       '<p class="note">Lectura orientativa de datos pasados, no una recomendación. Fuente: amplitudmercado.com.</p>' + footer("rv");
     app.querySelectorAll("[data-r]").forEach(function (b) { b.addEventListener("click", function () { AMP.range = +b.getAttribute("data-r"); ampRender(head); }); });
