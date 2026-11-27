@@ -2477,7 +2477,7 @@
       '<p class="note">Rentabilidades a 3 y 5 años anualizadas. La fila total es la media ponderada por peso' + (partial ? " (cuando falta el dato de algún fondo, solo con la parte indicada)" : "") + ". La volatilidad y la caída máxima totales no tienen en cuenta las correlaciones, así que no son las de la cartera en conjunto. Rentabilidad pasada, no garantiza resultados futuros.</p></section>";
   }
   function bandStyle(r) {
-    return "background:linear-gradient(to right,#e0e0e0 0," + r[0] + "%,#f0c9b0 " + r[0] + "%," + r[1] + "%,#e0e0e0 " + r[1] + "%,#e0e0e0 100%)";
+    return "background:linear-gradient(to right,#ececef 0," + r[0] + "%,#bdbdc6 " + r[0] + "%," + r[1] + "%,#ececef " + r[1] + "%,#ececef 100%)";
   }
 
   function viewBuild() {
@@ -2485,7 +2485,7 @@
     if (!bld) bldReset("moderado", false);
     var GC = { "Renta fija": "g-rf", "Otros": "g-alt", "Renta variable": "g-rv" }, GN = { "Renta fija": "Renta fija", "Otros": "Alternativos y mixtos", "Renta variable": "Renta variable" };
     var h = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>Construir cartera</h1>' +
-      '<p class="sub">Elige el perfil, ajusta el porcentaje de cada categoría dentro de su horquilla y selecciona los fondos propuestos. La franja de color de cada barra es la horquilla recomendada para el perfil.</p>' +
+      '<p class="sub">Elige el perfil, ajusta el porcentaje de cada categoría dentro de su horquilla y selecciona los fondos propuestos. La zona sombreada de cada barra es la horquilla recomendada para el perfil.</p>' +
       '<div class="bhead"><label class="fld"><span class="muted">Nombre de la cartera</span><input class="inp" id="bname" maxlength="80" placeholder="Por ejemplo, Cartera cliente" value="' + esc(bld.name) + '"></label>' +
       '<label class="fld"><span class="muted">Importe (€)</span><input class="inp amt" id="bamt" type="number" min="0" step="1000" placeholder="Opcional" value="' + (bld.amount || "") + '"></label>' +
       '<div class="fld"><span class="muted">Perfil</span><div class="seg" role="group" aria-label="Perfil">' + Object.keys(BPROF).map(function (k) {
@@ -2534,10 +2534,10 @@
       var cs = candidates(b.k);
       bld.sel[b.k] = bld.sel[b.k].filter(function (id) { return cs.some(function (f) { return f.id === id; }); });
       if (!bld.sel[b.k].length && cs.length) bld.sel[b.k] = [cs[0].id];
-      box.innerHTML = cs.length ? '<p class="label">Fondos propuestos (ordenados por puntuación Morningstar)</p>' + cs.map(function (f) {
+      box.innerHTML = cs.length ? '<div class="candh" aria-hidden="true"><span>Fondos propuestos (por puntuación Morningstar)</span><span>Morningstar</span><div><span>Año</span><span>1 año</span><span>3 años</span><span>Vol. 1 a.</span></div></div>' + cs.map(function (f) {
         var on = bld.sel[b.k].indexOf(f.id) !== -1;
         function stat(l, v) { return "<span><small>" + l + "</small><b>" + v + "</b></span>"; }
-        return '<label class="cand' + (on ? " on" : "") + '"><input type="checkbox" data-f="' + esc(f.id) + '" data-b="' + b.k + '"' + (on ? " checked" : "") + '><span class="flogo" aria-hidden="true">' + logoOrInit(f.g) + '</span><span class="ct"><b>' + esc(f.n) + "</b><small>" + esc(f.g) + " · " + esc(f.c) + "</small>" + (f.stars ? '<span class="cst" role="img" aria-label="' + f.stars + ' de 5 estrellas">' + stars(f.stars) + "</span>" : "") + '</span><span class="cm">' +
+        return '<label class="cand' + (on ? " on" : "") + '"><input type="checkbox" data-f="' + esc(f.id) + '" data-b="' + b.k + '"' + (on ? " checked" : "") + '><span class="flogo" aria-hidden="true">' + logoOrInit(f.g) + '</span><span class="ct"><b>' + esc(f.n) + "</b><small>" + esc(f.g) + " · " + esc(f.c) + "</small>" + '</span><span class="cst"' + (f.stars ? ' role="img" aria-label="' + f.stars + ' de 5 estrellas">' + stars(f.stars) : ">–") + '</span><span class="cm">' +
           stat("Año", ret(f.ret.ytd, 1)) + stat("1 año", ret(f.ret.y1, 1)) + stat("3 años", ret(f.ret.y3, 1)) + stat("Vol. 1 a.", pct(f.vol[0], false, 1)) + "</span></label>";
       }).join("") : '<p class="muted">No hay fondos en esta categoría.</p>';
       box.querySelectorAll("[data-f]").forEach(function (c) {
