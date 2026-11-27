@@ -534,23 +534,6 @@
   }
 
   // ---------- ficha ----------
-  function navChart(f) {
-    var h = (DATA.hist || {})[f.id] || [];
-    if (h.length < 3) return "";
-    var v = h.map(function (x) { return x[1]; }), lo = Math.min.apply(null, v), hi = Math.max.apply(null, v), pad = (hi - lo) * 0.12 || hi * 0.01 || 1;
-    lo -= pad; hi += pad;
-    var t = h.map(function (x) { return Date.parse(x[0]); }), t0 = t[0], t1 = t[t.length - 1];
-    var W = 560, H = 250, L = 10, R = 10, T = 22, B = 28;
-    function X(i) { return L + (t[i] - t0) / (t1 - t0 || 1) * (W - L - R); }
-    function Y(n) { return T + (hi - n) / (hi - lo) * (H - T - B); }
-    function day(d) { return d.slice(8, 10) + "/" + d.slice(5, 7) + "/" + d.slice(0, 4); }
-    var pts = h.map(function (x, i) { return X(i).toFixed(1) + "," + Y(x[1]).toFixed(1); }).join(" ");
-    var ch = (v[v.length - 1] / v[0] - 1) * 100, col = ch < 0 ? "#b3261e" : "#1e7a4a";
-    var imax = v.indexOf(Math.max.apply(null, v)), imin = v.indexOf(Math.min.apply(null, v));
-    function tag(i, dy) { var x = X(i); return '<circle cx="' + x.toFixed(1) + '" cy="' + Y(v[i]).toFixed(1) + '" r="3.5" fill="' + col + '"/><text x="' + x.toFixed(1) + '" y="' + (Y(v[i]) + dy).toFixed(1) + '" text-anchor="' + (x < 40 ? "start" : x > W - 40 ? "end" : "middle") + '" font-size="12" font-weight="700" fill="#222">' + nf(v[i], 2) + "</text>"; }
-    return '<section class="block"><h3>Valor liquidativo</h3><p class="navch">' + ret(ch) + ' <span class="muted">desde el ' + day(h[0][0]) + '</span></p><svg viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" aria-label="Evolución del valor liquidativo"><polyline fill="none" stroke="' + col + '" stroke-width="2.5" stroke-linejoin="round" points="' + pts + '"/>' +
-      tag(imax, -8) + (imin !== imax ? tag(imin, 18) : "") + '<text x="' + L + '" y="' + (H - 4) + '" font-size="11" fill="#666">' + day(h[0][0]) + '</text><text x="' + (W - R) + '" y="' + (H - 4) + '" text-anchor="end" font-size="11" fill="#666">' + day(h[h.length - 1][0]) + '</text></svg><p class="note">Valores liquidativos guardados en cada actualización de la web. El histórico crece cada día.</p></section>';
-  }
   function kpi(l, v, hi) { return '<div class="kpi' + (hi ? " hi" : "") + '"><small>' + l + "</small><span>" + v + "</span></div>"; }
   function bar(label, v, max, kind, text) {
     var w = isNum(v) ? Math.min(100, Math.abs(v) / (max || 1) * 100) : 0;
@@ -605,7 +588,6 @@
           '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (CH - 2) + '" text-anchor="middle" font-size="11" fill="#666">' + esc(String(y[0]).replace(/ \(.*$/, "*")) + "</text>";
       }).join("") + '</svg><p class="note">* Año en curso hasta ' + esc(String(f.nd || "").slice(0, 5)) + ".</p></section>";
     }
-    TB.res += navChart(f);
 
     // Composición
     var mix = f.mix, labels = ["Acciones", "Bonos", "Efectivo", "Otros"], colors = ["#2a5ca8", "#a3173f", "#bfc3c9", "#f2b705"];

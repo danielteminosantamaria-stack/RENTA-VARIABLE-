@@ -2140,7 +2140,6 @@ a.fchip { color: var(--brand); }
 #body > .table-wrap thead th, .table-wrap > table.es2t2 thead th, #pftable .table-wrap thead th { position: sticky; top: 0; z-index: 3; background: #f7f6f8; }
 #body > .table-wrap thead th:first-child, .table-wrap > table.es2t2 thead th:first-child, #pftable .table-wrap thead th:first-child { left: 0; z-index: 4; }
 #allBtn { white-space: nowrap; }
-.navch { margin: -4px 0 8px; font-size: 18px; font-weight: 700; } .navch .muted { font-size: 12.5px; font-weight: 500; }
 @media screen and (max-width: 760px) {
   #body > .table-wrap, .table-wrap:has(> table.es2t2), #pftable .table-wrap { max-height: 76vh; max-height: 76dvh; }
   .table-wrap td:first-child { box-shadow: 1px 0 0 #e4e0e6; }
