@@ -2011,9 +2011,6 @@ a.fchip { color: var(--brand); }
 .hv-main { position: relative; z-index: 2; }
 .hero.vis.hv2 h1 { font-size: 56px; line-height: 1.04; }
 .hero.vis.hv2 .eyebrow { background: rgba(255, 255, 255, .14) !important; border: 1px solid rgba(255, 255, 255, .3) !important; color: #fff !important; }
-.hv-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
-.hv-links a { color: #fff; font-size: 13.5px; font-weight: 600; padding: 8px 16px; border-radius: 999px; background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .28); text-decoration: none; transition: background .15s, transform .15s; }
-.hv-links a:hover { background: rgba(255, 255, 255, .24); transform: translateY(-1px); }
 .hv-stats { position: relative; z-index: 2; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .hv-s { background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .22); border-radius: 16px; padding: 18px 20px; backdrop-filter: blur(6px); }
 .hv-s b { display: block; font-size: 32px; line-height: 1.1; color: #fff; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
@@ -2027,7 +2024,6 @@ a.fchip { color: var(--brand); }
 .hero.vis.hv2 { display: block !important; padding-top: 34px !important; padding-bottom: 54px !important; }
 .hero.vis.hv2 h1 { font-size: 42px; }
 .hero.vis.hv2 .lead { margin-top: 10px; font-size: 16px; }
-.hv-links { margin-top: 16px; }
 .hv-stats { display: none; }
 .phero::before { display: none !important; }
 .phero { border-left: 0 !important; }

@@ -112,7 +112,7 @@
     var rvs = ofType("rv").length, rfs = ofType("rf").length, wk = FUNDS.map(function (f) { return f.ret && f.ret.w1; }).filter(isNum), md = esMed(wk);
     var stat = function (n, l, c) { return '<div class="hv-s"><b' + (c ? ' class="' + c + '"' : "") + ">" + esc(String(n)) + "</b><span>" + esc(l) + "</span></div>"; };
     return '<header class="hero vis hv2"><svg class="deco" viewBox="0 0 600 220" preserveAspectRatio="none" aria-hidden="true"><path d="M0 190 C60 170 90 150 140 160 S230 120 290 110 380 130 430 80 530 40 600 20" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/><path d="M0 210 C70 195 110 185 170 180 S260 150 320 145 420 150 470 110 560 80 600 60" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="3"/></svg><div class="hv-main"><h1>Gestión de carteras</h1><p class="lead">Rentabilidad, riesgo y ratios de los fondos en seguimiento, con datos de Morningstar.</p>' +
-      '<div class="hv-links"><a href="#/rv">Renta variable</a><a href="#/rf">Renta fija</a><a href="#/macro">Macro</a><a href="#/nota">Nota diaria</a><a href="#/estado">Estado de fondos</a></div></div>'  + "</header>";
+      '</div>'  + "</header>";
   }
   function searchHtml() {
     return '<div class="search big">' + icon() + '<input id="q" type="search" placeholder="Buscar fondo por nombre o ISIN" autocomplete="off" aria-label="Buscar fondo"></div><div class="results" id="res"></div>';
