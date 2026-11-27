@@ -1044,7 +1044,7 @@
         var t = document.createElement("textarea"); t.value = url; t.style.position = "fixed"; t.style.opacity = "0"; document.body.appendChild(t); t.select();
         try { document.execCommand("copy"); copied(); } catch (e) { window.prompt("Copia el enlace:", url); } document.body.removeChild(t);
       }
-      if (navigator.share) { navigator.share({ title: f.n, text: txt, url: url }).catch(function () { /* cancelado */ }); }
+      if (navigator.share) { navigator.share({ title: txt, url: url }).catch(function () { /* cancelado */ }); }
       else if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(url).then(copied, fb); }
       else fb();
     });
@@ -3654,7 +3654,12 @@
     if (!p.length) return viewHome();
     if ((p[0] === "rf" || p[0] === "rv") && !p[1]) return viewList(p[0]);
     if ((p[0] === "rf" || p[0] === "rv") && p[1] === "resumen") return viewOverview(p[0]);
-    if (p[0] === "fondo" && p[1]) { var fid = decodeURIComponent(p[1]); viewFund(fid); return; }
+    if (p[0] === "fondo" && p[1]) {
+      var fid; try { fid = decodeURIComponent(p[1]); } catch (e) { fid = p[1]; }
+      // tolera enlaces alterados por el correo (mayúsculas, espacios, puntuación o texto pegado detrás)
+      if (!byId(fid)) { var up = fid.toUpperCase(), hit = FUNDS.filter(function (x) { return up.indexOf(x.id.toUpperCase()) > -1; })[0]; if (hit) fid = hit.id; }
+      viewFund(fid); return;
+    }
     if (p[0] === "comparar") return viewCompare(p[1]);
     if (p[0] === "carteras") return viewPortfolios();
     if (p[0] === "acciones") return viewStocks();
