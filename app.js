@@ -541,9 +541,10 @@
       '<p class="fchips"><a class="fchip" href="#/gestora/' + encodeURIComponent(f.g) + '">' + esc(f.g) + '</a><span class="fchip alt">' + esc(f.c) + '</span><span class="fchip ' + f.t + '">' + (f.t === "rf" ? "Renta fija" : "Renta variable") + "</span>" +
       (f.stars ? '<span class="fchip star">' + "★".repeat(f.stars) + "</span>" : "") + (f.idx ? '<span class="fchip">Indexado</span>' : "") + (f.nd ? '<span class="fchip vl">VL ' + esc(String(f.nd).slice(0, 5)) + "</span>" : "") + "</p>" +
       (fsg ? '<p class="fsgs"><a href="#/estado">Sigmas</a>' + fsg + "</p>" : "") + "</div></header>";
-    html += '<div class="row tools2" id="fundtools"></div><div class="kpis fk">' +
-      kpi("Último mes", ret(r.m1)) + kpi("Año", ret(r.ytd)) + kpi("1 año", ret(r.y1)) + kpi("3 años", ret(r.y3)) +
-      kpi("5 años", ret(r.y5)) + kpi("10 años", ret(r.y10)) + kpi("Vol. 1 año", pct(f.vol[0], false, 1), true) + kpi("Sharpe 1 año", dec(f.sharpe[0]), true) + "</div>";
+    function kf(l, v, raw) { var c = isNum(raw) ? (raw < 0 ? "dn" : raw > 0 ? "up" : "") : ""; return '<div class="kpi kf ' + c + '"><small>' + l + "</small><span>" + (isNum(raw) ? '<b class="' + c + '">' + pct(raw, true, 2) + "</b>" : v) + "</span></div>"; }
+    html += '<div class="row tools2" id="fundtools"></div><div class="kpis fk"><h4 class="kh">Rentabilidad</h4>' +
+      kf("Último mes", "", r.m1) + kf("Año", "", r.ytd) + kf("1 año", "", r.y1) + kf("3 años", "", r.y3) + kf("5 años", "", r.y5) + kf("10 años", "", r.y10) +
+      '<h4 class="kh">Riesgo</h4><div class="kpi kf risk"><small>Volatilidad 1 año</small><span><b>' + pct(f.vol[0], false, 1) + '</b></span></div><div class="kpi kf risk"><small>Ratio de Sharpe 1 año</small><span><b>' + dec(f.sharpe[0]) + "</b></span></div></div>";
     html += '<p class="note">Rentabilidad de la clase en euros. A 3, 5 y 10 años, anualizada. Fuente: Morningstar, valor liquidativo a ' + esc(f.nd) + ". La rentabilidad de la semana cubre los 7 días naturales hasta esa fecha.</p>";
 
     var docs = [["xray", "X-Ray", "Morningstar"], ["ms", "Morningstar", "Ficha online"]]

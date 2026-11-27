@@ -1868,3 +1868,32 @@ a.fchip { color: var(--brand); }
 .fundpg .cm-sec p { font-size: 14px; line-height: 1.65; color: #1c1c26; }
 .fundpg .cm-sec:nth-child(n+4) { background: none; border-left: 0; }
 @media (max-width: 760px) { .fundpg .cm-sec { grid-template-columns: 1fr; } }
+
+/* KPIs de la ficha */
+.kpis.fk { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+.kpis.fk .kh { grid-column: 1 / -1; margin: 8px 0 0; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: #8a8490; font-weight: 700; display: flex; align-items: center; gap: 12px; }
+.kpis.fk .kh::after { content: ""; flex: 1; height: 1px; background: #ece8ea; }
+.kpis.fk .kh:first-child { margin-top: 0; }
+.kpis.fk .kf { border: 1px solid #ebe6e9 !important; border-top: 1px solid #ebe6e9 !important; border-radius: 14px; padding: 14px 16px; background: #fff; position: relative; overflow: hidden; }
+.kpis.fk .kf::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; height: auto; background: #c9c3c8; }
+.kpis.fk .kf.up::before { background: #1f7a4d; } .kpis.fk .kf.dn::before { background: #b3283d; } .kpis.fk .kf.risk::before { background: #2a5ca8; }
+.kpis.fk .kf.up { background: linear-gradient(135deg, #fff 55%, #eef7f1); } .kpis.fk .kf.dn { background: linear-gradient(135deg, #fff 55%, #fbeef0); } .kpis.fk .kf.risk { background: linear-gradient(135deg, #fff 55%, #eef3fa); }
+.kpis.fk .kf small { font-size: 11.5px; letter-spacing: .04em; color: #7a747f; font-weight: 600; margin-bottom: 6px; }
+.kpis.fk .kf span { font-size: 25px; font-weight: 700; letter-spacing: -.01em; }
+.kpis.fk .kf b.up { color: #1f7a4d; } .kpis.fk .kf b.dn { color: #b3283d; }
+.kpis.fk .kf.risk { grid-column: span 3; }
+.kpis.fk .kf.risk span { color: #1c1c26; }
+@media (max-width: 1000px) { .kpis.fk { grid-template-columns: repeat(3, 1fr); } .kpis.fk .kf.risk { grid-column: span 3; } }
+@media (max-width: 560px) { .kpis.fk { grid-template-columns: repeat(2, 1fr); } .kpis.fk .kf.risk { grid-column: span 1; } }
+/* botones de la ficha y pestañas */
+.fundpg .tools2 .btn, .fundpg .tools2 button { border-radius: 999px; padding: 8px 18px; font-weight: 600; }
+.fundpg .mstabs button { position: relative; font-weight: 600; }
+.fundpg .mstabs button.on, .fundpg .mstabs .on { color: #a3173f !important; border-bottom: 3px solid #a3173f !important; }
+.fundpg .note { margin-top: 12px; }
+.kpis.fk > .kh { border: 0 !important; border-radius: 0 !important; box-shadow: none !important; background: none !important; overflow: visible !important; height: auto; padding: 0 !important; }
+.kpis.fk > .kh::before { display: none !important; }
+.kpis.fk > .kh::after { display: block !important; position: static !important; content: "" !important; flex: 1; height: 1px !important; background: #ece8ea !important; inset: auto !important; }
+.kpis.fk > .kf::before { content: "" !important; position: absolute !important; inset: 0 auto 0 0 !important; width: 4px !important; height: auto !important; border-radius: 0 !important; }
+.kpis.fk > .kf { box-shadow: 0 6px 16px -12px rgba(20, 10, 14, .3) !important; }
+.kpis.fk > .kf::before { background: #c9c3c8 !important; }
+.kpis.fk > .kf.up::before { background: #1f7a4d !important; } .kpis.fk > .kf.dn::before { background: #b3283d !important; } .kpis.fk > .kf.risk::before { background: #2a5ca8 !important; }
