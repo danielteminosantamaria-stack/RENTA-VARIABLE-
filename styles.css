@@ -2192,9 +2192,9 @@ a.fchip { color: var(--brand); }
 .bpage .cand .cm > span { background: none; border: 0; border-radius: 0; padding: 0; }
 .bpage .cand .cm small { display: none; }
 .bpage .cand .cm b { font-size: 13.5px; font-weight: 500; }
-.bpage .block { border-top: 0; }
-.bpage .block::before { display: none !important; }
-.bpage .block > h3, .bpage .bft-t { color: var(--text); border-bottom-color: #111; }
+.bpage #bfinal .block { border-top: 0; }
+.bpage #bfinal .block::before { display: none !important; }
+.bpage #bfinal .block > h3, .bpage .bft-t { color: var(--text); border-bottom-color: #111; }
 .bpage .bft tr.bfg td, .bpage .bft tr.bfg td:first-child { background: #f5f4f6 !important; color: var(--text); border-left: 0; }
 .bpage .bft tbody u { background: #75757f !important; }
 #bleft, #bleft.sobra, #bleft.ok { background: #fff; color: var(--text); border: 1px solid #cfccd3; border-radius: 10px; box-shadow: 0 6px 20px rgba(0, 0, 0, .14); width: min(440px, calc(100vw - 180px)); padding: 9px 16px 11px; }
@@ -2215,8 +2215,6 @@ a.fchip { color: var(--brand); }
   .bpage .cand .cst { font-size: 12px; align-self: start; }
   #bleft, #bleft.sobra, #bleft.ok { width: calc(100vw - 88px); left: 12px; transform: none; }
 }
-.bpage #bsum .kpis > *::before, .bpage #bsum .kpis > *::after, .bpage #bsum .apgrid > *::before { display: none !important; }
-.bpage #bsum .kpis > * { border: 1px solid #e4e0e6 !important; }
-.bpage #bsum .apgrid > * { border-left: 1px solid #e4e0e6 !important; }
-.bpage #bsum .apbar i, .bpage #bsum .bar .fill { background: #75757f !important; }
-.bpage #bsum .donutw { filter: grayscale(1); }
+/* resumen de Construir cartera igual que la ficha de fondo (con sitio para nombres de categoría largos) */
+.bpage #bsum .fundpg .bar { grid-template-columns: minmax(140px, 230px) 1fr 64px; }
+@media (max-width: 760px) { .bpage #bsum .fundpg .bar { grid-template-columns: minmax(96px, 130px) 1fr 52px; gap: 8px; font-size: 12.5px; } }

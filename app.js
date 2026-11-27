@@ -2556,7 +2556,7 @@
         app.querySelector('[data-gt="' + g + '"]').textContent = nf(w, 0) + "%" + (bld.amount ? " · " + nf(bld.amount * w / 100, 0) + " €" : "");
       });
       drawLeft();
-      document.getElementById("bsum").innerHTML = n ? summary({ id: "tmp", name: bld.name, amount: bld.amount, lines: lines }) : "";
+      document.getElementById("bsum").innerHTML = n ? '<div class="fundpg">' + summary({ id: "tmp", name: bld.name, amount: bld.amount, lines: lines }) + "</div>" : "";
       document.getElementById("bfinal").innerHTML = n ? bldFinal(lines, bld.amount) : "";
     }
     function drawAll() { BUCKETS.forEach(drawBucket); drawTotals(); }
