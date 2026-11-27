@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Convierte las hojas de Morningstar (exportadas a CSV desde Google Drive)
 en data.js, el fichero de datos que lee la web.
+Ademas guarda en data.js el historico de valores liquidativos (clave "hist"), que se amplia
+en cada ejecucion a partir del data.js anterior.
 
 Uso:
     python3 tools/build_data.py rf.csv rv.csv data.js
@@ -10,6 +12,7 @@ rv.csv  = hoja "Fondos Renta Variable" (pestaña Indexados, exportada como CSV)
 """
 import csv
 import json
+import os
 import re
 import sys
 from datetime import datetime
@@ -211,6 +214,35 @@ def fmt(date_iso):
         return ""
 
 
+def nav_point(f):
+    """('25/11/2026', 'EUR 15.72') -> ['2026-11-25', 15.72]"""
+    try:
+        day = datetime.strptime(f["nd"], "%d/%m/%Y").strftime("%Y-%m-%d")
+        value = float(f["nav"].split()[-1].replace(",", ""))
+    except (ValueError, IndexError):
+        return None
+    return [day, value] if value > 0 else None
+
+
+def previous_history(path):
+    """Historico guardado en el data.js anterior. Si el fichero existe y no se puede leer, se para."""
+    if not os.path.exists(path):
+        return {}
+    text = open(path, encoding="utf-8").read().strip()
+    return json.loads(text[len("window.DATA="):].rstrip(";")).get("hist", {})
+
+
+def add_history(hist, funds):
+    """Anade el valor liquidativo de cada fondo (uno por fecha; la ultima lectura manda)."""
+    for f in funds:
+        point = nav_point(f)
+        if point:
+            series = dict(hist.get(f["id"], []))
+            series[point[0]] = point[1]
+            hist[f["id"]] = [[d, series[d]] for d in sorted(series)]
+    return hist
+
+
 def main():
     if len(sys.argv) != 4:
         sys.exit(__doc__)
@@ -223,7 +255,8 @@ def main():
         "rv": fmt(max((f["run"] for f in funds_rv), default="")),
         "annDate": ann_date,
     }
-    payload = {"meta": meta, "funds": funds_rf + funds_rv}
+    funds = funds_rf + funds_rv
+    payload = {"meta": meta, "funds": funds, "hist": add_history(previous_history(out), funds)}
     with open(out, "w", encoding="utf-8") as fh:
         fh.write("window.DATA=" + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n")
     print(f"RF: {len(funds_rf)} fondos, RV: {len(funds_rv)} fondos -> {out}")

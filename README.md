@@ -21,3 +21,13 @@ Ojo: en cuentas gratuitas un repositorio con Pages es público. La web lleva `no
 1. En Google Sheets, exportar cada hoja (pestaña "Indexados") como CSV: `rf.csv` (Fondos Renta Fija) y `rv.csv` (Fondos Renta Variable).
 2. Ejecutar: `python3 tools/build_data.py rf.csv rv.csv data.js`
 3. Subir `data.js` al repositorio. La web se actualiza sola en un par de minutos.
+
+## Histórico de valores liquidativos
+
+`tools/build_data.py` lee el `data.js` anterior y le suma el valor liquidativo de cada fondo (clave `hist`).
+No borrar `data.js` antes de regenerarlo, porque se perdería el histórico.
+
+## Probar antes de publicar
+
+`node tools/test_web.js` abre todas las secciones en móvil y ordenador y avisa de errores, desbordes y tablas
+que no se pueden deslizar.

@@ -5,6 +5,16 @@
   var FUNDS = DATA.funds;
   (function () { var O = window.OVERRIDES || {}; FUNDS.forEach(function (f) { var o = O[f.id]; if (o) for (var k in o) f[k] = o[k]; }); })();
   var META = DATA.meta || {};
+  // el año en curso de los gráficos usa la rentabilidad diaria (la misma que la ficha), no el cierre del mes anterior
+  (function () {
+    var key = "", last = "";
+    FUNDS.forEach(function (f) {
+      if (f.ann && f.ann.length && f.ret && isFinite(f.ret.ytd) && f.ret.ytd !== null) f.ann[0] = f.ret.ytd;
+      var k = String(f.nd || "").split("/").reverse().join("");
+      if (k > key) { key = k; last = f.nd; }
+    });
+    if (last) META.annDate = last;
+  })();
   var app = document.getElementById("app");
 
   var CATS = {
@@ -143,7 +153,7 @@
       homeSection("Mercado y seguimiento", [
         tile("#/acciones", "bolt", "Explorar", "Stocks", stocks().length + (stocks().length === 1 ? " ficha" : " fichas")),
         tile("#/amplitud", "trend", "Mercado", "Amplitud de mercado", "NYSE y gráficos"),
-        tile("#/estado", "alert", "Cada lunes", "Estado de fondos", "sigmas de día, semana y mes"),
+        tile("#/estado", "alert", "Seguimiento", "Estado de fondos", "sigmas de día, semana y mes"),
         tile("#/macro", "chart", "Para el cliente", "Macro", "gráficos y PDF"),
         tile("#/nota", "doc", "Cada día", "Nota diaria", "mercados y macro")
       ]) +
@@ -291,7 +301,7 @@
       }).join("") + "</select></label>" +
       '<div class="filters"><div class="search">' + icon() +
       '<input id="q" type="search" placeholder="Buscar por nombre o ISIN" value="' + esc(s.q) + '" aria-label="Buscar fondo" autocomplete="off"></div>' +
-      (s.view === "list" ? '<button type="button" class="chip" id="pickBtn" aria-expanded="' + s.pick + '">Columnas</button>' : "") + "</div>" +
+      (s.view === "list" ? '<button type="button" class="chip" id="allBtn" aria-pressed="' + allCols(t) + '">Todos los campos</button><button type="button" class="chip" id="pickBtn" aria-expanded="' + s.pick + '">Columnas</button>' : "") + "</div>" +
       '<div class="picker" id="picker"' + (s.pick && s.view === "list" ? "" : " hidden") + "></div>" +
       '<div id="body"></div>' + footer(t);
 
@@ -302,6 +312,18 @@
     cs.addEventListener("change", function () { s.cat = cs.value || null; viewList(t); document.getElementById("catsel").focus(); });
     var q = document.getElementById("q");
     q.addEventListener("input", function () { s.q = q.value; renderBody(t); });
+    var ab = document.getElementById("allBtn");
+    if (ab) {
+      ab.addEventListener("click", function () {
+        if (allCols(t)) s.cols = (s.prev || DEFAULTS[t]).slice();
+        else {
+          s.prev = s.cols.slice();
+          s.cols = s.cols.concat(metricsFor(t).map(function (m) { return m.k; }).filter(function (k) { return s.cols.indexOf(k) === -1; }));
+        }
+        if (s.sort !== "n" && s.sort !== "st" && s.cols.indexOf(s.sort) === -1) { s.sort = "n"; s.dir = 1; }
+        saveCols(t); viewList(t);
+      });
+    }
     var pb = document.getElementById("pickBtn");
     if (pb) {
       pb.addEventListener("click", function () {
@@ -315,6 +337,7 @@
     renderBody(t);
   }
 
+  function allCols(t) { return state[t].cols.length >= metricsFor(t).length; }
   function renderPicker(t) {
     var s = state[t], el = document.getElementById("picker"), ms = metricsFor(t);
     if (!el) return;
@@ -340,7 +363,8 @@
 
   function renderBody(t) {
     var s = state[t], body = document.getElementById("body");
-    var list = filtered(t);
+    var list = filtered(t), old = body.querySelector(".table-wrap"), keep = old ? [old.scrollLeft, old.scrollTop] : null, ab = document.getElementById("allBtn");
+    if (ab) ab.setAttribute("aria-pressed", String(allCols(t)));
     if (!list.length) { body.innerHTML = '<div class="table-wrap"><div class="empty">Sin resultados</div></div>'; return; }
     if (s.view === "chart") {
       body.innerHTML = axisBar(t) + chart(t, list);
@@ -369,6 +393,7 @@
           '<td class="mst">' + (f.stars ? '<span role="img" aria-label="' + f.stars + ' de 5 estrellas">' + stars(f.stars) + "</span>" : '<span class="muted">–</span>') + "</td>" +
           c.map(function (x) { return "<td>" + x.r(f) + "</td>"; }).join("") + "</tr>";
       }).join("") + "</tbody></table></div>";
+    if (keep) { var tw = body.querySelector(".table-wrap"); tw.scrollLeft = keep[0]; tw.scrollTop = keep[1]; }
     body.querySelectorAll("[data-sort]").forEach(function (b) {
       b.addEventListener("click", function () {
         var k = b.getAttribute("data-sort");
@@ -509,6 +534,23 @@
   }
 
   // ---------- ficha ----------
+  function navChart(f) {
+    var h = (DATA.hist || {})[f.id] || [];
+    if (h.length < 3) return "";
+    var v = h.map(function (x) { return x[1]; }), lo = Math.min.apply(null, v), hi = Math.max.apply(null, v), pad = (hi - lo) * 0.12 || hi * 0.01 || 1;
+    lo -= pad; hi += pad;
+    var t = h.map(function (x) { return Date.parse(x[0]); }), t0 = t[0], t1 = t[t.length - 1];
+    var W = 560, H = 250, L = 10, R = 10, T = 22, B = 28;
+    function X(i) { return L + (t[i] - t0) / (t1 - t0 || 1) * (W - L - R); }
+    function Y(n) { return T + (hi - n) / (hi - lo) * (H - T - B); }
+    function day(d) { return d.slice(8, 10) + "/" + d.slice(5, 7) + "/" + d.slice(0, 4); }
+    var pts = h.map(function (x, i) { return X(i).toFixed(1) + "," + Y(x[1]).toFixed(1); }).join(" ");
+    var ch = (v[v.length - 1] / v[0] - 1) * 100, col = ch < 0 ? "#b3261e" : "#1e7a4a";
+    var imax = v.indexOf(Math.max.apply(null, v)), imin = v.indexOf(Math.min.apply(null, v));
+    function tag(i, dy) { var x = X(i); return '<circle cx="' + x.toFixed(1) + '" cy="' + Y(v[i]).toFixed(1) + '" r="3.5" fill="' + col + '"/><text x="' + x.toFixed(1) + '" y="' + (Y(v[i]) + dy).toFixed(1) + '" text-anchor="' + (x < 40 ? "start" : x > W - 40 ? "end" : "middle") + '" font-size="12" font-weight="700" fill="#222">' + nf(v[i], 2) + "</text>"; }
+    return '<section class="block"><h3>Valor liquidativo</h3><p class="navch">' + ret(ch) + ' <span class="muted">desde el ' + day(h[0][0]) + '</span></p><svg viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" aria-label="Evolución del valor liquidativo"><polyline fill="none" stroke="' + col + '" stroke-width="2.5" stroke-linejoin="round" points="' + pts + '"/>' +
+      tag(imax, -8) + (imin !== imax ? tag(imin, 18) : "") + '<text x="' + L + '" y="' + (H - 4) + '" font-size="11" fill="#666">' + day(h[0][0]) + '</text><text x="' + (W - R) + '" y="' + (H - 4) + '" text-anchor="end" font-size="11" fill="#666">' + day(h[h.length - 1][0]) + '</text></svg><p class="note">Valores liquidativos guardados en cada actualización de la web. El histórico crece cada día.</p></section>';
+  }
   function kpi(l, v, hi) { return '<div class="kpi' + (hi ? " hi" : "") + '"><small>' + l + "</small><span>" + v + "</span></div>"; }
   function bar(label, v, max, kind, text) {
     var w = isNum(v) ? Math.min(100, Math.abs(v) / (max || 1) * 100) : 0;
@@ -553,7 +595,7 @@
     // Rentabilidad por año
     if (f.ann && f.ann.some(isNum)) {
       var years = [], base = 2025;
-      f.ann.forEach(function (v, i) { years.push([i === 0 ? "2026 (" + String(META.annDate || "").slice(0, 5) + ")" : String(base - (i - 1)), v]); });
+      f.ann.forEach(function (v, i) { years.push([i === 0 ? "2026 (" + String(f.nd || "").slice(0, 5) + ")" : String(base - (i - 1)), v]); });
       var mx = Math.max.apply(null, years.map(function (y) { return isNum(y[1]) ? Math.abs(y[1]) : 0; })) || 1;
       var yv = years.filter(function (y) { return isNum(y[1]); }).reverse(), CW = 560, CH = 290, cb = 190, cmax = Math.max.apply(null, yv.map(function (y) { return Math.abs(y[1]); })) || 1, cneg = yv.some(function (y) { return y[1] < 0; }), base = cneg ? 150 : 215, ph = cneg ? 115 : 185, cwd = (CW - 20) / yv.length;
       TB.res += '<section class="block"><h3>Rentabilidad por año</h3><svg viewBox="0 0 ' + CW + " " + (CH + 10) + '" width="100%" role="img" aria-label="Rentabilidad por año"><line x1="10" x2="' + (CW - 10) + '" y1="' + base + '" y2="' + base + '" stroke="#bbb"/>' + yv.map(function (y, k) {
@@ -561,8 +603,9 @@
         return '<rect x="' + x.toFixed(1) + '" y="' + (up ? base - h : base).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="3" fill="' + (up ? "#1e7a4a" : "#b3261e") + '"/>' +
           '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (up ? base - h - 6 : base + h + 14).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#222">' + nf(y[1], 1) + "%</text>" +
           '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (CH - 2) + '" text-anchor="middle" font-size="11" fill="#666">' + esc(String(y[0]).replace(/ \(.*$/, "*")) + "</text>";
-      }).join("") + '</svg><p class="note">* Año en curso hasta ' + esc(String(META.annDate || "").slice(0, 5)) + ".</p></section>";
+      }).join("") + '</svg><p class="note">* Año en curso hasta ' + esc(String(f.nd || "").slice(0, 5)) + ".</p></section>";
     }
+    TB.res += navChart(f);
 
     // Composición
     var mix = f.mix, labels = ["Acciones", "Bonos", "Efectivo", "Otros"], colors = ["#2a5ca8", "#a3173f", "#bfc3c9", "#f2b705"];
@@ -3511,6 +3554,15 @@
         open(document.getElementById("amppw").value, function () { document.getElementById("amperr").hidden = false; });
       });
     }
+    var lazy = document.querySelector('script[data-lazy="amp"]');
+    if (!window.AMPLITUD_ENC && lazy && !AMP.tried) {
+      app.innerHTML = head + '<div class="empty box">Cargando datos…</div>' + footer("rv");
+      var sc = document.createElement("script");
+      sc.src = lazy.getAttribute("src");
+      sc.onload = sc.onerror = function () { AMP.tried = !!window.AMPLITUD_ENC; if (/^#\/amplitud/.test(location.hash)) { if (window.AMPLITUD_ENC) viewAmplitud(); else app.innerHTML = head + '<div class="empty box">No se han podido cargar los datos. Recarga la página.</div>' + footer("rv"); } sc.remove(); };
+      document.body.appendChild(sc);
+      return;
+    }
     if (!window.AMPLITUD_ENC) { app.innerHTML = head + '<div class="empty box">No hay datos de amplitud publicados todavía.</div>' + footer("rv"); return; }
     if (saved) open(saved, function () { form(false); }); else form(false);
   }
@@ -3657,6 +3709,36 @@
     return viewNotFound();
   }
   window.CFUI = { vl: vlTag, logo: logoOrInit, stockLogo: stockLogo, rcell: rcell, ret: ret, pct: pct, dec: dec, footer: footer };
-  window.addEventListener("hashchange", route);
-  route();
+  // al volver atrás se recupera la posición de la página y de las tablas
+  var POS = {}, cur = null, curHash = "";
+  function boxes() { return app.querySelectorAll(".table-wrap, .cmpx"); }
+  function remember() {
+    if (cur) POS[cur] = { y: window.scrollY, t: Array.prototype.map.call(boxes(), function (b) { return [b.scrollLeft, b.scrollTop]; }) };
+  }
+  function navigate() {
+    remember();
+    var st = history.state, saved = st && st.k ? POS[st.k] : null;
+    if (!st || !st.k) {
+      st = { k: "k" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), prev: curHash };
+      try { history.replaceState(st, ""); } catch (e) { /* sin historial */ }
+    }
+    cur = st.k; curHash = location.hash || "#/";
+    route();
+    if (saved) {
+      var back = function () {
+        var bs = boxes();
+        saved.t.forEach(function (p, i) { if (bs[i]) { bs[i].scrollLeft = p[0]; bs[i].scrollTop = p[1]; } });
+        window.scrollTo(0, saved.y);
+      };
+      back();
+      requestAnimationFrame(back); // otra vez cuando la cabecera de la página ya está colocada
+    }
+  }
+  app.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest(".topbar a");
+    if (a && history.state && history.state.prev === a.getAttribute("href")) { e.preventDefault(); history.back(); }
+  });
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  window.addEventListener("hashchange", navigate);
+  navigate();
 })();
