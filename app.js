@@ -140,7 +140,6 @@
       ]) +
       homeSection("Mercado y seguimiento", [
         tile("#/acciones", "bolt", "Explorar", "Stocks", stocks().length + (stocks().length === 1 ? " ficha" : " fichas")),
-        tile("#/etf", "grid", "🔒 Privado", "ETF", "seguimiento y caídas"),
         tile("#/amplitud", "trend", "🔒 Privado", "Amplitud de mercado", "NYSE y gráficos"),
         tile("#/estado", "alert", "Cada lunes", "Estado de fondos", "sigmas de día, semana y mes"),
         tile("#/macro", "chart", "Para el cliente", "Macro", "gráficos y PDF"),
@@ -3170,7 +3169,7 @@
     var v = rows.filter(function (x) { return x.s !== null; }).map(function (x) { return x.s; });
     if (!v.length) return "";
     var M = Math.max(SIG_MIN + 0.5, Math.ceil(Math.max.apply(null, v.map(Math.abs)) + 0.3)), W = 520, H = 74, px = function (n) { return 10 + (n + M) / (2 * M) * (W - 20); };
-    var bins = {}, dots = v.slice().sort(function (a, b) { return a - b; }).map(function (n) { var k = Math.round(px(n) / 9); bins[k] = (bins[k] || 0) + 1; return '<circle cx="' + px(n).toFixed(1) + '" cy="' + (46 - (bins[k] - 1) * 8).toFixed(1) + '" r="3.6" fill="' + (n <= -SIG_MIN ? "#b3283d" : n >= SIG_MIN ? "#1f7a4d" : n < 0 ? "#c98a96" : "#8fb9a2") + '" fill-opacity=".9"/>'; }).join("");
+    var bins = {}, dots = v.slice().sort(function (a, b) { return a - b; }).map(function (n) { var k = Math.round(px(n) / 9); bins[k] = (bins[k] || 0) + 1; return '<circle cx="' + px(n).toFixed(1) + '" cy="' + (46 - (bins[k] - 1) * 8).toFixed(1) + '" r="3.6" fill="' + (Math.abs(n) >= SIG_MIN ? "#1c1c26" : "#9a949e") + '" fill-opacity=".9"/>'; }).join("");
     var tk = []; for (var t = -Math.floor(M); t <= Math.floor(M); t++) tk.push('<text x="' + px(t).toFixed(1) + '" y="70" text-anchor="middle" font-size="10" fill="#888">' + (t > 0 ? "+" : "") + t + "</text>");
     var md = esMed(v);
     return '<svg class="esdist" viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" aria-label="Distribución de sigmas de los fondos">' +
@@ -3198,6 +3197,7 @@
       '<div class="es2k"><span>Caídas poco comunes</span><b class="dn">' + dn + '</b><em>de ' + tot + " fondos</em></div>" +
       '<div class="es2k"><span>Subidas poco comunes</span><b class="up">' + up + '</b><em>de ' + tot + " fondos</em></div>" +
       '<div class="es2m">' + esDist(rows) + "<p>" + esc(ctx) + "</p></div></div>";
+    h += '<div class="es2leg"><b>Cómo leerlo</b><span><i class="a"></i>Menos de 1,5 sigmas: movimiento normal</span><span><i class="b"></i>De 1,5 a ' + nf(SIG_MIN, 1) + ': notable</span><span><i class="c"></i>' + nf(SIG_MIN, 1) + ' o más: poco común, merece revisión</span><span class="es2legn">La barra sale a la izquierda si el fondo cae y a la derecha si sube.</span></div>';
     var max = Math.max(SIG_MIN + 1, Math.ceil(Math.max.apply(null, [0].concat(rows.map(function (x) { return Math.abs(x.s || 0); })))));
     [["rv", "Renta variable"], ["rf", "Renta fija"]].filter(function (g) { return ESS2.t === "all" || ESS2.t === g[0]; }).forEach(function (g) {
       var items = rows.filter(function (x) { return x.f.t === g[0]; });
@@ -3211,7 +3211,7 @@
         var f = x.f, s = x.s, big = s !== null && Math.abs(s) >= SIG_MIN, w = s === null ? 0 : Math.min(Math.abs(s), max) / max * 50;
         var chips = ESP.map(function (p) { var q = esSig(f, p); return '<span class="es2c' + esLvl(q) + (q !== null && q < 0 ? " dn" : " up") + '" title="' + p[1] + ": " + esPc(f.ret[p[0]]) + (q === null ? "" : " (" + esSg(q) + " sigmas)") + '"><i>' + p[3] + "</i>" + esSg(q) + "</span>"; }).join("");
         return '<a class="es2r' + (big ? (s < 0 ? " big dn" : " big up") : "") + '" href="#/fondo/' + encodeURIComponent(f.id) + '"><span class="esf"><span class="flogo" aria-hidden="true">' + logoOrInit(f.g) + '</span><span class="ftxt"><b>' + esc(f.n) + "</b><small>" + esc(f.c) + "</small></span></span>" +
-          '<span class="es2b"><span class="es2tr"><em style="left:' + (50 - SIG_MIN / max * 50) + '%"></em><em style="left:' + (50 + SIG_MIN / max * 50) + '%"></em><s></s>' + (s === null ? "" : '<i class="' + (s < 0 ? "dn" : "up") + '" style="' + (s < 0 ? "right" : "left") + ":50%;width:" + w.toFixed(2) + '%"></i>') + '</span><span class="es2n"><b>' + esSg(s) + "</b> · " + esPc(x.r) + "</span></span>" +
+          '<span class="es2b"><span class="es2tr"><em style="left:' + (50 - SIG_MIN / max * 50) + '%"></em><em style="left:' + (50 + SIG_MIN / max * 50) + '%"></em><s></s>' + (s === null ? "" : '<i class="' + (s < 0 ? "dn" : "up") + '" style="' + (s < 0 ? "right" : "left") + ":50%;width:" + w.toFixed(2) + '%"></i>') + '</span><span class="es2n"><b>' + esSg(s) + "</b> sigmas · " + esPc(x.r) + (s === null ? "" : ' <u class="es2v' + (Math.abs(s) >= SIG_MIN ? " x" : Math.abs(s) >= 1.5 ? " m" : "") + '">' + (Math.abs(s) >= SIG_MIN ? "Poco común" : Math.abs(s) >= 1.5 ? "Notable" : "Normal") + "</u>") + "</span></span>" +
           '<span class="es2rel' + (x.rel === null ? "" : x.rel < 0 ? " dn" : " up") + '">' + (x.rel === null ? "–" : (x.rel > 0 ? "+" : x.rel < 0 ? "−" : "") + nf(Math.abs(x.rel), 1) + " pp") + '</span><span class="es2cs">' + chips + "</span></a>";
       }).join("") + "</div>";
     });
@@ -3618,7 +3618,6 @@
     if (p[0] === "gestora" && p[1] && window.BUSCA) return window.BUSCA.gestora(app, setTitle, decodeURIComponent(p[1]));
     if (p[0] === "acceso") return gate("acceso", "Acceso privado", viewAcceso);
     if (p[0] === "amplitud") return viewAmplitud();
-    if (p[0] === "etf") return gate("etf", "ETF", viewETF);
     if (p[0] === "gestion") return viewGestion();
     if (p[0] === "newsletter" && window.NEWSLETTER) return window.NEWSLETTER.view(app, setTitle);
     if (p[0] === "privacidad" && window.NEWSLETTER) return window.NEWSLETTER.privacy(app, setTitle);
