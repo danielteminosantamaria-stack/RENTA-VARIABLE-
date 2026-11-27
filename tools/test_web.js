@@ -34,9 +34,7 @@ const srv = http.createServer((q, r) => {
       const before = errs.length;
       await page.goto(base + "#/" + r); await page.waitForTimeout(350);
       const tabs = await page.$$('#app [role="tab"]');
-      for (const t of tabs) { if (await t.isVisible()) await t.click(); }
-      if (tabs.length && (await tabs[0].isVisible())) await tabs[0].click();
-      const m = await page.evaluate(() => {
+      const measure = () => page.evaluate(() => {
         const out = { over: document.documentElement.scrollWidth - innerWidth, empty: document.getElementById("app").innerText.trim().length < 20, cut: [], loose: [] };
         document.querySelectorAll("#app table").forEach((t) => {
           if (!t.offsetParent) return;
@@ -55,8 +53,33 @@ const srv = http.createServer((q, r) => {
         });
         const cmp = document.querySelector("#app .cmpx");
         if (cmp && cmp.scrollWidth > cmp.clientWidth + 2) out.loose.push("el comparador no cabe en la pantalla");
+        // contenido que se sale por la derecha y no se puede deslizar (cuadros o cifras cortados)
+        const lost = new Set();
+        document.querySelectorAll("#app *").forEach((el) => {
+          if (el.closest("svg") && el.tagName.toLowerCase() !== "svg") return;
+          const r = el.getBoundingClientRect(); if (!r.width || !r.height || !el.offsetParent) return;
+          for (let e = el; e && e.id !== "app"; e = e.parentElement) {
+            const cs = getComputedStyle(e);
+            if (cs.visibility === "hidden") return;
+            if (e !== el && /auto|scroll/.test(cs.overflowX) && e.getBoundingClientRect().right <= innerWidth + 1) return;
+          }
+          let edge = innerWidth;
+          const box = el.parentElement.closest(".nsec, .mxtiles, .ntiles, .kpis");
+          if (box) edge = Math.min(edge, box.getBoundingClientRect().right);
+          if (r.right > edge + 2) lost.add((el.parentElement.className || el.parentElement.tagName) + " > " + (el.className.baseVal === undefined ? el.className || el.tagName : el.tagName));
+        });
+        if (lost.size) out.loose.push("contenido cortado: " + [...lost].slice(0, 4).join(", "));
+        document.querySelectorAll("#app [role=tablist]").forEach((n) => { if (n.offsetParent && n.scrollWidth > n.clientWidth + 2) out.loose.push("pestañas cortadas: " + n.className); });
         return out;
       });
+      // se mide la pantalla en cada pestaña
+      const m = await measure();
+      for (const t of tabs) {
+        if (!(await t.isVisible())) continue;
+        await t.click(); await page.waitForTimeout(120);
+        const n = await measure();
+        m.over = Math.max(m.over, n.over); m.cut = [...new Set(m.cut.concat(n.cut))]; m.loose = [...new Set(m.loose.concat(n.loose))];
+      }
       const bad = [];
       if (errs.length > before) bad.push("error: " + errs.slice(before).join(" | "));
       if (m.over > 1) bad.push("la página se desborda " + m.over + " px");

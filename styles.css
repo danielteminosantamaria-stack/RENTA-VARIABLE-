@@ -2268,3 +2268,26 @@ a.fchip { color: var(--brand); }
 .cmpx .neg, .cmpcards .neg, .cmpg .neg, .cmpx .msv .neg, #deck .dk-cmp .neg { color: #1c1c26 !important; }
 .cmpx .cbar u.dn { background: #a9a4b0; }
 .cmpx .msplit { background: #d9d5dc; }
+
+/* móvil: sectores de la nota y cuadros de macro sin cortar */
+@media screen and (max-width: 760px) {
+  .nsec { padding: 6px 12px; }
+  .nsec .nsh, .nsec .nsr { grid-template-columns: minmax(0, 1fr) 64px 64px; gap: 6px; }
+  .nsec .nsb, .nsec .nsh span:nth-child(2) { display: none; }
+  .nsec .nsr { font-size: 13.5px; }
+  .nsec .nsn { gap: 8px; min-width: 0; line-height: 1.3; }
+  .nsec .nsn .nsi { width: 30px !important; height: 30px !important; border-radius: 9px !important; }
+  .nsec .nsn .nsi svg { width: 17px; height: 17px; }
+  .mxtop .mxtiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .mxtop .mxtile { min-width: 0; padding: 12px !important; }
+  .mxtop .mxtile b { white-space: normal; font-size: 20px !important; line-height: 1.25; }
+}
+/* sigmas sin rojo: negativos en negro y positivos en verde */
+.es2t2 .num.neg, .es2kp .kpi .neg, .fsg.neg, .fsg.l1.neg, .fsg.l2.neg { color: #1c1c26 !important; }
+.fsg.l2.neg { border-color: #cfc8cd; }
+.fsg:not(.neg) { color: #1f7a4d; }
+/* móvil: las cuatro pestañas de la ficha caben a lo ancho */
+@media screen and (max-width: 760px) {
+  .fundpg .mstabs { gap: 8px; justify-content: space-between; overflow: visible; }
+  .fundpg .mstabs button { flex: 0 1 auto; min-width: 0; white-space: normal; text-align: center; font-size: 13.5px; line-height: 1.3; padding: 10px 1px 9px; }
+}

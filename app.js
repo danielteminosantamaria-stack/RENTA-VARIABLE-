@@ -72,7 +72,7 @@
   function footer(t) {
     var date = (t && META[t]) || META.rf || META.rv || "";
     return (window.NEWSLETTER && window.NEWSLETTER.mini ? window.NEWSLETTER.mini() : "") + '<footer class="foot"><span>Datos Morningstar a ' + esc(date) + '</span>' +
-      '<span>Información orientativa. Las rentabilidades pasadas no garantizan resultados futuros.</span><a class="privlk" href="#/acceso" title="Acceso privado">' + (unlocked() ? "🔓" : "🔒") + '</a></footer>';
+      '<span>Información orientativa. Las rentabilidades pasadas no garantizan resultados futuros.</span></footer>';
   }
   function matches(f, q) {
     var n = norm(q);
@@ -3423,7 +3423,7 @@
   }
   if (window.MutationObserver) new MutationObserver(decorate).observe(app, { childList: true });
 
-  // ---------- candado (acceso privado) ----------
+  // ---------- acceso privado (contraseña) ----------
   var LOCK = { salt: "ec5a57c6e2be789b", hash: "e906eba26cf1faf0dcf2cda16ab9de1bd6b1f1d5ea178b80ed5966c6305b090b", key: "cf_unlock" };
   function sha(txt) {
     var enc = new TextEncoder().encode(txt);
@@ -3435,7 +3435,7 @@
   function gate(id, title, view) {
     if (unlocked()) return view();
     setTitle(title);
-    app.innerHTML = '<header class="phero"><h1>🔒 ' + esc(title) + '</h1><p class="sub">Apartado privado. Introduce la contraseña para usarlo.</p></header>' +
+    app.innerHTML = '<header class="phero"><h1>' + esc(title) + '</h1><p class="sub">Apartado privado. Introduce la contraseña para usarlo.</p></header>' +
       '<form class="lockbox" id="lockf"><label class="muted" for="lockpw">Contraseña</label><input id="lockpw" type="password" autocomplete="current-password" autofocus>' +
       '<button type="submit" class="btn primary">Desbloquear</button><p class="lockerr" id="lockerr" hidden>Contraseña incorrecta</p></form>' + footer("rv");
     document.getElementById("lockf").addEventListener("submit", function (e) {
@@ -3449,7 +3449,7 @@
   function setNav() { /* el menú no cambia */ }
   function viewAcceso() {
     setTitle("Acceso privado");
-    app.innerHTML = '<div class="topbar"><a href="#/">← Inicio</a></div><header class="phero"><h1>🔓 Acceso privado activo</h1><p class="sub">En este navegador tienes desbloqueadas las funciones privadas (por ejemplo, el botón Correo en fondos y carteras, Construir cartera y la revisión de cartera). Los demás visitantes no las ven.</p></header>' +
+    app.innerHTML = '<div class="topbar"><a href="#/">← Inicio</a></div><header class="phero"><h1>Acceso privado activo</h1><p class="sub">En este navegador tienes desbloqueadas las funciones privadas (por ejemplo, el botón Correo en fondos y carteras, Construir cartera y la revisión de cartera). Los demás visitantes no las ven.</p></header>' +
       '<div class="row tools2"><button type="button" class="btn ghost" id="privout">Cerrar acceso privado</button></div>' + footer("rv");
     document.getElementById("privout").addEventListener("click", function () { try { localStorage.removeItem(LOCK.key); } catch (e) { /* sin almacenamiento */ } location.hash = "#/"; route(); });
   }
@@ -3457,7 +3457,7 @@
   // ---------- ETF: seguimiento y caídas (privado) ----------
   function viewETF() {
     setTitle("ETF");
-    var E = window.ETFS || { list: [] }, head = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>🔒 ETF</h1>' +
+    var E = window.ETFS || { list: [] }, head = '<div class="topbar"><a href="#/">← Inicio</a></div><h1>ETF</h1>' +
       '<p class="sub">Seguimiento de ETF de renta variable cotizados en EE. UU., solo para clientes profesionales. En dólares y con dividendos. Datos a cierre del ' + esc(E.f || "") + ".</p>";
     if (!E.list.length) { app.innerHTML = head + '<div class="empty box">No hay datos de ETF publicados todavía.</div>' + footer("rv"); return; }
     var L = E.list, all = L.concat([E.ref]), sel = L.filter(function (x) { return x.sel; });
