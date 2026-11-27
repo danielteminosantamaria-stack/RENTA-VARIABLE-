@@ -2029,3 +2029,5 @@ a.fchip { color: var(--brand); }
 .hero.vis.hv2 .lead { margin-top: 10px; font-size: 16px; }
 .hv-links { margin-top: 16px; }
 .hv-stats { display: none; }
+.phero::before { display: none !important; }
+.phero { border-left: 0 !important; }
