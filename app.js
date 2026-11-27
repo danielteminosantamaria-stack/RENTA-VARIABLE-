@@ -136,7 +136,7 @@
         tile("#/rv", "trend", "", CATS.rv.card, ofType("rv").length + " fondos")
       ]) +
       homeSection("Carteras", [
-        tile("#/construir", "pie", "Privado", "Construir cartera", "con el cliente"),
+        tile("#/construir", "pie", "Herramienta", "Construir cartera", "con el cliente"),
         tile("#/comparar", "swap", "Herramienta", "Comparador de fondos", "hasta " + CMP_MAX + " fondos"),
         tile("#/carteras", "brief", "Herramienta", "Xray", PF.length + (PF.length === 1 ? " cartera" : " carteras"))
       ]) +
