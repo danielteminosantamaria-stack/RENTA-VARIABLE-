@@ -542,9 +542,9 @@
       (f.stars ? '<span class="fchip star">' + "★".repeat(f.stars) + "</span>" : "") + (f.idx ? '<span class="fchip">Indexado</span>' : "") + (f.nd ? '<span class="fchip vl">VL ' + esc(String(f.nd).slice(0, 5)) + "</span>" : "") + "</p>" +
       (fsg ? '<p class="fsgs"><a href="#/estado">Sigmas</a>' + fsg + "</p>" : "") + "</div></header>";
     function kf(l, v, raw) { var c = isNum(raw) ? (raw < 0 ? "dn" : raw > 0 ? "up" : "") : ""; return '<div class="kpi kf ' + c + '"><small>' + l + "</small><span>" + (isNum(raw) ? '<b class="' + c + '">' + pct(raw, true, 2) + "</b>" : v) + "</span></div>"; }
-    html += '<div class="row tools2" id="fundtools"></div><div class="kpis fk"><h4 class="kh">Rentabilidad</h4>' +
-      kf("Último mes", "", r.m1) + kf("Año", "", r.ytd) + kf("1 año", "", r.y1) + kf("3 años", "", r.y3) + kf("5 años", "", r.y5) + kf("10 años", "", r.y10) +
-      '<h4 class="kh">Riesgo</h4><div class="kpi kf risk"><small>Volatilidad 1 año</small><span><b>' + pct(f.vol[0], false, 1) + '</b></span></div><div class="kpi kf risk"><small>Ratio de Sharpe 1 año</small><span><b>' + dec(f.sharpe[0]) + "</b></span></div></div>";
+    html += '<div class="row tools2" id="fundtools"></div><div class="kpis fk">' +
+      '<div class="kpi kf risk"><small>Vol. 1 año</small><span><b>' + pct(f.vol[0], false, 1) + '</b></span></div><div class="kpi kf risk"><small>Sharpe 1 año</small><span><b>' + dec(f.sharpe[0]) + "</b></span></div>" +
+      kf("Último mes", "", r.m1) + kf("Año", "", r.ytd) + kf("1 año", "", r.y1) + kf("3 años", "", r.y3) + kf("5 años", "", r.y5) + kf("10 años", "", r.y10) + "</div>";
     html += '<p class="note">Rentabilidad de la clase en euros. A 3, 5 y 10 años, anualizada. Fuente: Morningstar, valor liquidativo a ' + esc(f.nd) + ". La rentabilidad de la semana cubre los 7 días naturales hasta esa fecha.</p>";
 
     var docs = [["xray", "X-Ray", "Morningstar"], ["ms", "Morningstar", "Ficha online"]]

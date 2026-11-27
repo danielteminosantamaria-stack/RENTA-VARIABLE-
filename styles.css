@@ -1897,3 +1897,11 @@ a.fchip { color: var(--brand); }
 .kpis.fk > .kf { box-shadow: 0 6px 16px -12px rgba(20, 10, 14, .3) !important; }
 .kpis.fk > .kf::before { background: #c9c3c8 !important; }
 .kpis.fk > .kf.up::before { background: #1f7a4d !important; } .kpis.fk > .kf.dn::before { background: #b3283d !important; } .kpis.fk > .kf.risk::before { background: #2a5ca8 !important; }
+
+/* ficha: mezcla del diseño clásico y el nuevo */
+.kpis.fk { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 10px !important; }
+.kpis.fk > .kf, .kpis.fk > .kf.risk { grid-column: auto !important; border-radius: 10px !important; padding: 12px 14px !important; background: #fff !important; box-shadow: none !important; border: 1px solid var(--line) !important; border-top: 0 !important; }
+.kpis.fk > .kf::before { inset: 0 0 auto 0 !important; width: auto !important; height: 3px !important; }
+.kpis.fk > .kf small { font-size: 12px; letter-spacing: 0; font-weight: 400; margin-bottom: 4px; }
+.kpis.fk > .kf span { font-size: 21px !important; }
+@media (max-width: 760px) { .kpis.fk { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
