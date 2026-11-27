@@ -136,13 +136,13 @@
         tile("#/rv", "trend", "", CATS.rv.card, ofType("rv").length + " fondos")
       ]) +
       homeSection("Carteras", [
-        tile("#/construir", "pie", "🔒 Privado", "Construir cartera", "con el cliente"),
+        tile("#/construir", "pie", "Privado", "Construir cartera", "con el cliente"),
         tile("#/comparar", "swap", "Herramienta", "Comparador de fondos", "hasta " + CMP_MAX + " fondos"),
         tile("#/carteras", "brief", "Herramienta", "Xray", PF.length + (PF.length === 1 ? " cartera" : " carteras"))
       ]) +
       homeSection("Mercado y seguimiento", [
         tile("#/acciones", "bolt", "Explorar", "Stocks", stocks().length + (stocks().length === 1 ? " ficha" : " fichas")),
-        tile("#/amplitud", "trend", "Privado", "Amplitud de mercado", "NYSE y gráficos"),
+        tile("#/amplitud", "trend", "Mercado", "Amplitud de mercado", "NYSE y gráficos"),
         tile("#/estado", "alert", "Cada lunes", "Estado de fondos", "sigmas de día, semana y mes"),
         tile("#/macro", "chart", "Para el cliente", "Macro", "gráficos y PDF"),
         tile("#/nota", "doc", "Cada día", "Nota diaria", "mercados y macro")
